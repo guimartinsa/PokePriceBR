@@ -1,0 +1,127 @@
+from cards.models import Set, Card
+
+set_amg = Set.objects.create(
+    nome="Amigos de jornada",
+    codigo_liga="AMG"
+)
+
+
+card = Card.objects.create(
+    nome="Hilda",
+    numero=181,
+    total_set=181,
+    numero_completo="181/181",
+    liga_num="181",
+    raridade="Secret Rare",
+    set=set_amg
+)
+
+
+
+from decimal import Decimal
+
+class Card(models.Model):
+    nome = models.CharField(max_length=200)
+
+    numero = models.PositiveIntegerField()
+    total_set = models.PositiveIntegerField()
+    numero_completo = models.CharField(max_length=20)
+
+    liga_num = models.CharField(max_length=20)
+
+    raridade = models.CharField(max_length=50, blank=True, null=True)
+    imagem = models.URLField(blank=True, null=True)
+
+    preco_min = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    preco_med = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    preco_max = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+
+    set = models.ForeignKey(Set, on_delete=models.CASCADE, related_name="cartas")
+
+    @property
+    def is_over_number(self):
+        return self.numero > self.total_set
+
+
+
+https://www.ligapokemon.com.br/?view=cards/card&card=Levincia%20(244%2F182)&ed=DRI&num=244
+
+python manage.py atualizar_precos
+
+
+
+
+
+
+<div class="container-show-price-mkp" id="container-show-price"><div class="container-price-mkp-item" id="container-price-mkp-card">
+<div class="title">
+<div>Preço Médio <label class="hide-mobile">de Venda no Marketplace</label></div>
+<span class="cursor-pointer" onclick="mpcard.modal('full-average-price');">Ver Mais</span>
+</div>
+<div class="bg-light-gray container-price-mkp">
+<div class="container-extras">
+<div class="extras extras_n">N</div>
+<span>Normal</span>
+</div>
+<div class="price-mkp">
+<div class="min"><div class="price">R$ 68,00</div></div>
+<div class="medium"><div class="price">R$ 68,00</div></div>
+<div class="max"><div class="price">R$ 68,00</div></div>
+</div>
+</div> <div class="bg-light-gray container-price-mkp">
+<div class="container-extras">
+<div class="extras extras_f">F</div>
+<span>Foil</span>
+</div>
+<div class="price-mkp">
+<div class="min"><div class="price">R$ 58,50</div></div>
+<div class="medium"><div class="price">R$ 92,06</div></div>
+<div class="max"><div class="price">R$ 149,99</div></div>
+</div>
+</div>
+</div></div>
+
+
+
+from cards.services.liga_scraper import extrair_precos
+
+url = "https://www.ligapokemon.com.br/?view=cards/card&card=Levincia%20%28244/182%29&ed=DRI&num=244"
+extrair_precos(url)
+
+
+
+<div class="bg-light-gray container-price-mkp">
+<div class="container-extras">
+<div class="extras extras_n">N</div>
+<span>Normal</span>
+</div>
+<div class="price-mkp">
+<div class="min">
+	<div class="price">R$ 68,00</div>
+</div>
+<div class="medium">
+	<div class="price">R$ 68,00</div>
+</div>
+<div class="max">
+	<div class="price">R$ 68,00</div>
+</div>
+</div>
+</div>
+
+<div class="bg-light-gray container-price-mkp">
+<div class="container-extras">
+<div class="extras extras_n">N</div>
+<span>Normal</span>
+</div>
+<div class="price-mkp">
+<div class="min"><div class="price">R$ 68,00</div></div>
+<div class="medium"><div class="price">R$ 68,00</div></div>
+<div class="max"><div class="price">R$ 68,00</div></div>
+</div>
+</div>
