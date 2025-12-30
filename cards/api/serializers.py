@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from cards.models import Card, Set
+from cards.models import CardAdminLog
 
 
 class SetSerializer(serializers.ModelSerializer):
@@ -31,3 +32,13 @@ class CardSerializer(serializers.ModelSerializer):
             "is_over_number",
             "set",
         ]
+
+
+class CardAdminLogSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()
+
+    class Meta:
+        model = CardAdminLog
+        fields = ["id", "action", "user", "created_at", "note"]
+
+

@@ -1,5 +1,6 @@
 from django.db import models
 from cards.services.liga_url import gerar_liga_url
+from django.conf import settings
 
 
 class Set(models.Model):
@@ -75,3 +76,31 @@ class Card(models.Model):
 
     def __str__(self):
         return f"{self.nome} ({self.numero_completo})"
+
+
+class CardAdminLog(models.Model):
+    ACTION_CHOICES = [
+        ("delete", "Excluir"),
+        ("restore", "Restaurar"),
+        ("update_price", "Atualizar Preço"),
+    ]
+
+    card = models.ForeignKey(
+        Card,
+        on_delete=models.CASCADE,
+        related_name="admin_logs",
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    note = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.card.nome} | {self.action} | {self.created_at}"

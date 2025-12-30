@@ -8,9 +8,10 @@ from django.shortcuts import get_object_or_404
 from django.db import models
 
 
-from cards.models import Card
+from cards.models import Card, CardAdminLog
 from cards.services.liga_scraper import atualizar_preco_carta
-from .serializers import CardSerializer
+from cards.services.admin_log import log_admin_action
+from .serializers import CardAdminLogSerializer, CardSerializer
 
 from cards.tasks.atualizar_todas_cartas import atualizar_todas_cartas
 
@@ -94,6 +95,13 @@ class ExcluirCartaView(APIView):
         card.ativa = False
         card.save()
 
+        log_admin_action(
+            card=card,
+            user=request.user,
+            action="delete",
+            note="Carta excluída via API",
+        )
+
         return Response(
             {
                 "status": "ok",
@@ -102,3 +110,42 @@ class ExcluirCartaView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class RestaurarCartaView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, pk):
+        card = get_object_or_404(Card, pk=pk)
+
+        if card.ativa:
+            return Response(
+                {"message": "Carta já está ativa"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        card.ativa = True
+        card.save()
+
+        log_admin_action(
+            card=card,
+            user=request.user,
+            action="restore",
+            note="Carta restaurada via API",
+        )
+
+        return Response(
+            {
+                "status": "ok",
+                "message": "Carta restaurada com sucesso",
+                "card_id": card.id,
+            }
+        )
+
+class CardAdminLogView(ListAPIView):
+    serializer_class = CardAdminLogSerializer
+    permission_classes = [IsAdminUser]
+
+    def get_queryset(self):
+        card_id = self.kwargs["pk"]
+        return CardAdminLog.objects.filter(card_id=card_id).order_by("-created_at")

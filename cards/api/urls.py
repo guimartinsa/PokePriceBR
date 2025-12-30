@@ -5,6 +5,8 @@ from .views import (
     AtualizarPrecoCartaView,
     AtualizarTodasCartasView,
     ExcluirCartaView,
+    RestaurarCartaView,
+    CardAdminLogView,
 )
 
 urlpatterns = [
@@ -21,7 +23,8 @@ urlpatterns = [
         name="cards-atualizar-todas",
     ),
     path("cards/<int:pk>/excluir/", ExcluirCartaView.as_view()),  # 👈 NOVO
-
+    path("cards/<int:pk>/restaurar/", RestaurarCartaView.as_view()),
+    path("cards/<int:pk>/logs/", CardAdminLogView.as_view()),
 
 ]
 
