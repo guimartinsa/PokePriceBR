@@ -1,21 +1,23 @@
-from urllib.parse import quote
+from urllib.parse import quote_plus
 
 
-def gerar_url_liga(card):
+BASE_LIGA_URL = "https://www.ligapokemon.com.br/?view=cards/card"
+
+
+def gerar_liga_url(card) -> str:
     """
-    Exemplo final:
-    https://www.ligapokemon.com.br/?view=cards/card
-    &card=Mega%20Charizard%20X%20ex%20(125%2F094)
-    &ed=PRC
-    &num=125
+    Gera a URL oficial da Liga Pokémon para a carta
     """
+    nome = card.nome.strip()
+    numero_completo = card.numero_completo.strip()
+    codigo_set = card.set.codigo_liga
+    numero = card.numero
 
-    nome_url = f"{card.nome} ({card.numero_completo})"
-    nome_url = quote(nome_url)
+    card_param = f"{nome} ({numero_completo})"
 
     return (
-        "https://www.ligapokemon.com.br/?view=cards/card"
-        f"&card={nome_url}"
-        f"&ed={card.set.codigo_liga}"
-        f"&num={card.numero}"
+        f"{BASE_LIGA_URL}"
+        f"&card={quote_plus(card_param)}"
+        f"&ed={codigo_set}"
+        f"&num={numero}"
     )

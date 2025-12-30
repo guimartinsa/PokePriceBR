@@ -1,20 +1,22 @@
 from cards.models import Set, Card
 
-set_amg = Set.objects.create(
-    nome="Amigos de jornada",
-    codigo_liga="AMG"
+set_jtg = Set.objects.create(
+    nome="Amigos de Jornada",
+    codigo_liga="JTG"
 )
 
 
 card = Card.objects.create(
-    nome="Hilda",
-    numero=181,
-    total_set=181,
-    numero_completo="181/181",
-    liga_num="181",
+    nome="Reshiram do N",
+    numero=167,
+    total_set=159,
+    numero_completo="167/159",
+    liga_num="167",
     raridade="Secret Rare",
-    set=set_amg
+    set=set_jtg
 )
+
+print(card.liga_url)
 
 
 
