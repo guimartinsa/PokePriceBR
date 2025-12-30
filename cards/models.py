@@ -52,6 +52,8 @@ class Card(models.Model):
     # Relacionamento
     set = models.ForeignKey(Set, on_delete=models.CASCADE, related_name="cartas")
 
+    ativa = models.BooleanField(default=True)  # 👈 NOVO
+
     def save(self, *args, **kwargs):
         """
         Gera automaticamente a URL da Liga Pokémon
