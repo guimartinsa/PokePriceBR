@@ -4,10 +4,10 @@ from .serializers import CardSerializer
 
 
 class CardListView(ListAPIView):
-    queryset = Card.objects.all()
+    queryset = Card.objects.select_related("set").all()
     serializer_class = CardSerializer
 
 
 class CardDetailView(RetrieveAPIView):
-    queryset = Card.objects.all()
+    queryset = Card.objects.select_related("set").all()
     serializer_class = CardSerializer
