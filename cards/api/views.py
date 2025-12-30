@@ -12,6 +12,8 @@ from cards.models import Card
 from cards.services.liga_scraper import atualizar_preco_carta
 from .serializers import CardSerializer
 
+from cards.tasks.atualizar_todas_cartas import atualizar_todas_cartas
+
 
 
 class CardListView(ListAPIView):
@@ -66,28 +68,13 @@ class AtualizarTodasCartasView(APIView):
     permission_classes = [IsAdminUser]
 
     def post(self, request):
-        cartas = Card.objects.exclude(liga_num__isnull=True)
-        atualizadas = 0
-        erros = []
-
-        for carta in cartas:
-            print(f"Atualizando {carta.nome}")
-
-            try:
-                atualizar_preco_carta(carta)
-                atualizadas += 1
-            except Exception as e:
-                erros.append(
-                    {
-                        "carta": carta.nome,
-                        "erro": str(e),
-                    }
-                )
+        task = atualizar_todas_cartas.delay()
 
         return Response(
             {
                 "status": "ok",
-                "atualizadas": atualizadas,
-                "erros": erros,
-            }
+                "message": "Atualização iniciada",
+                "task_id": task.id,
+            },
+            status=status.HTTP_202_ACCEPTED,
         )
