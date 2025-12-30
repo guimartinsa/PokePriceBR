@@ -4,6 +4,8 @@ from cards.models import CardAdminLog
 
 
 class SetSerializer(serializers.ModelSerializer):
+    #total_cartas = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Set
         fields = ["id", "nome", "codigo_liga"]

@@ -7,6 +7,7 @@ from .views import (
     ExcluirCartaView,
     RestaurarCartaView,
     CardAdminLogView,
+    SetListView,
 )
 
 urlpatterns = [
@@ -25,6 +26,7 @@ urlpatterns = [
     path("cards/<int:pk>/excluir/", ExcluirCartaView.as_view()),  # 👈 NOVO
     path("cards/<int:pk>/restaurar/", RestaurarCartaView.as_view()),
     path("cards/<int:pk>/logs/", CardAdminLogView.as_view()),
+    path("sets/", SetListView.as_view(), name="set-list"),
 
 ]
 

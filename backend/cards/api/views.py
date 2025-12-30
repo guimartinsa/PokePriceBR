@@ -15,7 +15,9 @@ from .serializers import CardAdminLogSerializer, CardSerializer
 
 from cards.tasks.atualizar_todas_cartas import atualizar_todas_cartas
 
-
+from django.db.models import Count
+from cards.models import Set
+from .serializers import SetSerializer
 
 class CardListView(ListAPIView):
     serializer_class = CardSerializer
@@ -149,3 +151,15 @@ class CardAdminLogView(ListAPIView):
     def get_queryset(self):
         card_id = self.kwargs["pk"]
         return CardAdminLog.objects.filter(card_id=card_id).order_by("-created_at")
+
+#----sets-----#
+
+class SetListView(ListAPIView):
+    serializer_class = SetSerializer
+
+    def get_queryset(self):
+        return (
+            Set.objects
+            .annotate(total_cartas=Count("cartas"))
+            .order_by("nome")
+        )
