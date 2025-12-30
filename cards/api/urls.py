@@ -4,6 +4,7 @@ from .views import (
     CardDetailView,
     AtualizarPrecoCartaView,
     AtualizarTodasCartasView,
+    ExcluirCartaView,
 )
 
 urlpatterns = [
@@ -19,6 +20,8 @@ urlpatterns = [
         AtualizarTodasCartasView.as_view(),
         name="cards-atualizar-todas",
     ),
+    path("cards/<int:pk>/excluir/", ExcluirCartaView.as_view()),  # 👈 NOVO
+
 
 ]
 

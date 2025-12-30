@@ -20,8 +20,7 @@ class CardListView(ListAPIView):
     serializer_class = CardSerializer
 
     def get_queryset(self):
-        qs = Card.objects.select_related("set").all()
-
+        qs = Card.objects.select_related("set").filter(ativa=True)
         set_code = self.request.query_params.get("set")
         raridade = self.request.query_params.get("raridade")
         over = self.request.query_params.get("over")
@@ -41,7 +40,7 @@ class CardListView(ListAPIView):
 
 
 class CardDetailView(RetrieveAPIView):
-    queryset = Card.objects.select_related("set").all()
+    queryset = Card.objects.select_related("set").filter(ativa=True)
     serializer_class = CardSerializer
 
 class AtualizarPrecoCartaView(APIView):
@@ -77,4 +76,29 @@ class AtualizarTodasCartasView(APIView):
                 "task_id": task.id,
             },
             status=status.HTTP_202_ACCEPTED,
+        )
+    
+
+class ExcluirCartaView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def delete(self, request, pk):
+        card = get_object_or_404(Card, pk=pk)
+
+        if not card.ativa:
+            return Response(
+                {"message": "Carta já está excluída"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        card.ativa = False
+        card.save()
+
+        return Response(
+            {
+                "status": "ok",
+                "message": "Carta excluída com sucesso",
+                "card_id": card.id,
+            },
+            status=status.HTTP_200_OK,
         )
