@@ -46,7 +46,7 @@ class CardDetailView(RetrieveAPIView):
     queryset = Card.objects.select_related("set").filter(ativa=True)
     serializer_class = CardSerializer
 
-class AtualizarPrecoCartaView(APIView):
+"""class AtualizarPrecoCartaView(APIView):
     def post(self, request, pk):
         card = get_object_or_404(Card, pk=pk)
 
@@ -64,7 +64,25 @@ class AtualizarPrecoCartaView(APIView):
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            )"""
+from cards.tasks.atualizar_preco_carta import atualizar_preco_carta_task
+
+class AtualizarPrecoCartaView(APIView):
+    def post(self, request, pk):
+        atualizar_preco_carta_task(pk)
+
+        return Response(
+            {
+                "status": "accepted",
+                "message": "Atualização enviada para processamento",
+                "card_id": pk,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
+
+
 
 class AtualizarTodasCartasView(APIView):
     permission_classes = [IsAdminUser]
