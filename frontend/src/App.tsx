@@ -1,7 +1,7 @@
-import CardsPage from "./pages/CardsPage";
+import AppRoutes from "./router";
 
 function App() {
-  return <CardsPage />;
+  return <AppRoutes />;
 }
 
 export default App;
