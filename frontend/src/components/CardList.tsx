@@ -1,8 +1,19 @@
 import { useEffect, useState } from "react";
 import { fetchCards } from "../api/cards";
 import type { Card } from "../types/Card";
+import { useSearchParams } from "react-router-dom";
+
+
+
 
 export default function CardList() {
+  const [filters, setFilters] = useState({
+    set: "",
+    raridade: "",
+    over: false,
+  });
+
+
   const [cards, setCards] = useState<Card[]>([]);
   const [page, setPage] = useState(1);
   const [count, setCount] = useState(0);
@@ -11,32 +22,22 @@ export default function CardList() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-
     setLoading(true);
     setError(null);
 
-    fetchCards({ page })
+    fetchCards({
+      page,
+      set: filters.set || undefined,
+      raridade: filters.raridade || undefined,
+      over: filters.over,
+    })
       .then((data) => {
-        if (!mounted) return;
-
         setCards(data.results);
         setCount(data.count);
       })
-      .catch((err) => {
-        console.error(err);
-        if (!mounted) return;
-        setError("Erro ao carregar cartas");
-      })
-      .finally(() => {
-        if (!mounted) return;
-        setLoading(false);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [page]);
+      .catch(() => setError("Erro ao carregar cartas"))
+      .finally(() => setLoading(false));
+  }, [page, filters]);
 
 
   if (loading) return <p>Carregando...</p>;
@@ -45,6 +46,36 @@ export default function CardList() {
   return (
     <div style={{ padding: 16 }}>
       <h1>Cartas</h1>
+
+      <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+        <input
+          placeholder="Set (ex: DRI)"
+          value={filters.set}
+          onChange={(e) =>
+            setFilters((f) => ({ ...f, set: e.target.value }))
+          }
+        />
+
+        <input
+          placeholder="Raridade"
+          value={filters.raridade}
+          onChange={(e) =>
+            setFilters((f) => ({ ...f, raridade: e.target.value }))
+          }
+        />
+
+        <label>
+          <input
+            type="checkbox"
+            checked={filters.over}
+            onChange={(e) =>
+              setFilters((f) => ({ ...f, over: e.target.checked }))
+            }
+          />
+          Over
+        </label>
+      </div>
+
 
       <ul style={{ listStyle: "none", padding: 0 }}>
         {cards.map((card) => (
