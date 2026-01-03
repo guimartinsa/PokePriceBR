@@ -1,52 +1,103 @@
-import { useEffect, useState } from "react";
-import { fetchCards } from "../api/cards";
-import type { Card } from "../types/Card";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
+import { fetchCards } from "../api/cards";
+import type { Card } from "../types/Card";
+import { CardItem } from "./CardItem";
+import { CardSkeleton } from "./CardSkeleton";
 
-
+type Filters = {
+  set: string;
+  raridade: string;
+};
 
 export default function CardList() {
-  const [filters, setFilters] = useState({
-    set: "",
-    raridade: "",
-    over: false,
-  });
-
+  const [searchParams, setSearchParams] = useSearchParams();
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const [cards, setCards] = useState<Card[]>([]);
   const [page, setPage] = useState(1);
-  const [count, setCount] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
-  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<Filters>({
+    set: searchParams.get("set") || "",
+    raridade: searchParams.get("raridade") || "",
+  });
+
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /* ======================
+     RESET quando filtro muda
+  ====================== */
   useEffect(() => {
+    setCards([]);
+    setPage(1);
+    setHasMore(true);
+  }, [filters]);
+
+  /* ======================
+     FETCH
+  ====================== */
+  useEffect(() => {
+    if (!hasMore || loading) return;
+
     setLoading(true);
     setError(null);
+
+    const params: Record<string, string> = {};
+    if (filters.set) params.set = filters.set;
+    if (filters.raridade) params.raridade = filters.raridade;
+    if (page > 1) params.page = String(page);
+
+    setSearchParams(params);
 
     fetchCards({
       page,
       set: filters.set || undefined,
       raridade: filters.raridade || undefined,
-      over: filters.over,
     })
       .then((data) => {
-        setCards(data.results);
-        setCount(data.count);
+        setCards((prev) =>
+          page === 1 ? data.results : [...prev, ...data.results]
+        );
+        setHasMore(Boolean(data.next));
       })
       .catch(() => setError("Erro ao carregar cartas"))
       .finally(() => setLoading(false));
   }, [page, filters]);
 
+  /* ======================
+     INTERSECTION OBSERVER
+  ====================== */
+  useEffect(() => {
+    if (!hasMore || loading) return;
 
-  if (loading) return <p>Carregando...</p>;
-  if (error) return <p>{error}</p>;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setPage((p) => p + 1);
+        }
+      },
+      { rootMargin: "200px" }
+    );
 
+    const el = loadMoreRef.current;
+    if (el) observer.observe(el);
+
+    return () => {
+      if (el) observer.unobserve(el);
+    };
+  }, [hasMore, loading]);
+
+  /* ======================
+     UI
+  ====================== */
   return (
     <div style={{ padding: 16 }}>
       <h1>Cartas</h1>
 
+      {/* FILTROS */}
       <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
         <input
           placeholder="Set (ex: DRI)"
@@ -63,62 +114,24 @@ export default function CardList() {
             setFilters((f) => ({ ...f, raridade: e.target.value }))
           }
         />
-
-        <label>
-          <input
-            type="checkbox"
-            checked={filters.over}
-            onChange={(e) =>
-              setFilters((f) => ({ ...f, over: e.target.checked }))
-            }
-          />
-          Over
-        </label>
       </div>
 
-
+      {/* LISTA */}
       <ul style={{ listStyle: "none", padding: 0 }}>
         {cards.map((card) => (
-          <li
-            key={card.id}
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: 8,
-              padding: 12,
-              marginBottom: 12,
-            }}
-          >
-            <strong>{card.nome}</strong>
-            <div>{card.numero_completo}</div>
-            <div>{card.set.nome}</div>
-
-            {card.preco_med && (
-              <div>Preço médio: R$ {card.preco_med}</div>
-            )}
-          </li>
+          <CardItem key={card.id} card={card} />
         ))}
+
+        {loading &&
+          Array.from({ length: 3 }).map((_, i) => (
+            <CardSkeleton key={`skeleton-${i}`} />
+          ))}
       </ul>
 
-      {/* PAGINAÇÃO */}
-      <div style={{ marginTop: 16 }}>
-        <button
-          disabled={page === 1}
-          onClick={() => setPage((p) => p - 1)}
-        >
-          Anterior
-        </button>
+      {error && <p>{error}</p>}
 
-        <span style={{ margin: "0 12px" }}>
-          Página {page}
-        </span>
-
-        <button
-          disabled={page * 20 >= count}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          Próxima
-        </button>
-      </div>
+      {/* SENTINELA */}
+      {hasMore && <div ref={loadMoreRef} style={{ height: 40 }} />}
     </div>
   );
 }
