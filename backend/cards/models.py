@@ -7,6 +7,8 @@ class Set(models.Model):
     nome = models.CharField(max_length=100)
     codigo_liga = models.CharField(max_length=10, unique=True)
 
+    tcgdex_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
+
     def __str__(self):
         return self.nome
 
@@ -104,3 +106,8 @@ class CardAdminLog(models.Model):
 
     def __str__(self):
         return f"{self.card.nome} | {self.action} | {self.created_at}"
+
+
+##-----------##-------------##
+##---------TCG_DEX----------##
+##-----------##-------------##

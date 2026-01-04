@@ -145,7 +145,7 @@ export default function CardList() {
             setFilters((f) => ({ ...f, set: value }))
           }
         />
-        
+
         {/*<input
           placeholder="Raridade"
           value={filters.raridade}

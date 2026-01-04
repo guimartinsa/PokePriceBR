@@ -15,8 +15,12 @@ from .serializers import SetSerializer
 
 from cards.tasks.atualizar_todas_cartas import atualizar_todas_cartas
 from cards.tasks.atualizar_preco_carta import atualizar_preco_carta_task
+from cards.tasks.import_sets import import_sets_from_tcgdex_task
+from cards.tasks.import_cards import import_cards_from_set_task
+
 
 from .serializers import CardAdminLogSerializer, CardSerializer
+from cards.api.serializers import SetSerializer
 
 
 from django.db.models import Count
@@ -48,11 +52,9 @@ class CardListView(ListAPIView):
         return qs
         #return Card.objects.select_related("set").all()
 
-
 class CardDetailView(RetrieveAPIView):
     queryset = Card.objects.select_related("set").filter(ativa=True)
     serializer_class = CardSerializer
-
 
 class AtualizarPrecoCartaView(APIView):
     def post(self, request, pk):
@@ -66,10 +68,6 @@ class AtualizarPrecoCartaView(APIView):
             },
             status=status.HTTP_202_ACCEPTED,
         )
-
-
-
-
 
 class AtualizarTodasCartasView(APIView):
     permission_classes = [IsAdminUser]
@@ -86,7 +84,6 @@ class AtualizarTodasCartasView(APIView):
             status=status.HTTP_202_ACCEPTED,
         )
     
-
 class ExcluirCartaView(APIView):
     permission_classes = [IsAdminUser]
 
@@ -117,7 +114,6 @@ class ExcluirCartaView(APIView):
             },
             status=status.HTTP_200_OK,
         )
-
 
 class RestaurarCartaView(APIView):
     permission_classes = [IsAdminUser]
@@ -157,18 +153,33 @@ class CardAdminLogView(ListAPIView):
         card_id = self.kwargs["pk"]
         return CardAdminLog.objects.filter(card_id=card_id).order_by("-created_at")
 
+class ImportCardsFromSetView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, codigo):
+        import_cards_from_set_task.delay(codigo)
+        return Response({"status": "Importação de cartas iniciada"})
+
+
 #----sets-----#
+
+from django.db.models import Q
+
 
 class SetListView(ListAPIView):
     serializer_class = SetSerializer
 
     def get_queryset(self):
-        return (
-            Set.objects
-            .annotate(total_cartas=Count("cartas"))
-            .order_by("nome")
-        )
+        qs = Set.objects.all().order_by("nome")
 
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(
+                Q(nome__icontains=search) |
+                Q(codigo__icontains=search)
+            )
+
+        return qs
 
 class SetDetailView(RetrieveAPIView):
     queryset = Set.objects.name
@@ -193,3 +204,18 @@ class SetAutocompleteView(APIView):
             }
             for s in qs
         ])
+
+class ImportSetsFromTCGDexView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        task = import_sets_from_tcgdex_task.delay()
+
+        return Response(
+            {
+                "status": "ok",
+                "message": "Importação de sets iniciada",
+                "task_id": task.id,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
