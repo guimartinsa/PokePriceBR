@@ -4,6 +4,7 @@ import type { PaginatedResponse } from "../types/PaginatedResponse";
 
 export interface CardFilters {
   page?: number;
+  nome?: string;
   set?: string;
   raridade?: string;
   over?: boolean;

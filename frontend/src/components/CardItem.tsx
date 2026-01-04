@@ -1,35 +1,28 @@
 import type { Card } from "../types/Card";
+import './style.css'
+
 
 export function CardItem({ card }: { card: Card }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 12,
-        border: "1px solid #e5e5e5",
-        borderRadius: 12,
-        padding: 12,
-      }}
-    >
-      {card.imagem && (
+
+
+    <div className="card">
         <img
-          src={card.imagem}
-          alt={card.nome}
-          style={{ width: 80, borderRadius: 8 }}
+            src={card.imagem || "/placeholder.png"}
+            alt={card.nome}
         />
-      )}
+        <hr></hr>
+        <div className="card-body">
+            <strong>{card.nome}</strong>
+            <small>({card.numero_completo})</small><br></br>
+            <small>{card.set.nome}</small>
 
-      <div>
-        <strong>{card.nome}</strong>
-        <div>{card.numero_completo}</div>
-        <div>{card.set.nome}</div>
-
-        {card.preco_med && (
-          <div style={{ marginTop: 4 }}>
-            💰 R$ {card.preco_med}
-          </div>
-        )}
-      </div>
+            {card.preco_med && (
+            <div className="price">
+                R$ {card.preco_med}
+            </div>
+            )}
+        </div>
     </div>
   );
 }

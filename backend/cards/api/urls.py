@@ -7,6 +7,8 @@ from .views import (
     ExcluirCartaView,
     RestaurarCartaView,
     CardAdminLogView,
+    SetAutocompleteView,
+    SetDetailView,
     SetListView,
 )
 
@@ -25,6 +27,7 @@ urlpatterns = [
 
 
     path("sets/", SetListView.as_view(), name="set-list"),
-
+    path("sets/<int:pk>/", SetDetailView.as_view(), name="set-detail"),
+    path("sets/", SetAutocompleteView.as_view(), name="set-autocomplete"),
 ]
 

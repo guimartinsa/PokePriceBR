@@ -1,0 +1,29 @@
+.card {
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border:rebeccapurple, solid, 1px;
+
+}
+
+.card img {
+    display: block;
+    margin: auto;
+    margin-top: 5px;
+    width: 90%;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    /*border:rebeccapurple, solid, 1px;*/
+    border-radius: 6%;
+}
+
+.card-body {
+  padding: 8px;
+}
+
+.price {
+  margin-top: 4px;
+  font-weight: bold;
+  color: #2e7d32;
+}

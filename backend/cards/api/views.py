@@ -1,32 +1,38 @@
 from rest_framework.generics import ListAPIView, RetrieveAPIView
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from rest_framework import status
+
 from django.shortcuts import get_object_or_404
 from django.db import models
 
-
 from cards.models import Card, CardAdminLog
+from cards.models import Set
 from cards.services.liga_scraper import atualizar_preco_carta
 from cards.services.admin_log import log_admin_action
-from .serializers import CardAdminLogSerializer, CardSerializer
+from .serializers import SetSerializer
 
 from cards.tasks.atualizar_todas_cartas import atualizar_todas_cartas
+from cards.tasks.atualizar_preco_carta import atualizar_preco_carta_task
+
+from .serializers import CardAdminLogSerializer, CardSerializer
+
 
 from django.db.models import Count
-from cards.models import Set
-from .serializers import SetSerializer
 
 class CardListView(ListAPIView):
     serializer_class = CardSerializer
 
     def get_queryset(self):
         qs = Card.objects.select_related("set").filter(ativa=True)
+        search = self.request.query_params.get("search")
         set_code = self.request.query_params.get("set")
         raridade = self.request.query_params.get("raridade")
         over = self.request.query_params.get("over")
+
+        if search:
+            qs = qs.filter(nome__icontains=search)
 
         if set_code:
             qs = qs.filter(set__codigo_liga__iexact=set_code)
@@ -40,32 +46,13 @@ class CardListView(ListAPIView):
             qs = qs.filter(numero__lte=models.F("total_set"))
 
         return qs
+        #return Card.objects.select_related("set").all()
 
 
 class CardDetailView(RetrieveAPIView):
     queryset = Card.objects.select_related("set").filter(ativa=True)
     serializer_class = CardSerializer
 
-"""class AtualizarPrecoCartaView(APIView):
-    def post(self, request, pk):
-        card = get_object_or_404(Card, pk=pk)
-
-        try:
-            atualizar_preco_carta(card)
-            return Response(
-                {
-                    "status": "ok",
-                    "message": "Preço atualizado com sucesso",
-                    "card": CardSerializer(card).data,
-                },
-                status=status.HTTP_200_OK,
-            )
-        except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )"""
-from cards.tasks.atualizar_preco_carta import atualizar_preco_carta_task
 
 class AtualizarPrecoCartaView(APIView):
     def post(self, request, pk):
@@ -181,3 +168,28 @@ class SetListView(ListAPIView):
             .annotate(total_cartas=Count("cartas"))
             .order_by("nome")
         )
+
+
+class SetDetailView(RetrieveAPIView):
+    queryset = Set.objects.name
+    serializer_class = SetSerializer
+
+class SetAutocompleteView(APIView):
+    def get(self, request):
+        q = request.query_params.get("q", "").strip()
+
+        qs = Set.objects.all()
+
+        if q:
+            qs = qs.filter(nome__icontains=q) | qs.filter(codigo_liga__icontains=q)
+
+        qs = qs.order_by("nome")[:10]  # limite para autocomplete
+
+        return Response([
+            {
+                "id": s.id,
+                "nome": s.nome,
+                "codigo": s.codigo_liga,
+            }
+            for s in qs
+        ])
