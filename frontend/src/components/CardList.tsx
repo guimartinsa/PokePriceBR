@@ -18,7 +18,7 @@ type Filters = {
 };
 
 export default function CardList() {
-  const [searchParams, {/*setSearchParams*/}] = useSearchParams();
+  const [searchParams, {/*setSearchParams*/ }] = useSearchParams();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const [cards, setCards] = useState<Card[]>([]);
@@ -49,72 +49,69 @@ export default function CardList() {
     setCards([]);
     setPage(1);
     setHasMore(true);
-  }, [filters]);
+  }, [debounceFilters]);
 
   /* ======================
      FETCH
   ====================== */
   useEffect(() => {
-    if (!hasMore) return;
+    if (!hasMore || loading) return;
 
     setLoading(true);
     setError(null);
 
     fetchCards({
       page,
-      //nome: filters.nome || undefined,
+      nome: debounceFilters.nome || undefined,
       set: debounceFilters.set || undefined,
       raridade: debounceFilters.raridade || undefined,
     })
-    .then((data) => {
-      setCards((prev) =>
-        page === 1 ? data.results : [...prev, ...data.results]
-      );
-      setHasMore(Boolean(data.next));
-    })
+      .then((data) => {
+        setCards((prev) =>
+          page === 1 ? data.results : [...prev, ...data.results]
+        );
+
+        setHasMore(Boolean(data.next));
+      })
       .catch(() => setError("Erro ao carregar cartas"))
       .finally(() => setLoading(false));
   }, [page, debounceFilters]);
+
 
   /* ======================
      INTERSECTION OBSERVER
   ====================== */
   useEffect(() => {
-    if (!hasMore || loading) return;
+    if (!hasMore || loading || page === 1) return;
 
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
+      ([entry]) => {
+        if (entry.isIntersecting) {
           setPage((p) => p + 1);
         }
       },
       { rootMargin: "200px" }
     );
 
-    /*const el = loadMoreRef.current;
+    const el = loadMoreRef.current;
     if (el) observer.observe(el);
 
     return () => {
       if (el) observer.unobserve(el);
-    };*/
+    };
+  }, [hasMore, loading, page]);
 
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
+
+  useEffect(() => {
+    if (debouncedSetInput.length < 2) {
+      setSetOptions([]);
+      return;
     }
-    return () => observer.disconnect();
 
-  }, [hasMore, loading]);
-
-useEffect(() => {
-  if (debouncedSetInput.length < 2) {
-    setSetOptions([]);
-    return;
-  }
-
-  fetchSets(debouncedSetInput)
-    .then(setSetOptions)
-    .catch(() => setSetOptions([]));
-}, [debouncedSetInput]);
+    fetchSets(debouncedSetInput)
+      .then(setSetOptions)
+      .catch(() => setSetOptions([]));
+  }, [debouncedSetInput]);
 
 
   /* ======================
@@ -128,9 +125,9 @@ useEffect(() => {
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <style>
           .card-grid {"{"}
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 16px;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+          gap: 16px;
           {"}"}
 
         </style>
@@ -141,68 +138,14 @@ useEffect(() => {
           }
         />
 
-      
+
         <SetAutocomplete
           value={filters.set}
           onChange={(value) =>
             setFilters((f) => ({ ...f, set: value }))
           }
         />
-
-        <div style={{ position: "relative", width: "100%" }}>
-  <input
-    placeholder="Set (ex: DRI ou Scarlet)"
-    value={setInput}
-    onChange={(e) => {
-      setSetInput(e.target.value);
-      setShowSetOptions(true);
-    }}
-    onBlur={() => setTimeout(() => setShowSetOptions(false), 150)}
-  />
-
-  {showSetOptions && setOptions.length > 0 && (
-    <ul
-      style={{
-        position: "absolute",
-        top: "100%",
-        left: 0,
-        right: 0,
-        background: "#fff",
-        border: "1px solid #ddd",
-        borderRadius: 6,
-        marginTop: 4,
-        zIndex: 10,
-        maxHeight: 220,
-        overflowY: "auto",
-      }}
-    >
-      {setOptions.map((opt) => (
-        <li
-          key={opt.id}
-          style={{
-            padding: 10,
-            cursor: "pointer",
-            borderBottom: "1px solid #eee",
-          }}
-          onMouseDown={() => {
-            setFilters((f) => ({ ...f, set: opt.codigo }));
-            setSetInput(`${opt.nome} (${opt.codigo})`);
-            setSetOptions([]);
-            setPage(1);
-            setCards([]);
-          }}
-        >
-          <strong>{opt.nome}</strong>
-          <div style={{ fontSize: 12, opacity: 0.7 }}>
-            {opt.codigo}
-          </div>
-        </li>
-      ))}
-    </ul>
-  )}
-</div>
-
-
+        
         {/*<input
           placeholder="Raridade"
           value={filters.raridade}
