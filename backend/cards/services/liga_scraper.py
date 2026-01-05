@@ -86,14 +86,14 @@ def atualizar_preco_carta(card: Card) -> bool:
         card.preco_med_foil = precos["foil"]["med"]
         card.preco_max_foil = precos["foil"]["max"]
     if "reverse foil" in precos:
-        card.preco_min_foil = precos["reverse foil"]["min"]
-        card.preco_med_foil = precos["reverse foil"]["med"]
-        card.preco_max_foil = precos["reverse foil"]["max"]
-    if "foil" in precos:
+        card.preco_min_reverse_foil = precos["reverse foil"]["min"]
+        card.preco_med_reverse_foil = precos["reverse foil"]["med"]
+        card.preco_max_reverse_foil = precos["reverse foil"]["max"]
+    if "master ball" in precos:
         card.preco_min_master_ball = precos["master ball"]["min"]
         card.preco_med_master_ball = precos["master ball"]["med"]
         card.preco_max_master_ball = precos["master ball"]["max"]
-    if "foil" in precos:
+    if "pokeball foil" in precos:
         card.preco_min_pokeball_foil = precos["pokeball foil"]["min"]
         card.preco_med_pokeball_foil = precos["pokeball foil"]["med"]
         card.preco_max_pokeball_foil = precos["pokeball foil"]["max"]
