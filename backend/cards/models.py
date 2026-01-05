@@ -14,6 +14,14 @@ class Set(models.Model):
 
 
 class Card(models.Model):
+    tcgdex_id = models.CharField(
+        max_length=100,
+        unique=True,
+        db_index=True,
+        null=True,
+        blank=True,
+    )
+
     # Identificação
     nome = models.CharField(max_length=200)
 
@@ -51,6 +59,38 @@ class Card(models.Model):
     preco_max_foil = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True
     )
+    # Preços reverse FOIL
+    preco_min_reverse_foil = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True
+    )
+    preco_med_reverse_foil = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True
+    )
+    preco_max_reverse_foil = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True
+    )
+    # Preços master
+    preco_min_master_ball = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True
+    )
+    preco_med_master_ball = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True
+    )
+    preco_max_master_ball = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True
+    )
+    # Preços pokebalFOIL
+    preco_min_pokeball_foil = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True
+    )
+    preco_med_pokeball_foil = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True
+    )
+    preco_max_pokeball_foil = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True
+    )
+
+
 
     # Relacionamento
     set = models.ForeignKey(Set, on_delete=models.CASCADE, related_name="cartas")

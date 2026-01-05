@@ -4,7 +4,7 @@ from cards.models import Card, Set
 TCGDEX_BASE = "https://api.tcgdex.net/v2/en"
 
 def import_cards_from_set(set_codigo: str):
-    tcg_set = Set.objects.get(codigo=set_codigo)
+    tcg_set = Set.objects.get(codigo_liga=set_codigo)
 
     url = f"{TCGDEX_BASE}/sets/{tcg_set.tcgdex_id}"
     response = requests.get(url, timeout=30)

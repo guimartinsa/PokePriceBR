@@ -24,6 +24,7 @@ from cards.api.serializers import SetSerializer
 
 
 from django.db.models import Count
+from django.db.models import Q
 
 class CardListView(ListAPIView):
     serializer_class = CardSerializer
@@ -156,14 +157,23 @@ class CardAdminLogView(ListAPIView):
 class ImportCardsFromSetView(APIView):
     permission_classes = [IsAdminUser]
 
-    def post(self, request, codigo):
-        import_cards_from_set_task.delay(codigo)
-        return Response({"status": "Importação de cartas iniciada"})
+    def post(self, request, pk):
+        set_obj = Set.objects.get(pk=pk)
+
+        import_cards_from_set_task.delay(set_obj.id)
+
+        return Response(
+            {
+                "status": "importacao_disparada",
+                "set": set_obj.nome,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 #----sets-----#
 
-from django.db.models import Q
+
 
 
 class SetListView(ListAPIView):

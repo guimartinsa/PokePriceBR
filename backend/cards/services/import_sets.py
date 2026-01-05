@@ -2,7 +2,7 @@ import requests
 from cards.models import Set
 
 
-TCGDEX_SETS_URL = "https://api.tcgdex.net/v2/pt/sets"
+TCGDEX_SETS_URL = "https://api.tcgdex.net/v2/en/sets"
 
 
 def import_sets_from_tcgdex():

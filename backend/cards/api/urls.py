@@ -5,6 +5,7 @@ from .views import (
     AtualizarPrecoCartaView,
     AtualizarTodasCartasView,
     ExcluirCartaView,
+    ImportCardsFromSetView,
     RestaurarCartaView,
     CardAdminLogView,
     SetAutocompleteView,
@@ -29,6 +30,11 @@ urlpatterns = [
 
     path("sets/", SetListView.as_view(), name="set-list"),
     path("sets/importar-tcgdex/", ImportSetsFromTCGDexView.as_view(), name="set-import-tcgdex"),
+    path(
+        "sets/<int:pk>/importar-cartas/",
+        ImportCardsFromSetView.as_view(),
+        name="set-import-cards",
+    ),
     path("sets/<int:pk>/", SetDetailView.as_view(), name="set-detail"),
     path("sets/", SetAutocompleteView.as_view(), name="set-autocomplete"),
 ]

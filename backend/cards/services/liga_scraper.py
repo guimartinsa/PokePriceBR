@@ -44,6 +44,12 @@ def extrair_precos_liga(url: str) -> dict:
                 chave = "normal"
             elif tipo == "F":
                 chave = "foil"
+            elif tipo == "RF":
+                chave = "reverse foil"
+            elif tipo == "MB":
+                chave = "master ball"
+            elif tipo == "PF":
+                chave = "pokeball foil"
             else:
                 continue
 
@@ -79,6 +85,18 @@ def atualizar_preco_carta(card: Card) -> bool:
         card.preco_min_foil = precos["foil"]["min"]
         card.preco_med_foil = precos["foil"]["med"]
         card.preco_max_foil = precos["foil"]["max"]
+    if "reverse foil" in precos:
+        card.preco_min_foil = precos["reverse foil"]["min"]
+        card.preco_med_foil = precos["reverse foil"]["med"]
+        card.preco_max_foil = precos["reverse foil"]["max"]
+    if "foil" in precos:
+        card.preco_min_master_ball = precos["master ball"]["min"]
+        card.preco_med_master_ball = precos["master ball"]["med"]
+        card.preco_max_master_ball = precos["master ball"]["max"]
+    if "foil" in precos:
+        card.preco_min_pokeball_foil = precos["pokeball foil"]["min"]
+        card.preco_med_pokeball_foil = precos["pokeball foil"]["med"]
+        card.preco_max_pokeball_foil = precos["pokeball foil"]["max"]
 
     card.save()
     return True
