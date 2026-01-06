@@ -16,14 +16,6 @@ def _parse_preco(texto: str) -> Decimal:
 
 
 def extrair_precos_liga(url: str) -> dict:
-    """
-    Retorna:
-    {
-        "normal": {"min": Decimal, "med": Decimal, "max": Decimal},
-        "foil":   {"min": Decimal, "med": Decimal, "max": Decimal}
-    }
-    """
-
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
@@ -34,28 +26,33 @@ def extrair_precos_liga(url: str) -> dict:
         time.sleep(1)
 
         blocos = page.query_selector_all(".container-price-mkp")
-
         resultado = {}
 
         for bloco in blocos:
-            tipo = bloco.query_selector(".extras").inner_text().strip()
+            extras_el = bloco.query_selector(".extras")
+            if not extras_el:
+                continue  # <-- CRÍTICO
 
-            if tipo == "N":
-                chave = "normal"
-            elif tipo == "F":
-                chave = "foil"
-            elif tipo == "RF":
-                chave = "reverse foil"
-            elif tipo == "MB":
-                chave = "master ball"
-            elif tipo == "PF":
-                chave = "pokeball foil"
-            else:
+            tipo_raw = extras_el.inner_text().strip()
+
+            MAPA_TIPOS = {
+                "N": "normal",
+                "F": "foil",
+                "RF": "reverse foil",
+                "MB": "master ball",
+                "PF": "pokeball foil",
+            }
+
+            chave = MAPA_TIPOS.get(tipo_raw)
+            if not chave:
                 continue
 
-            min_ = bloco.query_selector(".min .price").inner_text()
-            med_ = bloco.query_selector(".medium .price").inner_text()
-            max_ = bloco.query_selector(".max .price").inner_text()
+            try:
+                min_ = bloco.query_selector(".min .price").inner_text()
+                med_ = bloco.query_selector(".medium .price").inner_text()
+                max_ = bloco.query_selector(".max .price").inner_text()
+            except Exception:
+                continue  # se faltar algum preço, ignora bloco
 
             resultado[chave] = {
                 "min": _parse_preco(min_),
@@ -67,10 +64,8 @@ def extrair_precos_liga(url: str) -> dict:
         return resultado
 
 
+
 def atualizar_preco_carta(card: Card) -> bool:
-    """
-    Atualiza os preços da carta usando a Liga Pokémon
-    """
     if not card.liga_url:
         return False
 
@@ -85,14 +80,17 @@ def atualizar_preco_carta(card: Card) -> bool:
         card.preco_min_foil = precos["foil"]["min"]
         card.preco_med_foil = precos["foil"]["med"]
         card.preco_max_foil = precos["foil"]["max"]
+
     if "reverse foil" in precos:
         card.preco_min_reverse_foil = precos["reverse foil"]["min"]
         card.preco_med_reverse_foil = precos["reverse foil"]["med"]
         card.preco_max_reverse_foil = precos["reverse foil"]["max"]
+
     if "master ball" in precos:
         card.preco_min_master_ball = precos["master ball"]["min"]
         card.preco_med_master_ball = precos["master ball"]["med"]
         card.preco_max_master_ball = precos["master ball"]["max"]
+
     if "pokeball foil" in precos:
         card.preco_min_pokeball_foil = precos["pokeball foil"]["min"]
         card.preco_med_pokeball_foil = precos["pokeball foil"]["med"]
