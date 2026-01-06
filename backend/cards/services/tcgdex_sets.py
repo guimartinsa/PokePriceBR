@@ -1,4 +1,4 @@
-import requests
+'''import requests
 from cards.models import Set
 
 TCGDEX_BASE = "https://api.tcgdex.net/v2/en"
@@ -24,3 +24,4 @@ def import_sets_from_tcgdex():
             created += 1
 
     return created
+'''

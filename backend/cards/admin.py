@@ -5,6 +5,9 @@ from cards.services.admin_log import log_admin_action
 
 from cards.models import Set, Card
 
+from cards.tasks.import_cards import import_cards_from_set_task
+from cards.tasks.atualizar_todas_cartas import atualizar_todas_cartas
+
 
 
 @admin.register(CardAdminLog)
@@ -94,9 +97,56 @@ class SetAdmin(admin.ModelAdmin):
         #"total_cartas",
     )
 
-    search_fields = ("nome", "codigo_liga")
+    search_fields = ("nome", "codigo_liga", "tcgdex_id")
     ordering = ("nome",)
     inlines = [CardInline]
+
+    actions = [
+        "importar_cartas_do_set",
+        "atualizar_precos_do_set",
+    ]
+
+    # -------- AÇÕES -------- #
+
+    @admin.action(description="Importar cartas do set (TCGdex)")
+    def importar_cartas_do_set(self, request, queryset):
+        disparados = 0
+
+        for set_obj in queryset:
+            if not set_obj.tcgdex_id:
+                self.message_user(
+                    request,
+                    f'Set "{set_obj.nome}" não possui tcgdex_id.',
+                    level=messages.WARNING,
+                )
+                continue
+
+            import_cards_from_set_task.delay(set_obj.id)
+            disparados += 1
+
+        if disparados:
+            self.message_user(
+                request,
+                f"Importação iniciada para {disparados} set(s).",
+                level=messages.SUCCESS,
+            )
+
+    @admin.action(description="Atualizar preços das cartas do set")
+    def atualizar_precos_do_set(self, request, queryset):
+        total_cartas = 0
+
+        for set_obj in queryset:
+            cartas = Card.objects.filter(set=set_obj, ativa=True)
+            total_cartas += cartas.count()
+
+            for card in cartas:
+                atualizar_todas_cartas.delay(card.id)
+
+        self.message_user(
+            request,
+            f"Atualização de preços iniciada para {total_cartas} carta(s).",
+            level=messages.SUCCESS,
+        )
 
     def total_cartas(self, obj):
         return obj.cartas.count()

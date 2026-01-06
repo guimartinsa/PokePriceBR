@@ -5,9 +5,9 @@ from django.conf import settings
 
 class Set(models.Model):
     nome = models.CharField(max_length=100)
-    codigo_liga = models.CharField(max_length=10, unique=True)
+    codigo_liga = models.CharField(max_length=10, db_index=True, null=True, blank=True)
 
-    tcgdex_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    tcgdex_id = models.CharField(max_length=50, db_index=True, null=True, blank=True)
 
     def __str__(self):
         return self.nome

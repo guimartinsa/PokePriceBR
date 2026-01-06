@@ -32,7 +32,7 @@ def import_sets_from_tcgdex():
             tcgdex_id=tcgdex_id,
             defaults={
                 "nome": nome,
-                "codigo": codigo_liga,
+                "codigo_liga": codigo_liga,
             },
         )
 
