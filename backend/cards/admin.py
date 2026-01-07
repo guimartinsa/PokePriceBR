@@ -1,4 +1,5 @@
 from django.contrib import admin
+from cards.tasks.atualizar_precos_set_task import atualizar_precos_set_task
 from cards.models import Card, CardAdminLog
 from django.contrib import messages
 from cards.services.admin_log import log_admin_action
@@ -30,8 +31,11 @@ class CardAdmin(admin.ModelAdmin):
     list_filter = ("ativa", "set", "raridade")
     search_fields = ("nome", "numero_completo")
 
-    actions = ["excluir_cartas", "restaurar_cartas"]
-
+    actions = [
+        "excluir_cartas",
+        "restaurar_cartas",
+        "atualizar_precos_global",   
+    ]
 
     @admin.action(description="Excluir cartas selecionadas")
     def excluir_cartas(self, request, queryset):
@@ -76,6 +80,16 @@ class CardAdmin(admin.ModelAdmin):
         self.message_user(
             request,
             f"{atualizadas} carta(s) restaurada(s).",
+            level=messages.SUCCESS,
+        )
+
+    @admin.action(description="Atualizar preços (GLOBAL)")
+    def atualizar_precos_global(self, request, queryset):
+        atualizar_todas_cartas.delay()
+
+        self.message_user(
+            request,
+            "Atualização GLOBAL de preços iniciada (Celery).",
             level=messages.SUCCESS,
         )
 
@@ -140,7 +154,7 @@ class SetAdmin(admin.ModelAdmin):
             total_cartas += cartas.count()
 
             for card in cartas:
-                atualizar_todas_cartas.delay(card.id)
+                atualizar_precos_set_task.delay(card.id)
 
         self.message_user(
             request,

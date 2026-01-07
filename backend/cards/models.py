@@ -24,19 +24,20 @@ class Card(models.Model):
 
     # Identificação
     nome = models.CharField(max_length=200)
-
-    numero = models.PositiveIntegerField()
+    ilustrador = models.CharField(max_length=200, blank=True, null=True)
+    numero = models.CharField(max_length=20)
     total_set = models.PositiveIntegerField()
     numero_completo = models.CharField(max_length=20)
-
     liga_num = models.CharField(max_length=20)
-
     # Metadados
     raridade = models.CharField(max_length=50, blank=True, null=True)
     imagem = models.URLField(blank=True, null=True)
-
     # URL oficial da Liga Pokémon (gerada automaticamente)
     liga_url = models.URLField(blank=True, null=True)
+    # Relacionamento
+    set = models.ForeignKey(Set, on_delete=models.CASCADE, related_name="cartas")
+
+    ativa = models.BooleanField(default=True)  # 👈 NOVO
 
     # Preços NORMAL
     preco_min = models.DecimalField(
@@ -48,7 +49,6 @@ class Card(models.Model):
     preco_max = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True
     )
-
     # Preços FOIL
     preco_min_foil = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True
@@ -90,12 +90,16 @@ class Card(models.Model):
         max_digits=10, decimal_places=2, blank=True, null=True
     )
 
+    # -------- IMAGENS DERIVADAS -------- #
 
+    @property
+    def imagem_low(self):
+        return f"{self.imagem}/low.webp" if self.imagem else None
 
-    # Relacionamento
-    set = models.ForeignKey(Set, on_delete=models.CASCADE, related_name="cartas")
+    @property
+    def imagem_high(self):
+        return f"{self.imagem}/high.webp" if self.imagem else None
 
-    ativa = models.BooleanField(default=True)  # 👈 NOVO
 
     def save(self, *args, **kwargs):
         """
