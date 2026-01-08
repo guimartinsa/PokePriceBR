@@ -43,9 +43,16 @@ def update_card_from_tcgdex_task(self, card_id: int):
         card.ilustrador = ilustrador
         updated_fields.append("ilustrador")
 
+    # -------- IMAGENS (NORMALIZADAS) --------
+    imagem_base = data.get("image")
     if imagem_base:
-        card.imagem = imagem_base
-        updated_fields.append("imagem")
+        imagem_low = f"{imagem_base}/low.webp"
+        imagem_high = f"{imagem_base}/high.webp"
+
+        card.imagem = imagem_low
+        card.imagem_grande = imagem_high
+
+        updated_fields.extend(["imagem", "imagem_grande"])
 
     if official_total:
         card.total_set = official_total
@@ -53,7 +60,11 @@ def update_card_from_tcgdex_task(self, card_id: int):
         updated_fields.append("total_set")
 
     if updated_fields:
+        card.detalhes_atualizados = True
+        updated_fields.append("detalhes_atualizados")
+
         card.save(update_fields=updated_fields)
+
 
     return {
         "card": card.nome,

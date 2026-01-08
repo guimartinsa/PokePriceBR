@@ -32,6 +32,8 @@ class Card(models.Model):
     # Metadados
     raridade = models.CharField(max_length=50, blank=True, null=True)
     imagem = models.URLField(blank=True, null=True)
+    imagem_grande = models.URLField(blank=True, null=True)
+
     # URL oficial da Liga Pokémon (gerada automaticamente)
     liga_url = models.URLField(blank=True, null=True)
     # Relacionamento
@@ -89,6 +91,8 @@ class Card(models.Model):
     preco_max_pokeball_foil = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True
     )
+
+    detalhes_atualizados = models.BooleanField(default=False)
 
     # -------- IMAGENS DERIVADAS -------- #
 
