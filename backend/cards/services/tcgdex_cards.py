@@ -1,4 +1,4 @@
-import requests
+'''import requests
 from cards.models import Card, Set
 
 TCGDEX_BASE = "https://api.tcgdex.net/v2/en"
@@ -24,3 +24,4 @@ def import_cards_from_set(set_codigo: str):
                 "image_large_url": card["image"].get("large"),
             }
         )
+'''

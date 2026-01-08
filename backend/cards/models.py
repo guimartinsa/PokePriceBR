@@ -115,10 +115,11 @@ class Card(models.Model):
 
     @property
     def is_over_number(self):
-        """
-        Retorna True se a carta for over number (ex: 125/094)
-        """
-        return self.numero > self.total_set
+        try:
+            return int(self.numero) > int(self.total_set)
+        except (TypeError, ValueError):
+            return False
+
 
     def __str__(self):
         return f"{self.nome} ({self.numero_completo})"

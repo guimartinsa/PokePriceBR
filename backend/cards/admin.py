@@ -1,4 +1,6 @@
 from django.contrib import admin
+from cards.tasks.update_card_from_tcgdex import update_card_from_tcgdex_task
+from cards.tasks.update_set_cards_from_tcgdex import update_set_cards_from_tcgdex_task
 from cards.tasks.atualizar_precos_set_task import atualizar_precos_set_task
 from cards.models import Card, CardAdminLog
 from django.contrib import messages
@@ -35,6 +37,7 @@ class CardAdmin(admin.ModelAdmin):
         "excluir_cartas",
         "restaurar_cartas",
         "atualizar_precos_global",   
+        "atualizar_detalhes_tcgdex",
     ]
 
     @admin.action(description="Excluir cartas selecionadas")
@@ -93,6 +96,21 @@ class CardAdmin(admin.ModelAdmin):
             level=messages.SUCCESS,
         )
 
+
+    @admin.action(description="Atualizar detalhes via TCGdex")
+    def atualizar_detalhes_tcgdex(self, request, queryset):
+        total = 0
+
+        for card in queryset:
+            if card.tcgdex_id:
+                update_card_from_tcgdex_task.delay(card.id)
+                total += 1
+
+        self.message_user(
+            request,
+            f"{total} carta(s) enviadas para atualização de detalhes.",
+            level=messages.SUCCESS,
+        )
 #------sets---------#
 
 class CardInline(admin.TabularInline):
@@ -118,6 +136,7 @@ class SetAdmin(admin.ModelAdmin):
     actions = [
         "importar_cartas_do_set",
         "atualizar_precos_do_set",
+        "atualizar_detalhes_do_set",
     ]
 
     # -------- AÇÕES -------- #
@@ -159,6 +178,20 @@ class SetAdmin(admin.ModelAdmin):
         self.message_user(
             request,
             f"Atualização de preços iniciada para {total_cartas} carta(s).",
+            level=messages.SUCCESS,
+        )
+
+    @admin.action(description="Atualizar detalhes das cartas do set (TCGdex)")
+    def atualizar_detalhes_do_set(self, request, queryset):
+        disparados = 0
+
+        for set_obj in queryset:
+            update_set_cards_from_tcgdex_task.delay(set_obj.id)
+            disparados += 1
+
+        self.message_user(
+            request,
+            f"Atualização de detalhes iniciada para {disparados} set(s).",
             level=messages.SUCCESS,
         )
 
