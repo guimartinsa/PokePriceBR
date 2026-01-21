@@ -1,0 +1,9 @@
+.card-item.compact {
+    padding: 0;
+    background: transparent;
+}
+
+.card-item.compact img {
+    width: 100%;
+    border-radius: 8px;
+}

@@ -10,6 +10,9 @@ import { SetAutocomplete } from "./SetAutocomplete";
 import { CardAutocomplete } from "./CardAutocomplete";
 import { useDebounce } from "../hooks/useDebounce";
 
+import './style.css'
+
+
 
 type Filters = {
   nome: string;
@@ -82,7 +85,7 @@ export default function CardList() {
      INTERSECTION OBSERVER
   ====================== */
   useEffect(() => {
-    if (!hasMore || loading || page === 1) return;
+    if (!hasMore || loading) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -97,9 +100,9 @@ export default function CardList() {
     if (el) observer.observe(el);
 
     return () => {
-      if (el) observer.unobserve(el);
+      if (el) observer.disconnect();
     };
-  }, [hasMore, loading, page]);
+  }, [hasMore, loading]);
 
 
   useEffect(() => {

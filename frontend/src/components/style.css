@@ -4,6 +4,7 @@
     background: #fff;
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     border:rebeccapurple, solid, 1px;
+    max-width: 150px;
 
 }
 
@@ -26,4 +27,12 @@
   margin-top: 4px;
   font-weight: bold;
   color: #2e7d32;
+}
+
+
+
+/*----card_grid----*/
+
+.card-grid{
+  display: inline-flex;
 }
