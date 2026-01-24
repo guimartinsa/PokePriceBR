@@ -1,3 +1,5 @@
+/*usar para mostar somente a carta, sem informçoes*/ 
+
 import type { Card } from "../../types/Card";
 import "./style.css"
 
@@ -6,15 +8,19 @@ type Props = {
     compact?: boolean;
 };
 
-export function CardItem({ card, compact = false }: Props) {
+export function CardItem({ card, compact }: Props) {
     return (
-        <div className={`card-item ${compact ? "compact" : ""}`}>
-            <img src={card.imagem || "/placeholder.webp"} alt={card.nome} />
+        <div className={compact ? "card card--compact" : "card"}>
+            <img
+                src={card.imagem || undefined}
+                alt={card.nome}
+            />
+
             {!compact && (
-                <>
-                    <h3>{card.nome}</h3>
+                <div className="card-info">
+                    <strong>{card.nome}</strong>
                     <span>{card.numero_completo}</span>
-                </>
+                </div>
             )}
         </div>
     );

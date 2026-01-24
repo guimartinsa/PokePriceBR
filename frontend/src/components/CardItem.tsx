@@ -15,7 +15,6 @@ export function CardItem({ card, compact = false }: Props) {
                 src={card.imagem || "/placeholder.png"}
                 alt={card.nome}
             />
-            <hr></hr>
             <div className="card-body">
                 <strong>{card.nome}</strong>
                 <small>({card.numero_completo})</small><br></br>

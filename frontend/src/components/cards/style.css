@@ -1,9 +1,17 @@
-.card-item.compact {
-    padding: 0;
-    background: transparent;
+.card {
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    overflow: hidden;
 }
 
-.card-item.compact img {
+.card--compact {
+    width: 100px;
+    flex-shrink: 0;
+}
+
+.card--compact img {
     width: 100%;
-    border-radius: 8px;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
 }

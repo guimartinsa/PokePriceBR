@@ -68,9 +68,60 @@
 
 /* RECENT */
 .recent-cards {
-    padding: 24px 16px 48px;
-    max-width: 960px;
-    margin: 0 auto;
+    padding: 16px;
+}
+
+.recent-cards h2 {
+    margin-bottom: 12px;
+    font-size: 1.2rem;
+}
+
+/* Mobile-first: 2 colunas */
+.recent-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+/* Tablets */
+@media (min-width: 640px) {
+    .recent-cards-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+    }
+}
+
+/* Laptops */
+@media (min-width: 1024px) {
+    .recent-cards-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 16px;
+    }
+}
+
+/* Telas grandes */
+@media (min-width: 1280px) {
+    .recent-cards-grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+}
+
+.load-more {
+    margin: 20px auto 0;
+    display: block;
+    padding: 10px 18px;
+    border-radius: 12px;
+    border: none;
+    background: #ef5350;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.load-more:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .recent-cards header {
@@ -83,13 +134,4 @@
 .recent-cards a {
     color: #f6c400;
     font-size: 0.85rem;
-}
-
-.cards-row {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 140px;
-    gap: 12px;
-    overflow-x: auto;
-    padding-bottom: 8px;
 }

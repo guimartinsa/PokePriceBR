@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import { AppLayout } from "../components/layout/AppLayout";
 
 import HomePage from "../pages/Home/HomePage";
+//import CardsPage from "../pages/CardsPage";
 import CardListPage from "../pages/Cards/CardListPage";
 
 export default function AppRoutes() {
