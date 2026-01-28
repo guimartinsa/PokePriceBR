@@ -2,5 +2,5 @@ services:
   - type: web
     name: pricedex-backend
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && python manage.py migrate && python manage.py loaddata seed.json || true
     startCommand: gunicorn core.wsgi:application
