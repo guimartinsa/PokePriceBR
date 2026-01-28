@@ -49,6 +49,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
 
@@ -125,8 +126,9 @@ CELERY_TIMEZONE = TIME_ZONE
 
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
+    "https://pricedexbr.vercel.app"
+#    "http://localhost:5173",
+#    "http://127.0.0.1:5173",
 ]
 
 
