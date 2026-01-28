@@ -42,15 +42,15 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
 
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
+
 
 
 # =========================
@@ -126,10 +126,10 @@ CELERY_TIMEZONE = TIME_ZONE
 
 
 CORS_ALLOWED_ORIGINS = [
-#    "https://pricedexbr.vercel.app"
-    "pokepricebr.onrender.com"
-#    "http://localhost:5173",
-#    "http://127.0.0.1:5173",
+    "https://pokepricebr.onrender.com",
+    "https://pricedexbr.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 
