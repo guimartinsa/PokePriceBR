@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Card } from "../../types/Card";
 import './style.css'
 
@@ -20,7 +21,7 @@ export function CardItem({ card, compact = false }: Props) {
     }
 
     return (
-        <div className={`card-item ${compact ? "compact" : ""}`}>
+        <div className={`card-item ${compact ? "compact" : ""} ${owned ? "owned" : ""}`}>
             <img
                 src={card.imagem || "/placeholder.png"}
                 alt={card.nome}
@@ -34,6 +35,17 @@ export function CardItem({ card, compact = false }: Props) {
                     <div className="price">
                         R$ {card.preco_med}
                     </div>
+                )}
+
+                {!compact && (
+                    <label className="owned-checkbox">
+                        <input
+                            type="checkbox"
+                            checked={owned}
+                            onChange={toggleOwned}
+                        />
+                        <span>Tenho</span>
+                    </label>
                 )}
             </div>
         </div>

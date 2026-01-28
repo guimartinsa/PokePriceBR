@@ -1,2 +1,3 @@
-// TopBar.tsx
-export default function TopBar() {  }
+export default function TopBar() {
+    return null;
+}

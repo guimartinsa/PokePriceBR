@@ -1,2 +1,3 @@
-// TopBar.tsx
-export default function SideDrawer() {  }
+export default function SideDrawer() {
+    return null;
+}

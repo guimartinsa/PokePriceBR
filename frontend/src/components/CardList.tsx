@@ -2,17 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { fetchCards } from "../api/cards";
-import { fetchSets, type SetOption } from "../api/sets";
 import type { Card } from "../types/Card";
-import { CardItem } from "../components/cards/CardItemDetail";
-//import { CardSkeleton } from "./CardSkeleton";
+//import { CardItem } from "./CardItem";
+import { CardItem } from "../components/cards/CardItem";
 import { SetAutocomplete } from "./SetAutocomplete";
 import { CardAutocomplete } from "./CardAutocomplete";
 import { useDebounce } from "../hooks/useDebounce";
 
 import './style.css'
-
-
 
 type Filters = {
   nome: string;
@@ -21,7 +18,7 @@ type Filters = {
 };
 
 export default function CardList() {
-  const [searchParams, {/*setSearchParams*/ }] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const [cards, setCards] = useState<Card[]>([]);
@@ -37,13 +34,6 @@ export default function CardList() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const debounceFilters = useDebounce(filters, 400);
-
-  const [setInput, setSetInput] = useState(filters.set);
-  const debouncedSetInput = useDebounce(setInput, 300);
-
-  const [setOptions, setSetOptions] = useState<SetOption[]>([]);
-  const [showSetOptions, setShowSetOptions] = useState(false);
-
 
   /* ======================
      RESET quando filtro muda
@@ -78,8 +68,7 @@ export default function CardList() {
       })
       .catch(() => setError("Erro ao carregar cartas"))
       .finally(() => setLoading(false));
-  }, [page, debounceFilters]);
-
+  }, [page, debounceFilters, hasMore, loading]);
 
   /* ======================
      INTERSECTION OBSERVER
@@ -104,19 +93,6 @@ export default function CardList() {
     };
   }, [hasMore, loading]);
 
-
-  useEffect(() => {
-    if (debouncedSetInput.length < 2) {
-      setSetOptions([]);
-      return;
-    }
-
-    fetchSets(debouncedSetInput)
-      .then(setSetOptions)
-      .catch(() => setSetOptions([]));
-  }, [debouncedSetInput]);
-
-
   /* ======================
      UI
   ====================== */
@@ -127,12 +103,13 @@ export default function CardList() {
       {/* FILTROS */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <style>
-          .card-grid {"{"}
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-          gap: 16px;
-          {"}"}
-
+          {`
+          .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 16px;
+          }
+          `}
         </style>
         <CardAutocomplete
           value={filters.nome || ""}
@@ -141,22 +118,12 @@ export default function CardList() {
           }
         />
 
-
         <SetAutocomplete
           value={filters.set}
           onChange={(value) =>
             setFilters((f) => ({ ...f, set: value }))
           }
         />
-
-        {/*<input
-          placeholder="Raridade"
-          value={filters.raridade}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, raridade: e.target.value }))
-          }
-        /> 
-        */}
       </div>
 
       {/* LISTA */}
@@ -165,7 +132,6 @@ export default function CardList() {
           <CardItem key={card.id} card={card} />
         ))}
       </div>
-
 
       {error && <p>{error}</p>}
 

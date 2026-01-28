@@ -1,1 +1,3 @@
-export default function BottomBar() { }
+export default function BottomBar() {
+    return null;
+}
