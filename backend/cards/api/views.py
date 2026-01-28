@@ -31,13 +31,18 @@ class CardListView(ListAPIView):
 
     def get_queryset(self):
         qs = Card.objects.select_related("set").filter(ativa=True)
+        
+        # Aceita tanto 'search' quanto 'nome'
         search = self.request.query_params.get("search")
+        nome = self.request.query_params.get("nome")
+        search_term = search or nome
+        
         set_code = self.request.query_params.get("set")
         raridade = self.request.query_params.get("raridade")
         over = self.request.query_params.get("over")
 
-        if search:
-            qs = qs.filter(nome__icontains=search)
+        if search_term:
+            qs = qs.filter(nome__icontains=search_term)
 
         if set_code:
             qs = qs.filter(set__codigo_liga__iexact=set_code)
@@ -50,8 +55,7 @@ class CardListView(ListAPIView):
         elif over == "false":
             qs = qs.filter(numero__lte=models.F("total_set"))
 
-        return qs
-        #return Card.objects.select_related("set").all()
+        return qs.order_by('id')  # Ordem consistente para paginação
 
 class CardDetailView(RetrieveAPIView):
     queryset = Card.objects.select_related("set").filter(ativa=True)
@@ -173,9 +177,6 @@ class ImportCardsFromSetView(APIView):
 
 #----sets-----#
 
-
-
-
 class SetListView(ListAPIView):
     serializer_class = SetSerializer
 
@@ -186,13 +187,13 @@ class SetListView(ListAPIView):
         if search:
             qs = qs.filter(
                 Q(nome__icontains=search) |
-                Q(codigo__icontains=search)
+                Q(codigo_liga__icontains=search)
             )
 
         return qs
 
 class SetDetailView(RetrieveAPIView):
-    queryset = Set.objects.name
+    queryset = Set.objects.all()
     serializer_class = SetSerializer
 
 class SetAutocompleteView(APIView):
@@ -202,9 +203,11 @@ class SetAutocompleteView(APIView):
         qs = Set.objects.all()
 
         if q:
-            qs = qs.filter(nome__icontains=q) | qs.filter(codigo_liga__icontains=q)
+            qs = qs.filter(
+                Q(nome__icontains=q) | Q(codigo_liga__icontains=q)
+            )
 
-        qs = qs.order_by("nome")[:10]  # limite para autocomplete
+        qs = qs.order_by("nome")[:10]
 
         return Response([
             {

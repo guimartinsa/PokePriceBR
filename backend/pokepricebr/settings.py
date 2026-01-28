@@ -13,7 +13,12 @@ SECRET_KEY = 'django-insecure-dev-key'
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'pokepricebr.onrender.com',
+    '.vercel.app',
+]
 
 
 # =========================
@@ -126,11 +131,10 @@ CELERY_TIMEZONE = TIME_ZONE
 
 
 CORS_ALLOWED_ORIGINS = [
-    "https://pokepricebr.onrender.com",
-    "https://pricedexbr.vercel.app",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    ".vercel.app",
+    "https://pokepricebr.onrender.com",
+    "https://pricedexbr.vercel.app",
 ]
 
 
