@@ -1,4 +1,4 @@
-import type { Card } from "../types/Card";
+import type { Card } from "../../types/Card";
 import './style.css'
 
 
@@ -9,8 +9,18 @@ type Props = {
 
 
 export function CardItem({ card, compact = false }: Props) {
+    const [owned, setOwned] = useState(() => {
+        return localStorage.getItem(`owned-${card.id}`) === "1";
+    });
+
+    function toggleOwned() {
+        const next = !owned;
+        setOwned(next);
+        localStorage.setItem(`owned-${card.id}`, next ? "1" : "0");
+    }
+
     return (
-        <div className={`card-item ${compact ? "compact" : ""}`}> 
+        <div className={`card-item ${compact ? "compact" : ""}`}>
             <img
                 src={card.imagem || "/placeholder.png"}
                 alt={card.nome}
@@ -21,9 +31,9 @@ export function CardItem({ card, compact = false }: Props) {
                 <small>{card.set.nome}</small>
 
                 {card.preco_med && (
-                <div className="price">
-                    R$ {card.preco_med}
-                </div>
+                    <div className="price">
+                        R$ {card.preco_med}
+                    </div>
                 )}
             </div>
         </div>

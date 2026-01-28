@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchCards } from "../../api/cards";
 import type { Card } from "../../types/Card";
 //import { CardItem } from "../../components/cards/CardItem";
-import { CardItem } from "../../components/CardItem";
+import { CardItem } from "../../components/cards/CardItemDetail";
 
 import "./home.css";
 

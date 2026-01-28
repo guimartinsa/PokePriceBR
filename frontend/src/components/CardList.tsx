@@ -4,7 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { fetchCards } from "../api/cards";
 import { fetchSets, type SetOption } from "../api/sets";
 import type { Card } from "../types/Card";
-import { CardItem } from "./CardItem";
+import { CardItem } from "../components/cards/CardItemDetail";
 //import { CardSkeleton } from "./CardSkeleton";
 import { SetAutocomplete } from "./SetAutocomplete";
 import { CardAutocomplete } from "./CardAutocomplete";
