@@ -126,7 +126,8 @@ CELERY_TIMEZONE = TIME_ZONE
 
 
 CORS_ALLOWED_ORIGINS = [
-    "https://pricedexbr.vercel.app"
+#    "https://pricedexbr.vercel.app"
+    "pokepricebr.onrender.com"
 #    "http://localhost:5173",
 #    "http://127.0.0.1:5173",
 ]
