@@ -1,4 +1,4 @@
-from rest_framework import serializers
+'''from rest_framework import serializers
 from .models import Carta
 from .services import gerar_link_liga
 
@@ -12,3 +12,4 @@ class CartaSerializer(serializers.ModelSerializer):
 
     def get_link_liga(self, obj):
         return gerar_link_liga(obj)
+'''
