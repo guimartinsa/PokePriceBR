@@ -142,7 +142,7 @@ import { useDebounce } from "../hooks/useDebounce";
 //import "./style.css";
 import "../styles/global.css";
 
-export  function CardList() {
+export default function CardList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 

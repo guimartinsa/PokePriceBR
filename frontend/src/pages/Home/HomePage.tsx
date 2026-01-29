@@ -3,7 +3,7 @@
 import { Hero } from "./Hero";
 import { StatsBar } from "./StatsBar";
 import { RecentCards } from "./RecentCards";
-import {CardList} from "../../components/CardList";
+//import {CardList} from "../../components/CardList";
 import "../../styles/global.css";
 //import "./home.css"
 
@@ -12,7 +12,7 @@ export default function HomePage() {
         <div className="home">
             <Hero />
             <StatsBar />
-            <CardList />
+            <RecentCards />
         </div>
     );
 }

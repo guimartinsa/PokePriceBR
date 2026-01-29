@@ -85,7 +85,8 @@ input:focus {
 .app-content {
     flex: 1;
     overflow-y: auto;
-    padding-bottom: 80px; /* Espaço para o bottom bar */
+    padding-bottom: 80px;
+    /* Espaço para o bottom bar */
 }
 
 /* BOTTOM BAR */
@@ -131,6 +132,16 @@ input:focus {
     align-items: center;
     justify-content: center;
 }
+
+.bottom-bar svg {
+    fill: #666;
+
+}
+
+.bottom-bar button.active svg {
+    fill: #f6c400;
+}
+
 
 /* HOME PAGE */
 .home {
