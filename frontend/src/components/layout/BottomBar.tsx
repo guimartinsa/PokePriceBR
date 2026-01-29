@@ -5,16 +5,15 @@ export default function BottomBar() {
 
     return (
         <nav className="bottom-bar">
-            <button onClick={() => navigate("/")}>Home</button>
-            <button onClick={() => navigate("/cards")}>Cartas</button>
+            <button onClick={() => navigate("/")}>🏠 Home</button>
+            <button onClick={() => navigate("/cards")}>🃏 Cartas</button>
 
             {/* Botão central da câmera */}
-            <button
-                className="scan-button"
-                onClick={() => navigate("/scan")}
-            >
+            <button className="scan-button" onClick={() => navigate("/scan")}>
                 📷
             </button>
+
+            <button onClick={() => navigate("/collection")}>💼 Coleção</button>
         </nav>
     );
 }

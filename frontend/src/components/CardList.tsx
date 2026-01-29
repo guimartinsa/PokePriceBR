@@ -3,13 +3,13 @@ import { useSearchParams } from "react-router-dom";
 
 import { fetchCards } from "../api/cards";
 import type { Card } from "../types/Card";
-//import { CardItem } from "./CardItem";
-import { CardItem } from "../components/cards/CardItem";
+import { CardGrid } from "./cards/CardGrid";
 import { SetAutocomplete } from "./SetAutocomplete";
 import { CardAutocomplete } from "./CardAutocomplete";
 import { useDebounce } from "../hooks/useDebounce";
+import { Loading } from "./Loading";
 
-import './style.css'
+import "./style.css";
 
 type Filters = {
   nome: string;
@@ -101,39 +101,25 @@ export default function CardList() {
       <h1>Cartas</h1>
 
       {/* FILTROS */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <style>
-          {`
-          .card-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 16px;
-          }
-          `}
-        </style>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
         <CardAutocomplete
           value={filters.nome || ""}
-          onSelect={(nome) =>
-            setFilters((f) => ({ ...f, nome }))
-          }
+          onSelect={(nome) => setFilters((f) => ({ ...f, nome }))}
         />
 
         <SetAutocomplete
           value={filters.set}
-          onChange={(value) =>
-            setFilters((f) => ({ ...f, set: value }))
-          }
+          onChange={(value) => setFilters((f) => ({ ...f, set: value }))}
         />
       </div>
 
-      {/* LISTA */}
-      <div className="card-grid">
-        {cards.map((card) => (
-          <CardItem key={card.id} card={card} />
-        ))}
-      </div>
+      {/* LISTA usando CardGrid */}
+      <CardGrid cards={cards} />
 
-      {error && <p>{error}</p>}
+      {error && <p style={{ color: "red", textAlign: "center" }}>{error}</p>}
+
+      {/* LOADING */}
+      {loading && <Loading />}
 
       {/* SENTINELA */}
       {hasMore && <div ref={loadMoreRef} style={{ height: 40 }} />}
