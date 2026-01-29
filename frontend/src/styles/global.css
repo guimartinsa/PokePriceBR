@@ -84,6 +84,7 @@ input:focus {
 
 .app-content {
     flex: 1;
+    overflow-y: auto;
     padding-bottom: 80px; /* Espaço para o bottom bar */
 }
 

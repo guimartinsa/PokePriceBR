@@ -32,28 +32,50 @@ class CardListView(ListAPIView):
     def get_queryset(self):
         qs = Card.objects.select_related("set").filter(ativa=True)
         
-        # Aceita tanto 'search' quanto 'nome'
+        # Busca por nome (aceita 'search' ou 'nome')
         search = self.request.query_params.get("search")
         nome = self.request.query_params.get("nome")
         search_term = search or nome
         
-        set_code = self.request.query_params.get("set")
-        raridade = self.request.query_params.get("raridade")
-        over = self.request.query_params.get("over")
-
         if search_term:
             qs = qs.filter(nome__icontains=search_term)
 
+        # Filtro por set
+        set_code = self.request.query_params.get("set")
         if set_code:
             qs = qs.filter(set__codigo_liga__iexact=set_code)
 
+        # Filtro por raridade
+        raridade = self.request.query_params.get("raridade")
         if raridade:
             qs = qs.filter(raridade__icontains=raridade)
 
+        # Filtro por over-number
+        over = self.request.query_params.get("over")
         if over == "true":
             qs = qs.filter(numero__gt=models.F("total_set"))
         elif over == "false":
             qs = qs.filter(numero__lte=models.F("total_set"))
+
+        # 🆕 NOVO: Filtro por ilustrador
+        ilustrador = self.request.query_params.get("ilustrador")
+        if ilustrador:
+            qs = qs.filter(ilustrador__icontains=ilustrador)
+
+        # 🆕 NOVO: Filtro por número específico
+        numero = self.request.query_params.get("numero")
+        if numero:
+            qs = qs.filter(numero=numero)
+
+        # 🆕 NOVO: Filtro por range de preço
+        preco_min = self.request.query_params.get("preco_min")
+        preco_max = self.request.query_params.get("preco_max")
+        
+        if preco_min:
+            qs = qs.filter(preco_med__gte=preco_min)
+        
+        if preco_max:
+            qs = qs.filter(preco_med__lte=preco_max)
 
         return qs.order_by('id')  # Ordem consistente para paginação
 
@@ -232,3 +254,41 @@ class ImportSetsFromTCGDexView(APIView):
             },
             status=status.HTTP_202_ACCEPTED,
         )
+
+# 🆕 NOVO: Endpoint para listar raridades disponíveis
+class RaridadesListView(APIView):
+    def get(self, request):
+        """
+        Retorna lista única de raridades disponíveis
+        """
+        raridades = (
+            Card.objects
+            .filter(ativa=True, raridade__isnull=False)
+            .exclude(raridade="")
+            .values_list("raridade", flat=True)
+            .distinct()
+            .order_by("raridade")
+        )
+        
+        return Response(list(raridades))
+
+# 🆕 NOVO: Endpoint para listar ilustradores disponíveis
+class IlustradoresAutocompleteView(APIView):
+    def get(self, request):
+        """
+        Autocomplete para ilustradores
+        """
+        q = request.query_params.get("q", "").strip()
+        
+        qs = Card.objects.filter(ativa=True, ilustrador__isnull=False).exclude(ilustrador="")
+        
+        if q:
+            qs = qs.filter(ilustrador__icontains=q)
+        
+        ilustradores = (
+            qs.values_list("ilustrador", flat=True)
+            .distinct()
+            .order_by("ilustrador")[:10]
+        )
+        
+        return Response(list(ilustradores))

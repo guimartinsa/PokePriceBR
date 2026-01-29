@@ -4,6 +4,8 @@ import TopBar  from "./TopBar";
 import SideDrawer  from "./SideDrawer";
 import BottomBar  from "./BottomBar";
 
+import "../../styles/global.css"
+
 export function AppLayout() {
     return (
         <div className="app-shell">

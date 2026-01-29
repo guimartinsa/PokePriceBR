@@ -1,4 +1,4 @@
-import {api} from "./api";
+import { api } from "./api";
 import type { Card } from "../types/Card";
 import type { PaginatedResponse } from "../types/PaginatedResponse";
 
@@ -8,6 +8,11 @@ export interface CardFilters {
   set?: string;
   raridade?: string;
   over?: boolean;
+  // 🆕 NOVOS FILTROS
+  ilustrador?: string;
+  numero?: string;
+  preco_min?: string;
+  preco_max?: string;
 }
 
 export const fetchCards = async (filters: CardFilters) => {
@@ -17,10 +22,9 @@ export const fetchCards = async (filters: CardFilters) => {
     params.over = filters.over ? "true" : "false";
   }
 
-  const response = await api.get<PaginatedResponse<Card>>(
-    "/cards/",
-    { params }
-  );
+  const response = await api.get<PaginatedResponse<Card>>("/cards/", {
+    params,
+  });
 
   return response.data;
 };
