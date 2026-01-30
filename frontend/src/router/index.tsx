@@ -6,7 +6,7 @@ import HomePage from "../pages/Home/HomePage";
 import CardListPage from "../pages/Cards/CardListPage";
 import CardDetailPage from "../pages/CardDetailPage";
 import CollectionPage from "../pages/Collection/CollectionPage";
-import { CameraView } from "../components/camera/camera";
+import { CameraView } from "../components/camera/CameraView";
 
 export default function AppRoutes() {
   return (
