@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-export function useCamera() {
+export function useCamera(videoRef: unknown) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const [error, setError] = useState<string | null>(null);

@@ -69,3 +69,24 @@
     font-size: 14px;
     opacity: 0.85;
 }
+
+.capture-button {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+
+    background: #f6c400;
+    border: 6px solid #fff;
+
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+    font-size: 32px;
+    color: #111;
+
+    z-index: 50;
+}

@@ -16,29 +16,23 @@ export default function BottomBar() {
         <nav className="bottom-bar">
             <button onClick={() => navigate("/")}>
                 <img src={IconHome} alt="" width={45} height={45} />
-                
-
             </button>
 
             <button onClick={() => navigate("/cards")}>
                 <img src={IconeBusca} alt="Buscar" width={45} height={45} />
-                
             </button>
 
             {/* Botão central da câmera */}
             <button className="scan-button" onClick={() => navigate("/scan")}>
                 <img src={IconeCamera} alt="" width={45} height={45} />
-                
             </button>
 
             <button>
                 <img src= {WishlistIcon} alt="" width={45} height={45}/>
-                
             </button>
 
             <button onClick={() => navigate("/collection")}>
                 <img src={IconeColecao} alt="" width={35} height={35}/>
-                
             </button>
         </nav>
     );
