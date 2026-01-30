@@ -1,4 +1,4 @@
-import { useCamera } from "./useCamera";
+//import { useCamera } from "./useCamera";
 import "./camera.css";
 
 import { useEffect, type RefObject } from "react";
