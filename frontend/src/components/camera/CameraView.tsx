@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ScanOverlay } from "./ScanOverlay";
 import { CaptureButton } from "./CaptureButton";
-import { uploadScan } from "../../api/scan";
+//import { uploadScan } from "../../api/scan";
 import "./camera.css";
 
 export function CameraView() {
