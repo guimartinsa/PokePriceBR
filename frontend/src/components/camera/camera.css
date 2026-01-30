@@ -16,6 +16,43 @@
 }
 
 /* ======================
+   TELA DE ERRO
+====================== */
+.camera-error {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1000;
+}
+
+.error-content {
+    text-align: center;
+    color: #fff;
+    max-width: 400px;
+}
+
+.error-content h2 {
+    font-size: 1.5rem;
+    margin-bottom: 16px;
+    color: #f6c400;
+}
+
+.error-content p {
+    margin-bottom: 12px;
+    line-height: 1.6;
+}
+
+.error-hint {
+    font-size: 14px;
+    color: #999;
+    margin-top: 20px;
+}
+
+/* ======================
    OVERLAY DE SCAN
 ====================== */
 .scan-overlay {
@@ -159,8 +196,40 @@
         0 0 0 2px rgba(246, 196, 0, 0.2);
 }
 
-.capture-button:hover {
+.capture-button:hover:not(:disabled) {
     background: #ffd500;
+}
+
+.capture-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ======================
+   INDICADOR DE CAPTURA
+====================== */
+.capturing-indicator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: #f6c400;
+    padding: 16px 32px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 18px;
+    z-index: 1002;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.8;
+    }
+    50% {
+        opacity: 1;
+    }
 }
 
 /* ======================
@@ -183,6 +252,14 @@
         font-size: 14px;
         margin-top: 20px;
     }
+
+    .error-content h2 {
+        font-size: 1.2rem;
+    }
+
+    .error-content {
+        padding: 20px;
+    }
 }
 
 /* ======================
@@ -197,5 +274,9 @@
     .scan-text {
         margin-top: 16px;
         font-size: 14px;
+    }
+
+    .capture-button {
+        bottom: 20px;
     }
 }
