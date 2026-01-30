@@ -1,3 +1,5 @@
+import "./camera.css";
+
 type Props = {
     onCapture: () => void;
 };

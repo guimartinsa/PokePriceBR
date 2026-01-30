@@ -1,8 +1,12 @@
+/* ======================
+   CONTAINER DA CÂMERA
+====================== */
 .camera-container {
     position: fixed;
     inset: 0;
-    background: black;
+    background: #000;
     overflow: hidden;
+    z-index: 1000;
 }
 
 .camera-video {
@@ -11,82 +15,187 @@
     object-fit: cover;
 }
 
+/* ======================
+   OVERLAY DE SCAN
+====================== */
 .scan-overlay {
     position: absolute;
     inset: 0;
     pointer-events: none;
-
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    background: radial-gradient(
+        ellipse at center,
+        transparent 30%,
+        rgba(0, 0, 0, 0.5) 100%
+    );
 }
 
+/* ======================
+   FRAME DE CAPTURA
+====================== */
 .scan-frame {
     width: 70%;
     max-width: 280px;
-    aspect-ratio: 63 / 88;
-    /* proporção carta Pokémon */
-
-    border: 2px solid rgba(255, 255, 255, 0.7);
-    border-radius: 12px;
-
+    aspect-ratio: 63 / 88; /* proporção carta Pokémon */
+    border: 3px solid rgba(246, 196, 0, 0.8);
+    border-radius: 16px;
     position: relative;
     overflow: hidden;
+    box-shadow: 
+        0 0 0 2px rgba(255, 255, 255, 0.3),
+        0 0 30px rgba(246, 196, 0, 0.4);
 }
 
+/* Cantos do frame */
+.scan-frame::before,
+.scan-frame::after {
+    content: "";
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f6c400;
+}
+
+.scan-frame::before {
+    top: -3px;
+    left: -3px;
+    border-right: none;
+    border-bottom: none;
+}
+
+.scan-frame::after {
+    top: -3px;
+    right: -3px;
+    border-left: none;
+    border-bottom: none;
+}
+
+/* ======================
+   LINHA DE SCAN
+====================== */
 .scan-line {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-
     height: 3px;
-    background: #f6c400;
-
+    background: linear-gradient(
+        90deg,
+        transparent,
+        #f6c400,
+        transparent
+    );
+    box-shadow: 0 0 10px #f6c400;
     animation: scan 2s linear infinite;
 }
 
 @keyframes scan {
     0% {
         top: 0;
-        opacity: 0.2;
+        opacity: 0.3;
     }
-
     50% {
         opacity: 1;
     }
-
     100% {
         top: 100%;
-        opacity: 0.2;
+        opacity: 0.3;
     }
 }
 
+/* ======================
+   TEXTO DE INSTRUÇÃO
+====================== */
 .scan-text {
-    margin-top: 16px;
+    margin-top: 24px;
     color: #fff;
-    font-size: 14px;
-    opacity: 0.85;
+    font-size: 16px;
+    font-weight: 500;
+    opacity: 0.9;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    animation: pulse-text 2s ease-in-out infinite;
 }
 
+@keyframes pulse-text {
+    0%, 100% {
+        opacity: 0.7;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* ======================
+   BOTÃO DE CAPTURA
+====================== */
 .capture-button {
     position: fixed;
-    bottom: 24px;
+    bottom: 32px;
     left: 50%;
     transform: translateX(-50%);
-
     width: 72px;
     height: 72px;
     border-radius: 50%;
-
     background: #f6c400;
     border: 6px solid #fff;
-
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-
+    box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.4),
+        0 0 0 2px rgba(246, 196, 0, 0.2);
     font-size: 32px;
     color: #111;
+    cursor: pointer;
+    z-index: 1001;
+    transition: all 0.2s ease;
+    pointer-events: auto;
+}
 
-    z-index: 50;
+.capture-button:active {
+    transform: translateX(-50%) scale(0.95);
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.3),
+        0 0 0 2px rgba(246, 196, 0, 0.2);
+}
+
+.capture-button:hover {
+    background: #ffd500;
+}
+
+/* ======================
+   RESPONSIVIDADE
+====================== */
+@media (max-width: 480px) {
+    .scan-frame {
+        width: 80%;
+        max-width: 240px;
+    }
+
+    .capture-button {
+        width: 64px;
+        height: 64px;
+        bottom: 24px;
+        font-size: 28px;
+    }
+
+    .scan-text {
+        font-size: 14px;
+        margin-top: 20px;
+    }
+}
+
+/* ======================
+   MODO PAISAGEM
+====================== */
+@media (orientation: landscape) {
+    .scan-frame {
+        max-height: 60vh;
+        width: auto;
+    }
+
+    .scan-text {
+        margin-top: 16px;
+        font-size: 14px;
+    }
 }

@@ -7,7 +7,7 @@ export function ScanOverlay() {
                 <div className="scan-line" />
             </div>
 
-            <p className="scan-text">Centralize a carta</p>
+            <p className="scan-text">Centralize a carta no quadro</p>
         </div>
     );
 }
