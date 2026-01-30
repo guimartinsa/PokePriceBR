@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-export function useCamera(videoRef: unknown) {
-    const videoRef = useRef<HTMLVideoElement | null>(null);
+export function useCamera(videoRef: React.RefObject<HTMLVideoElement>) {
     const streamRef = useRef<MediaStream | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +29,7 @@ export function useCamera(videoRef: unknown) {
         return () => {
             streamRef.current?.getTracks().forEach((t) => t.stop());
         };
-    }, []);
+    }, [videoRef]);
 
-    return { videoRef, error };
+    return { error };
 }

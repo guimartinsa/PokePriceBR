@@ -11,10 +11,14 @@ export default function ScanPage() {
     async function handleCapture() {
         if (!videoRef.current) return;
 
-        const blob = await captureFrame(videoRef.current);
-        await uploadScan(blob);
-
-        alert("Imagem enviada!");
+        try {
+            const blob = await captureFrame(videoRef.current);
+            await uploadScan(blob);
+            alert("Imagem enviada com sucesso!");
+        } catch (error) {
+            console.error("Erro ao capturar/enviar imagem:", error);
+            alert("Erro ao enviar imagem. Tente novamente.");
+        }
     }
 
     return (
