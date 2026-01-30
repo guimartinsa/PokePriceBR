@@ -3,10 +3,10 @@ import IconeBusca from "../../assets/icons/busca-icon.svg";
 import IconeCamera from "../../assets/icons/camera-pokemon.svg"; 
 import IconeColecao from "../../assets/icons/colecaoicon.svg";
 import IconHome from "../../assets/icons/home-icon.svg";
-import PocketIcon from "../../assets/icons/poket9-logo.svg"
+import WishlistIcon from "../../assets/icons/wishlist-icon.svg";
 
 
-import "../../styles/global.css"
+import "../../styles/global.css";
 
 
 export default function BottomBar() {
@@ -15,13 +15,13 @@ export default function BottomBar() {
     return (
         <nav className="bottom-bar">
             <button onClick={() => navigate("/")}>
-                <img src={IconHome} alt="" width={35} height={35} />
+                <img src={IconHome} alt="" width={45} height={45} />
                 
 
             </button>
 
             <button onClick={() => navigate("/cards")}>
-                <img src={IconeBusca} alt="Buscar" width={35} height={35} />
+                <img src={IconeBusca} alt="Buscar" width={45} height={45} />
                 
             </button>
 
@@ -32,7 +32,7 @@ export default function BottomBar() {
             </button>
 
             <button>
-                <img src= {PocketIcon} alt="" width={35} height={35}/>
+                <img src= {WishlistIcon} alt="" width={45} height={45}/>
                 
             </button>
 
