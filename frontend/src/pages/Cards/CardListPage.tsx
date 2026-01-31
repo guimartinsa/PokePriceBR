@@ -56,7 +56,7 @@ export default function CardListPage() {
     ====================== */
     useEffect(() => {
         setCards([]);
-        //setPage(1);
+        setPage(1);
         setHasMore(true);
     }, [debounceFilters]);
 
