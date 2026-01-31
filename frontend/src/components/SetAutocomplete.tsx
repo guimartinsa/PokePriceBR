@@ -44,7 +44,7 @@ export function SetAutocomplete({ value, onChange }: Props) {
             top: "100%",
             left: 0,
             right: 0,
-            background: "#fff",
+            background: "#0b111a",
             border: "1px solid #ddd",
             borderRadius: 6,
             listStyle: "none",

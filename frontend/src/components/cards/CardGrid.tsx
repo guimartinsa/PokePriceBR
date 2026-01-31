@@ -18,8 +18,12 @@ export function CardGrid({ cards, compact = false }: Props) {
     return (
         <div className="card-grid">
             {cards.map((card) => (
-                <CardItem key={card.id} card={card} compact={compact} />
+                <CardItem key={`${card.id}-${card.set}-${card.numero}`}
+                    card={card}
+                    compact={compact}
+                />
             ))}
         </div>
     );
 }
+

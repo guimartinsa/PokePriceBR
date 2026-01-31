@@ -1,4 +1,4 @@
-/*usar para mostar somente a carta, sem informçoes*/ 
+/*usar para mostar somente a carta, sem informçoes 
 
 import type { Card } from "../../types/Card";
 import "./style.css"
@@ -25,3 +25,4 @@ export function CardItem({ card, compact }: Props) {
         </div>
     );
 }
+*/
