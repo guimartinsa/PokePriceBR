@@ -11,6 +11,8 @@ import { useDebounce } from "../../hooks/useDebounce";
 export default function CardListPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const loadMoreRef = useRef<HTMLDivElement | null>(null);
+    const isFetchingRef = useRef(false);
+
 
     const [cards, setCards] = useState<Card[]>([]);
     const [page, setPage] = useState(1);
@@ -62,7 +64,7 @@ export default function CardListPage() {
        FETCH
     ====================== */
     useEffect(() => {
-        if (!hasMore || loading) return;
+        if (!hasMore || isFetchingRef.current) return;
 
         setLoading(true);
         setError(null);
@@ -86,7 +88,7 @@ export default function CardListPage() {
             })
             .catch(() => setError("Erro ao carregar cartas"))
             .finally(() => setLoading(false));
-    }, [page, debounceFilters, hasMore, loading]);
+    }, [page, debounceFilters]);
 
     /* ======================
        INTERSECTION OBSERVER
