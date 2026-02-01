@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchMe, logout as logoutService, type AuthUser } from "../services/auth";
+import {
+    fetchMe,
+    logout as logoutService,
+    type AuthUser,
+} from "../services/auth";
 
 export function useAuth() {
     const [user, setUser] = useState<AuthUser | null>(null);
@@ -10,7 +14,6 @@ export function useAuth() {
             const data = await fetchMe();
             setUser(data);
         } catch {
-            // erro de rede ou inesperado -> trata como não logado
             setUser(null);
         } finally {
             setLoading(false);
@@ -26,5 +29,11 @@ export function useAuth() {
         setUser(null);
     }, []);
 
-    return { user, loading, isAuthenticated: !!user, logout };
+    return {
+        user,
+        loading,
+        isAuthenticated: !!user,
+        logout,
+        refreshUser: checkAuth, // ✅ ESSENCIAL
+    };
 }

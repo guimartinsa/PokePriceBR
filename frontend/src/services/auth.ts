@@ -1,9 +1,11 @@
 import { api } from "../api/api";
 
-export interface AuthUser {
+export type AuthUser = {
     email: string;
     name: string;
-}
+    avatar?: string ;
+};
+
 
 /**
  * Busca dados do usuário autenticado via /me/

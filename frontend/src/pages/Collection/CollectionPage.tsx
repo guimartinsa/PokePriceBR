@@ -5,6 +5,7 @@ import { CardGrid } from "../../components/cards/CardGrid";
 import { Loading } from "../../components/Loading";
 import { Section } from "../../components/ui/Section";
 import { StatBlock } from "../../components/ui/StatBlock";
+import { fetchUserCollection } from "../../services/collection";
 
 export default function CollectionPage() {
     const [collection, setCollection] = useState<Card[]>([]);
@@ -21,33 +22,44 @@ export default function CollectionPage() {
 
     async function loadCollection() {
         try {
-            // Buscar IDs das cartas marcadas como "owned" no localStorage
-            const ownedIds = Object.keys(localStorage)
-                .filter((key) => key.startsWith("owned-") && localStorage.getItem(key) === "1")
-                .map((key) => key.replace("owned-", ""));
+            // 1️⃣ Buscar coleção do backend
+            const userCards = await fetchUserCollection();
 
-            if (ownedIds.length === 0) {
-                setLoading(false);
+            if (userCards.length === 0) {
+                setCollection([]);
+                setStats({ total: 0, unique: 0, totalValue: 0 });
                 return;
             }
 
-            // Buscar informações das cartas da API
-            const promises = ownedIds.map((id) =>
-                api.get<Card>(`/cards/${id}/`).then((res) => res.data)
+            // 2️⃣ Buscar dados completos das cartas
+            const cardPromises = userCards.map((item) =>
+                api.get<Card>(`/cards/${item.card_id}/`).then((res) => res.data)
             );
 
-            const cards = await Promise.all(promises);
-            setCollection(cards);
+            const cards = await Promise.all(cardPromises);
 
-            // Calcular estatísticas
-            const uniqueCards = new Set(cards.map((c) => c.id)).size;
-            const totalValue = cards.reduce((sum, card) => {
+            // 3️⃣ Expandir quantidade (ex: quantity = 2 → carta duplicada)
+            const expandedCards: Card[] = [];
+
+            userCards.forEach((item) => {
+                const card = cards.find((c) => c.id === item.card_id);
+                if (!card) return;
+
+
+            });
+
+            setCollection(expandedCards);
+
+            // 4️⃣ Estatísticas
+            const uniqueCards = new Set(userCards.map((c) => c.card_id)).size;
+
+            const totalValue = expandedCards.reduce((sum, card) => {
                 const price = parseFloat(card.preco_med || "0");
                 return sum + price;
             }, 0);
 
             setStats({
-                total: cards.length,
+                total: expandedCards.length,
                 unique: uniqueCards,
                 totalValue,
             });
@@ -84,14 +96,11 @@ export default function CollectionPage() {
                 />
             </div>
 
-            {/* Lista de Cartas */}
+            {/* Lista */}
             <Section title="Suas Cartas">
                 {collection.length === 0 ? (
                     <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
                         <p>Você ainda não possui cartas na sua coleção.</p>
-                        <p style={{ marginTop: "8px" }}>
-                            Marque cartas como "Tenho" para adicioná-las aqui!
-                        </p>
                     </div>
                 ) : (
                     <CardGrid cards={collection} />
