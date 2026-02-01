@@ -11,6 +11,8 @@ ReactDOM.createRoot(
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <BrowserRouter>
         <App />
+        console.log("GOOGLE:", import.meta.env.VITE_GOOGLE_CLIENT_ID);
+        console.log("API:", import.meta.env.VITE_API_URL);
       </BrowserRouter>
     </GoogleOAuthProvider>
   </React.StrictMode>

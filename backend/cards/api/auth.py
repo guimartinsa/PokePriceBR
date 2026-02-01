@@ -1,15 +1,12 @@
-
-#Parte de usuarios
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from django.contrib.auth import get_user_model
-from rest_framework.decorators import api_view
-from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
+from django.conf import settings
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
 
@@ -24,18 +21,26 @@ def google_login(request):
         idinfo = id_token.verify_oauth2_token(
             token,
             requests.Request(),
-            "SEU_GOOGLE_CLIENT_ID"
+            settings.GOOGLE_CLIENT_ID,
+            clock_skew_in_seconds=10,  # 🛡️ tolerância de tempo
         )
-    except ValueError:
+    except ValueError as e:
+        print("GOOGLE TOKEN ERROR:", e)
         return Response({"error": "Token inválido"}, status=401)
 
-    email = idinfo["email"]
+    email = idinfo.get("email")
     name = idinfo.get("name", "")
     picture = idinfo.get("picture", "")
 
-    user, created = User.objects.get_or_create(
+    if not email:
+        return Response({"error": "Email não encontrado"}, status=400)
+
+    user, _ = User.objects.get_or_create(
         email=email,
-        defaults={"username": email, "first_name": name}
+        defaults={
+            "username": email,
+            "first_name": name,
+        },
     )
 
     refresh = RefreshToken.for_user(user)
@@ -45,10 +50,11 @@ def google_login(request):
         "refresh": str(refresh),
         "user": {
             "email": user.email,
-            "name": name,
-            "avatar": picture
-        }
+            "name": user.first_name,
+            "avatar": picture,
+        },
     })
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])

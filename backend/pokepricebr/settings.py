@@ -1,4 +1,7 @@
 from pathlib import Path
+import os
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 # =========================
 # BASE
@@ -146,6 +149,9 @@ CSRF_TRUSTED_ORIGINS = [
 
 
 REST_FRAMEWORK = {
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PAGINATION_CLASS":(
+        "rest_framework.pagination.PageNumberPagination",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
     "PAGE_SIZE": 20,
 }

@@ -10,6 +10,7 @@ export default function LoginButton({ onLogin }: Props) {
     return (
         <GoogleLogin
             onSuccess={async (res) => {
+                console.log("CREDENTIAL:", res.credential);
                 if (!res.credential) return;
 
                 try {
