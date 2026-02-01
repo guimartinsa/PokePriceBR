@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from cards.models import Card, Set
 from cards.models import CardAdminLog
+from cards.models import UserCard, Profile
 
 
 class SetSerializer(serializers.ModelSerializer):
@@ -43,4 +44,18 @@ class CardAdminLogSerializer(serializers.ModelSerializer):
         model = CardAdminLog
         fields = ["id", "action", "user", "created_at", "note"]
 
+#users
+class ProfileSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email", read_only=True)
+    name = serializers.CharField(source="user.first_name", read_only=True)
 
+    class Meta:
+        model = Profile
+        fields = ["email", "name", "avatar", "bio"]
+
+
+class UserCardSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserCard
+        fields = "__all__"
+        read_only_fields = ["user"]

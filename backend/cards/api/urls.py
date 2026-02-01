@@ -1,4 +1,7 @@
 from django.urls import path
+
+from cards.api.collection import collection_view
+from cards.api.profile import profile_view
 from .views import (
     CardListView,
     CardDetailView,
@@ -49,4 +52,7 @@ urlpatterns = [
     #users
     path("auth/google/", google_login),
     path("me/", me, name="me"),
+    path("profile/", profile_view),
+    path("collection/", collection_view),
+
 ]

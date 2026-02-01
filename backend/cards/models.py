@@ -112,8 +112,8 @@ class Card(models.Model):
         if not self.liga_url:
             try:
                 self.liga_url = gerar_liga_url(self)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[WARN] Falha ao gerar liga_url para card {self.id}: {e}")
 
         super().save(*args, **kwargs)
 
@@ -158,5 +158,51 @@ class CardAdminLog(models.Model):
 
 
 ##-----------##-------------##
-##---------TCG_DEX----------##
+##---------user----------##
 ##-----------##-------------##
+
+#user_profile
+User = settings.AUTH_USER_MODEL
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    avatar = models.URLField(blank=True, null=True)
+    bio = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.user.email
+
+#user card
+class UserCard(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="collection",
+    )
+
+    card = models.ForeignKey(
+        Card,
+        on_delete=models.CASCADE,
+        related_name="owners",
+    )
+
+    quantity = models.PositiveIntegerField(default=1)
+
+    is_favorite = models.BooleanField(default=False)
+
+    foil_type = models.CharField(
+        max_length=30,
+        blank=True,
+        null=True,
+        help_text="Ex: normal, foil, reverse, master, pokeball",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # 🔧 ALTERAÇÃO: impede duplicar a mesma carta para o mesmo usuário
+        unique_together = ("user", "card", "foil_type")
+
+    def __str__(self):
+        return f"{self.user} - {self.card} ({self.foil_type})"
