@@ -2,3 +2,4 @@ venv/
 __pycache__/
 1.txt
 .env
+*.sqlite3
