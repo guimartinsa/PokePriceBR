@@ -1,20 +1,23 @@
 from pathlib import Path
 import os
 
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-
+from dotenv import load_dotenv
 # =========================
 # BASE
 # =========================
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 
-
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 # =========================
 # SEGURANÇA / DEV
 # =========================
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
-DEBUG = True
+if not SECRET_KEY:
+    raise RuntimeError("DJANGO_SECRET_KEY não definida")
+
+#DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = [
     'localhost',
@@ -110,7 +113,10 @@ USE_TZ = True
 # =========================
 # STATIC FILES
 # =========================
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+#STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+#STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # =========================
