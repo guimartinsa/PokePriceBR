@@ -1,24 +1,25 @@
 import { GoogleLogin } from "@react-oauth/google";
+import { loginWithGoogle } from "../../services/auth";
+import type { AuthUser } from "../../services/auth";
 
-const API_URL = import.meta.env.VITE_API_URL;
+type Props = {
+    onLogin?: (user: AuthUser) => void;
+};
 
-
-export default function LoginButton()  {
+export default function LoginButton({ onLogin }: Props) {
     return (
         <GoogleLogin
             onSuccess={async (res) => {
-                const token = res.credential;
+                if (!res.credential) return;
 
-                const r = await fetch(`${API_URL}/auth/google/`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ token }),
-                });
-
-                const data = await r.json();
-                localStorage.setItem("access", data.access);
+                try {
+                    const user = await loginWithGoogle(res.credential);
+                    onLogin?.(user);
+                } catch {
+                    alert("Erro ao fazer login. Tente novamente.");
+                }
             }}
-            onError={() => alert("Erro no login")}
+            onError={() => alert("Erro no login com Google")}
         />
     );
 }

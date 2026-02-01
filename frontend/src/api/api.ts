@@ -12,6 +12,15 @@ export const api = axios.create({
   }
 });
 
+// Interceptor de REQUEST: injeta Bearer token se existir
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("access");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Log de erros em dev
 if (!import.meta.env.PROD) {
   api.interceptors.response.use(
