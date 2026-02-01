@@ -16,6 +16,11 @@ from .views import (
     IlustradoresAutocompleteView,  # 🆕 NOVO
 )
 
+from .auth import (
+    google_login,
+    me,
+)
+
 urlpatterns = [
     path("cards/", CardListView.as_view(), name="card-list"),
     path("cards/<int:pk>/", CardDetailView.as_view(), name="card-detail"),
@@ -41,4 +46,7 @@ urlpatterns = [
     ),
     path("sets/<int:pk>/", SetDetailView.as_view(), name="set-detail"),
     path("sets/autocomplete/", SetAutocompleteView.as_view(), name="set-autocomplete"),
+    #users
+    path("auth/google/", google_login),
+    path("me/", me, name="me"),
 ]

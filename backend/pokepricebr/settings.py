@@ -137,6 +137,13 @@ CORS_ALLOWED_ORIGINS = [
     "https://pricedexbr.vercel.app",
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://pokepricebr.onrender.com",
+    "https://pricedexbr.vercel.app",
+]
+
 
 REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",

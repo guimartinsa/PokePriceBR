@@ -292,3 +292,4 @@ class IlustradoresAutocompleteView(APIView):
         )
         
         return Response(list(ilustradores))
+    
