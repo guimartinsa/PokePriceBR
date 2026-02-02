@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchCards } from "../../api/cards";
 import type { Card } from "../../types/Card";
 //import { CardItem } from "../../components/cards/CardItem";
-import { CardItem } from "../../components/cards/CardItemDetail";
+import { CardItemDetail } from "../../components/cards/CardItemDetail";
 
 import "./home.css";
 
@@ -31,7 +31,7 @@ export function RecentCards() {
 
             <div className="recent-cards-grid">
                 {cards.map((card) => (
-                    <CardItem key={card.id} card={card} compact />
+                    <CardItemDetail key={card.id} card={card} compact />
                 ))}
             </div>
 

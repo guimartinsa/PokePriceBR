@@ -1,15 +1,31 @@
 import { useEffect, useState } from "react";
-import api  from "../../api/api";
+import api from "../../api/api";
 import type { Card } from "../../types/Card";
 import { CardGrid } from "../../components/cards/CardGrid";
+import { CardItemDetail } from "../../components/cards/CardItemDetail";
 import { Loading } from "../../components/Loading";
 import { Section } from "../../components/ui/Section";
 import { StatBlock } from "../../components/ui/StatBlock";
-import { fetchUserCollection } from "../../services/collection";
+import {
+    fetchUserCollection,
+    toggleCollectionCard,
+} from "../../services/collection";
+import type { UserCard } from "../../services/collection";
+import { useParams } from "react-router-dom";
+
+/* 🔹 Tipo local: carta + owned */
+type CardWithOwned = Card & {
+    owned: boolean;
+};
 
 export default function CollectionPage() {
-    const [collection, setCollection] = useState<Card[]>([]);
+    /* ✅ Hook no lugar certo */
+    const { id } = useParams();
+    const collectionId = Number(id);
+
+    const [collection, setCollection] = useState<CardWithOwned[]>([]);
     const [loading, setLoading] = useState(true);
+
     const [stats, setStats] = useState({
         total: 0,
         unique: 0,
@@ -18,12 +34,15 @@ export default function CollectionPage() {
 
     useEffect(() => {
         loadCollection();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     async function loadCollection() {
+        setLoading(true);
+
         try {
-            // 1️⃣ Buscar coleção do backend
-            const userCards = await fetchUserCollection();
+            /* 1️⃣ Buscar coleção do backend */
+            const userCards: UserCard[] = await fetchUserCollection();
 
             if (userCards.length === 0) {
                 setCollection([]);
@@ -31,35 +50,40 @@ export default function CollectionPage() {
                 return;
             }
 
-            // 2️⃣ Buscar dados completos das cartas
+            /* 2️⃣ Buscar dados completos das cartas */
             const cardPromises = userCards.map((item) =>
                 api.get<Card>(`/cards/${item.card_id}/`).then((res) => res.data)
             );
 
             const cards = await Promise.all(cardPromises);
 
-            // 3️⃣ Expandir quantidade (ex: quantity = 2 → carta duplicada)
-            const expandedCards: Card[] = [];
+            /* 3️⃣ Combinar carta + owned */
+            const combinedCards: CardWithOwned[] = userCards
+                .map((item) => {
+                    const card = cards.find((c) => c.id === item.card_id);
+                    if (!card) return null;
 
-            userCards.forEach((item) => {
-                const card = cards.find((c) => c.id === item.card_id);
-                if (!card) return;
+                    return {
+                        ...card,
+                        owned: item.owned,
+                    };
+                })
+                .filter((c): c is CardWithOwned => Boolean(c));
 
+            setCollection(combinedCards);
 
-            });
+            /* 4️⃣ Estatísticas */
+            const uniqueCards = new Set(
+                combinedCards.map((c) => c.id)
+            ).size;
 
-            setCollection(expandedCards);
-
-            // 4️⃣ Estatísticas
-            const uniqueCards = new Set(userCards.map((c) => c.card_id)).size;
-
-            const totalValue = expandedCards.reduce((sum, card) => {
+            const totalValue = combinedCards.reduce((sum, card) => {
                 const price = parseFloat(card.preco_med || "0");
                 return sum + price;
             }, 0);
 
             setStats({
-                total: expandedCards.length,
+                total: combinedCards.length,
                 unique: uniqueCards,
                 totalValue,
             });
@@ -76,7 +100,7 @@ export default function CollectionPage() {
         <div style={{ padding: "20px" }}>
             <h1>Minha Coleção</h1>
 
-            {/* Estatísticas */}
+            {/* 📊 Estatísticas */}
             <div
                 style={{
                     display: "grid",
@@ -96,14 +120,40 @@ export default function CollectionPage() {
                 />
             </div>
 
-            {/* Lista */}
+            {/* 🃏 Lista de cartas */}
             <Section title="Suas Cartas">
                 {collection.length === 0 ? (
                     <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
-                        <p>Você ainda não possui cartas na sua coleção.</p>
+                        <p>Você ainda não possui cartas nesta coleção.</p>
                     </div>
                 ) : (
-                    <CardGrid cards={collection} />
+                    <CardGrid
+                        cards={collection}
+                        renderItem={(card) => (
+                            <CardItemDetail
+                                key={card.id}
+                                card={card}
+                                owned={card.owned}
+                                onToggleOwned={(value) => {
+                                    /* ✅ UI otimista */
+                                    setCollection((prev) =>
+                                        prev.map((c) =>
+                                            c.id === card.id
+                                                ? { ...c, owned: value }
+                                                : c
+                                        )
+                                    );
+
+                                    /* ✅ Backend */
+                                    toggleCollectionCard(
+                                        collectionId,
+                                        card.id,
+                                        value
+                                    );
+                                }}
+                            />
+                        )}
+                    />
                 )}
             </Section>
         </div>
