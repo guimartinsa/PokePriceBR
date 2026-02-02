@@ -1,39 +1,15 @@
-/*
-import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { api } from "../api/api";
-import type { Card } from "../types/Card";
-
-export default function CardDetailPage() {
-    const { id } = useParams();
-    const [card, setCard] = useState<Card | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        api.get(`/cards/${id}/`)
-            .then(res => setCard(res.data))
-            .finally(() => setLoading(false));
-    }, [id]);
-
-    if (loading) return <div>Carregando...</div>;
-    if (!card) return <div>Carta não encontrada</div>;
-
-    return (
-        <div>
-            <h1>{card.nome}</h1>
-            <img src={card.imagem || undefined} alt={card.nome} />
-            {}
-        </div>
-    );
-}
-*/
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { api } from "../api/api";
 import type { Card } from "../types/Card";
 import { Loading } from "../components/Loading";
 import { Button } from "../components/ui/Button";
+import {
+    fetchCollections,
+    addCardToCollection,
+    type Collection,
+} from "../services/collection";
+
 
 export default function CardDetailPage() {
     const { id } = useParams();
@@ -41,9 +17,18 @@ export default function CardDetailPage() {
     const [card, setCard] = useState<Card | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [collections, setCollections] = useState<Collection[]>([]);
+    const [showCollections, setShowCollections] = useState(false);
+
 
     useEffect(() => {
         if (!id) return;
+        useEffect(() => {
+            fetchCollections()
+                .then(setCollections)
+                .catch(console.error);
+        }, []);
+
 
         api
             .get<Card>(`/cards/${id}/`)
@@ -87,6 +72,56 @@ export default function CardDetailPage() {
                         }}
                     />
                 </div>
+
+                <div style={{ marginBottom: 16 }}>
+                    <button
+                        onClick={() => setShowCollections((v) => !v)}
+                        style={{
+                            padding: "8px 12px",
+                            borderRadius: 8,
+                            border: "none",
+                            background: "#4caf50",
+                            color: "#fff",
+                            cursor: "pointer",
+                        }}
+                    >
+                        ➕ Adicionar à coleção
+                    </button>
+
+                    {showCollections && (
+                        <div
+                            style={{
+                                marginTop: 8,
+                                background: "#1e1e1e",
+                                borderRadius: 8,
+                                padding: 8,
+                                display: "grid",
+                                gap: 6,
+                            }}
+                        >
+                            {collections.map((col) => (
+                                <button
+                                    key={col.id}
+                                    onClick={() => {
+                                        addCardToCollection(col.id, card.id);
+                                        setShowCollections(false);
+                                    }}
+                                    style={{
+                                        background: "transparent",
+                                        border: "none",
+                                        color: "#fff",
+                                        textAlign: "left",
+                                        cursor: "pointer",
+                                        padding: "6px 8px",
+                                    }}
+                                >
+                                    {col.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
 
                 {/* Informações */}
                 <div>

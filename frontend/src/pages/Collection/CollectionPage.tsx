@@ -8,6 +8,8 @@ import type { Card } from "../../types/Card";
 import { Loading } from "../../components/Loading";
 import { Section } from "../../components/ui/Section";
 import { StatBlock } from "../../components/ui/StatBlock";
+import { SearchFilters, type SearchFiltersState } from "../../components/filters/Searchfilters";
+
 
 import {
     fetchCollectionCards,
@@ -35,6 +37,42 @@ export default function CollectionPage() {
         unique: 0,
         totalValue: 0,
     });
+
+    const [filters, setFilters] = useState<SearchFiltersState>({
+        nome: "",
+        set: "",
+        raridade: "",
+        ilustrador: "",
+        over: null,
+        preco_min: "",
+        preco_max: "",
+    });
+
+    const filteredCollection = collection.filter((card) => {
+        if (filters.nome && !card.nome.toLowerCase().includes(filters.nome.toLowerCase())) {
+            return false;
+        }
+
+        if (filters.raridade && card.raridade !== filters.raridade) {
+            return false;
+        }
+
+        /*if (filters.ilustrador && card.ilustrador !== filters.ilustrador) {
+            return false;
+        }*/
+
+        if (filters.preco_min && Number(card.preco_med) < Number(filters.preco_min)) {
+            return false;
+        }
+
+        if (filters.preco_max && Number(card.preco_med) > Number(filters.preco_max)) {
+            return false;
+        }
+
+        return true;
+    });
+
+
 
     /* 🔹 Effect */
     useEffect(() => {
@@ -110,6 +148,8 @@ export default function CollectionPage() {
         );
     }
 
+
+
     /* 🔹 UI */
     return (
         <div style={{ padding: "20px" }}>
@@ -136,14 +176,14 @@ export default function CollectionPage() {
             </div>
 
             {/* 🃏 Lista */}
+            <SearchFilters filters={filters} onChange={setFilters} />
+
             <Section title="Suas Cartas">
-                {collection.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
-                        <p>Você ainda não possui cartas nesta coleção.</p>
-                    </div>
+                {filteredCollection.length === 0 ? (
+                    <p style={{ color: "#999" }}>Nenhuma carta corresponde aos filtros.</p>
                 ) : (
                     <div className="card-grid">
-                        {collection.map((card) => (
+                        {filteredCollection.map((card) => (
                             <CardItemDetail
                                 key={card.id}
                                 card={card}
@@ -161,6 +201,7 @@ export default function CollectionPage() {
                     </div>
                 )}
             </Section>
+
         </div>
     );
 }

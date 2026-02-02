@@ -61,3 +61,13 @@ export async function toggleCollectionCard(
         owned,
     });
 }
+
+export async function addCardToCollection(
+    collectionId: number,
+    cardId: number
+): Promise<void> {
+    await api.post(`/collections/${collectionId}/cards/`, {
+        card_id: cardId,
+        owned: false,
+    });
+}
