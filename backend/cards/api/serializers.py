@@ -2,6 +2,8 @@ from rest_framework import serializers
 from cards.models import Card, Set
 from cards.models import CardAdminLog
 from cards.models import UserCard, Profile
+from cards.models import Collection, CollectionCard
+
 
 
 class SetSerializer(serializers.ModelSerializer):
@@ -59,3 +61,18 @@ class UserCardSerializer(serializers.ModelSerializer):
         model = UserCard
         fields = "__all__"
         read_only_fields = ["user"]
+
+
+#coleção
+class CollectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Collection
+        fields = ["id", "name", "created_at"]
+
+
+class CollectionCardSerializer(serializers.ModelSerializer):
+    card_id = serializers.IntegerField(source="card.id")
+
+    class Meta:
+        model = CollectionCard
+        fields = ["card_id", "owned"]

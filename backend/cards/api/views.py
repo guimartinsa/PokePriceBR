@@ -4,11 +4,16 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from rest_framework import status
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+
 from django.shortcuts import get_object_or_404
 from django.db import models
 
 from cards.models import Card, CardAdminLog
 from cards.models import Set
+from cards.models import Collection, CollectionCard
+
 from cards.services.liga_scraper import atualizar_preco_carta
 from cards.services.admin_log import log_admin_action
 from .serializers import SetSerializer
@@ -20,6 +25,8 @@ from cards.tasks.import_cards import import_cards_from_set_task
 
 
 from .serializers import CardAdminLogSerializer, CardSerializer
+from .serializers import CollectionSerializer, CollectionCardSerializer
+
 from cards.api.serializers import SetSerializer
 
 
@@ -293,3 +300,51 @@ class IlustradoresAutocompleteView(APIView):
         
         return Response(list(ilustradores))
     
+#coleções
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def collections_view(request):
+    if request.method == "GET":
+        collections = Collection.objects.filter(user=request.user)
+        return Response(CollectionSerializer(collections, many=True).data)
+
+    if request.method == "POST":
+        name = request.data.get("name")
+        if not name:
+            return Response({"error": "Nome obrigatório"}, status=400)
+
+        collection = Collection.objects.create(
+            user=request.user,
+            name=name
+        )
+        return Response(CollectionSerializer(collection).data, status=201)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def collection_cards_view(request, collection_id):
+    cards = CollectionCard.objects.filter(
+        collection_id=collection_id,
+        collection__user=request.user
+    )
+
+    return Response(CollectionCardSerializer(cards, many=True).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def toggle_card_owned(request, collection_id):
+    card_id = request.data.get("card_id")
+    owned = request.data.get("owned", False)
+
+    obj, _ = CollectionCard.objects.get_or_create(
+        collection_id=collection_id,
+        card_id=card_id,
+        defaults={"owned": owned},
+    )
+
+    obj.owned = owned
+    obj.save()
+
+    return Response({"ok": True})

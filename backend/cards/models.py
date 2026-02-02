@@ -206,3 +206,31 @@ class UserCard(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.card} ({self.foil_type})"
+
+class Collection(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="collections"
+    )
+    name = models.CharField(max_length=120)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.user})"
+
+
+class CollectionCard(models.Model):
+    collection = models.ForeignKey(
+        Collection,
+        on_delete=models.CASCADE,
+        related_name="cards"
+    )
+    card = models.ForeignKey(
+        "cards.Card",
+        on_delete=models.CASCADE
+    )
+    owned = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ("collection", "card")
