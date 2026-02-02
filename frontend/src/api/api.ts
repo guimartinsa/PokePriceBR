@@ -15,6 +15,8 @@ export const api = axios.create({
 // Interceptor de REQUEST: injeta Bearer token se existir
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access");
+  console.log("JWT enviado:", token);
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -35,3 +37,5 @@ if (!import.meta.env.PROD) {
     }
   );
 }
+
+export default api;
