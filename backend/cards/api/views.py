@@ -307,18 +307,29 @@ class IlustradoresAutocompleteView(APIView):
 def collections_view(request):
     if request.method == "GET":
         collections = Collection.objects.filter(user=request.user)
-        return Response(CollectionSerializer(collections, many=True).data)
+        return Response(
+            CollectionSerializer(collections, many=True).data
+        )
 
     if request.method == "POST":
         name = request.data.get("name")
+
         if not name:
-            return Response({"error": "Nome obrigatório"}, status=400)
+            return Response(
+                {"error": "Nome é obrigatório"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         collection = Collection.objects.create(
             user=request.user,
             name=name
         )
-        return Response(CollectionSerializer(collection).data, status=201)
+
+        return Response(
+            CollectionSerializer(collection).data,
+            status=status.HTTP_201_CREATED
+        )
+
 
 
 @api_view(["GET"])

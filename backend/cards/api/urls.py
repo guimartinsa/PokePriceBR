@@ -56,7 +56,7 @@ urlpatterns = [
     path("auth/google/", google_login),
     path("me/", me, name="me"),
     path("profile/", profile_view),
-    path("collection/", collection_view),
+    path("collections/", collections_view),
     path("collections/<int:collection_id>/cards/", collection_cards_view),
     path("collections/<int:collection_id>/toggle/", toggle_card_owned),
 

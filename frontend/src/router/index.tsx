@@ -17,8 +17,8 @@ export default function AppRoutes() {
         <Route path="/" element={<HomePage />} />
         <Route path="/cards" element={<CardListPage />} />
         <Route path="/cards/:id" element={<CardDetailPage />} />
-        <Route path="/collection" element={<CollectionPage />} />
-        <Route path="/collections/:id" element={<CollectionsListPage />} />
+        <Route path="/collection" element={<CollectionsListPage />} />
+        <Route path="/collections/:id" element={<CollectionPage  />} />
 
         <Route path="/perfil" element={<ProfilePage />} />
 
