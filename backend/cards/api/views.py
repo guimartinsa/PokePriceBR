@@ -305,11 +305,14 @@ class IlustradoresAutocompleteView(APIView):
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def collections_view(request):
+    """
+    GET: Lista todas as coleções do usuário
+    POST: Cria uma nova coleção
+    """
     if request.method == "GET":
         collections = Collection.objects.filter(user=request.user)
-        return Response(
-            CollectionSerializer(collections, many=True).data
-        )
+        serializer = CollectionSerializer(collections, many=True)
+        return Response(serializer.data)
 
     if request.method == "POST":
         name = request.data.get("name")
@@ -325,37 +328,82 @@ def collections_view(request):
             name=name
         )
 
-        return Response(
-            CollectionSerializer(collection).data,
-            status=status.HTTP_201_CREATED
-        )
+        serializer = CollectionSerializer(collection)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def collection_delete_view(request, collection_id):
+    """
+    DELETE: Deleta uma coleção do usuário
+    """
+    collection = get_object_or_404(
+        Collection,
+        id=collection_id,
+        user=request.user
+    )
+
+    collection.delete()
+
+    return Response(
+        {"message": "Coleção deletada com sucesso"},
+        status=status.HTTP_204_NO_CONTENT
+    )
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def collection_cards_view(request, collection_id):
-    cards = CollectionCard.objects.filter(
-        collection_id=collection_id,
-        collection__user=request.user
+    """
+    GET: Lista todas as cartas de uma coleção
+    """
+    # Verifica se a coleção pertence ao usuário
+    collection = get_object_or_404(
+        Collection,
+        id=collection_id,
+        user=request.user
     )
 
-    return Response(CollectionCardSerializer(cards, many=True).data)
+    cards = CollectionCard.objects.filter(collection=collection)
+    serializer = CollectionCardSerializer(cards, many=True)
+    
+    return Response(serializer.data)
 
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def toggle_card_owned(request, collection_id):
+    """
+    POST: Marca/desmarca uma carta como "tenho"
+    """
+    # Verifica se a coleção pertence ao usuário
+    collection = get_object_or_404(
+        Collection,
+        id=collection_id,
+        user=request.user
+    )
+
     card_id = request.data.get("card_id")
     owned = request.data.get("owned", False)
 
-    obj, _ = CollectionCard.objects.get_or_create(
-        collection_id=collection_id,
+    if not card_id:
+        return Response(
+            {"error": "card_id é obrigatório"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Cria ou atualiza o registro
+    collection_card, created = CollectionCard.objects.get_or_create(
+        collection=collection,
         card_id=card_id,
-        defaults={"owned": owned},
+        defaults={"owned": owned}
     )
 
-    obj.owned = owned
-    obj.save()
+    if not created:
+        collection_card.owned = owned
+        collection_card.save()
 
-    return Response({"ok": True})
+    return Response({"ok": True, "owned": owned})
+
+

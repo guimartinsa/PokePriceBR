@@ -16,7 +16,8 @@ from .views import (
     SetListView,
     ImportSetsFromTCGDexView,
     RaridadesListView,  # 🆕 NOVO
-    IlustradoresAutocompleteView,  # 🆕 NOVO
+    IlustradoresAutocompleteView,
+    collection_delete_view,  # 🆕 NOVO
     collections_view,
     collection_cards_view,
     toggle_card_owned,
@@ -56,7 +57,9 @@ urlpatterns = [
     path("auth/google/", google_login),
     path("me/", me, name="me"),
     path("profile/", profile_view),
+    # Collections
     path("collections/", collections_view),
+    path("collections/<int:collection_id>/", collection_delete_view),  # 🆕 NOVA ROTA
     path("collections/<int:collection_id>/cards/", collection_cards_view),
     path("collections/<int:collection_id>/toggle/", toggle_card_owned),
 
