@@ -1,17 +1,20 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+
 import api from "../../api/api";
 import type { Card } from "../../types/Card";
-import { CardGrid } from "../../components/cards/CardGrid";
-import { CardItemDetail } from "../../components/cards/CardItemDetail";
+
+//import { CardGrid } from "../../components/cards/CardGrid";
 import { Loading } from "../../components/Loading";
 import { Section } from "../../components/ui/Section";
 import { StatBlock } from "../../components/ui/StatBlock";
+
 import {
-    fetchUserCollection,
+    fetchCollectionCards,
     toggleCollectionCard,
+    type CollectionCard,
 } from "../../services/collection";
-import type { UserCard } from "../../services/collection";
-import { useParams } from "react-router-dom";
+import { CardItemDetail } from "../../components/cards/CardItemDetail";
 
 /* 🔹 Tipo local: carta + owned */
 type CardWithOwned = Card & {
@@ -19,7 +22,6 @@ type CardWithOwned = Card & {
 };
 
 export default function CollectionPage() {
-    /* ✅ Hook no lugar certo */
     const { id } = useParams();
     const collectionId = Number(id);
 
@@ -33,32 +35,34 @@ export default function CollectionPage() {
     });
 
     useEffect(() => {
+        if (!collectionId) return;
         loadCollection();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [collectionId]);
 
     async function loadCollection() {
         setLoading(true);
 
         try {
-            /* 1️⃣ Buscar coleção do backend */
-            const userCards: UserCard[] = await fetchUserCollection();
+            /* 1️⃣ Buscar cartas da coleção */
+            const collectionCards: CollectionCard[] =
+                await fetchCollectionCards(collectionId);
 
-            if (userCards.length === 0) {
+            if (collectionCards.length === 0) {
                 setCollection([]);
                 setStats({ total: 0, unique: 0, totalValue: 0 });
                 return;
             }
 
             /* 2️⃣ Buscar dados completos das cartas */
-            const cardPromises = userCards.map((item) =>
-                api.get<Card>(`/cards/${item.card_id}/`).then((res) => res.data)
+            const cards = await Promise.all(
+                collectionCards.map((item) =>
+                    api.get<Card>(`/cards/${item.card_id}/`).then((r) => r.data)
+                )
             );
 
-            const cards = await Promise.all(cardPromises);
-
             /* 3️⃣ Combinar carta + owned */
-            const combinedCards: CardWithOwned[] = userCards
+            const combined: CardWithOwned[] = collectionCards
                 .map((item) => {
                     const card = cards.find((c) => c.id === item.card_id);
                     if (!card) return null;
@@ -70,25 +74,21 @@ export default function CollectionPage() {
                 })
                 .filter((c): c is CardWithOwned => Boolean(c));
 
-            setCollection(combinedCards);
+            setCollection(combined);
 
             /* 4️⃣ Estatísticas */
-            const uniqueCards = new Set(
-                combinedCards.map((c) => c.id)
-            ).size;
-
-            const totalValue = combinedCards.reduce((sum, card) => {
-                const price = parseFloat(card.preco_med || "0");
-                return sum + price;
+            const unique = new Set(combined.map((c) => c.id)).size;
+            const totalValue = combined.reduce((sum, c) => {
+                return sum + parseFloat(c.preco_med || "0");
             }, 0);
 
             setStats({
-                total: combinedCards.length,
-                unique: uniqueCards,
+                total: combined.length,
+                unique,
                 totalValue,
             });
-        } catch (error) {
-            console.error("Erro ao carregar coleção:", error);
+        } catch (err) {
+            console.error("Erro ao carregar coleção:", err);
         } finally {
             setLoading(false);
         }
@@ -108,7 +108,7 @@ export default function CollectionPage() {
                     gap: "16px",
                     margin: "24px 0",
                     padding: "16px",
-                    background: "rgba(255, 255, 255, 0.05)",
+                    background: "rgba(255,255,255,0.05)",
                     borderRadius: "12px",
                 }}
             >
@@ -120,40 +120,47 @@ export default function CollectionPage() {
                 />
             </div>
 
-            {/* 🃏 Lista de cartas */}
+            {/* 🃏 Lista */}
             <Section title="Suas Cartas">
                 {collection.length === 0 ? (
                     <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
                         <p>Você ainda não possui cartas nesta coleção.</p>
                     </div>
                 ) : (
-                    <CardGrid
-                        cards={collection}
-                        renderItem={(card) => (
-                            <CardItemDetail
-                                key={card.id}
-                                card={card}
-                                owned={card.owned}
-                                onToggleOwned={(value) => {
-                                    /* ✅ UI otimista */
-                                    setCollection((prev) =>
-                                        prev.map((c) =>
-                                            c.id === card.id
-                                                ? { ...c, owned: value }
-                                                : c
-                                        )
-                                    );
+                    <Section title="Suas Cartas">
+                        {collection.length === 0 ? (
+                            <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
+                                <p>Você ainda não possui cartas nesta coleção.</p>
+                            </div>
+                        ) : (
+                            <div className="card-grid">
+                                {collection.map((card) => (
+                                    <CardItemDetail
+                                        key={card.id}
+                                        card={card}
+                                        onToggleOwned={(owned) => {
+                                            /* ✅ UI otimista */
+                                            setCollection((prev) =>
+                                                prev.map((c) =>
+                                                    c.id === card.id
+                                                        ? { ...c, owned }
+                                                        : c
+                                                )
+                                            );
 
-                                    /* ✅ Backend */
-                                    toggleCollectionCard(
-                                        collectionId,
-                                        card.id,
-                                        value
-                                    );
-                                }}
-                            />
+                                            /* ✅ Backend */
+                                            toggleCollectionCard(
+                                                collectionId,
+                                                card.id,
+                                                owned
+                                            );
+                                        }}
+                                    />
+                                ))}
+                            </div>
                         )}
-                    />
+                    </Section>
+
                 )}
             </Section>
         </div>

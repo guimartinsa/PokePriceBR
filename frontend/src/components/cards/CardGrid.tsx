@@ -12,7 +12,7 @@ type Props<T extends Card = Card> = {
 export function CardGrid<T extends Card>({
     cards,
     compact = false,
-    renderItem,
+    //renderItem,
 }: Props<T>) {
     if (cards.length === 0) {
         return (
@@ -25,15 +25,13 @@ export function CardGrid<T extends Card>({
     return (
         <div className="card-grid">
             {cards.map((card) =>
-                renderItem ? (
-                    renderItem(card)
-                ) : (
+
                     <CardItemDetail
                         key={`${card.id}-${card.set}-${card.numero}`}
                         card={card}
                         compact={compact}
                     />
-                )
+                
             )}
         </div>
     );

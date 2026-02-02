@@ -2,7 +2,7 @@ import type { Card } from "../../types/Card";
 import "./style.css";
 
 type Props = {
-    card: Card;
+    card: Card & { owned?: boolean };
     compact?: boolean;
 
     /** coleção */
@@ -17,7 +17,7 @@ export function CardItemDetail({
     onToggleOwned,
 }: Props) {
     return (
-        <div className={`card-item ${compact ? "compact" : ""}`}>
+        <div className={`card-item ${compact ? "compact" : ""} ${card.owned ? "owned" : ""}`}>           
             <img
                 src={card.imagem || "/placeholder.png"}
                 alt={card.nome}
@@ -36,7 +36,7 @@ export function CardItemDetail({
                 )}
 
                 {/* ✅ CHECKBOX APENAS QUANDO NÃO FOR COMPACT */}
-                {!compact && (
+                {!compact && card.owned !== undefined && onToggleOwned && (
                     <label className="owned-checkbox">
                         <input
                             type="checkbox"
