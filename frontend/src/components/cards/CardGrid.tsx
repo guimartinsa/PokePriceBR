@@ -1,19 +1,12 @@
 import type { Card } from "../../types/Card";
 import { CardItemDetail } from "./CardItemDetail";
 
-type Props<T extends Card = Card> = {
+type Props<T extends Card> = {
     cards: T[];
     compact?: boolean;
-
-    /** 🔥 NOVO (opcional) */
-    renderItem?: (card: T) => React.ReactNode;
 };
 
-export function CardGrid<T extends Card>({
-    cards,
-    compact = false,
-    //renderItem,
-}: Props<T>) {
+export function CardGrid<T extends Card>({ cards, compact = false }: Props<T>) {
     if (cards.length === 0) {
         return (
             <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
@@ -24,15 +17,13 @@ export function CardGrid<T extends Card>({
 
     return (
         <div className="card-grid">
-            {cards.map((card) =>
-
-                    <CardItemDetail
-                        key={`${card.id}-${card.set}-${card.numero}`}
-                        card={card}
-                        compact={compact}
-                    />
-                
-            )}
+            {cards.map((card) => (
+                <CardItemDetail
+                    key={card.id}
+                    card={card}
+                    compact={compact}
+                />
+            ))}
         </div>
     );
 }

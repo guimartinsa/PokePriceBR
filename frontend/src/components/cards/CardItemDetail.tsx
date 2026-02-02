@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import type { Card } from "../../types/Card";
 import "./style.css";
 
@@ -5,45 +7,40 @@ type Props = {
     card: Card & { owned?: boolean };
     compact?: boolean;
 
-    /** coleção */
-    owned?: boolean;
+    /** usado na CollectionPage */
     onToggleOwned?: (value: boolean) => void;
 };
 
 export function CardItemDetail({
     card,
     compact = false,
-    owned = false,
     onToggleOwned,
 }: Props) {
+    const [localOwned, setLocalOwned] = useState<boolean>(
+        card.owned ?? false
+    );
+
+    const owned = card.owned ?? localOwned;
+
+    function handleToggle(value: boolean) {
+        setLocalOwned(value);
+        onToggleOwned?.(value);
+    }
+
     return (
-        <div className={`card-item ${compact ? "compact" : ""} ${card.owned ? "owned" : ""}`}>           
-            <img
-                src={card.imagem || "/placeholder.png"}
-                alt={card.nome}
-            />
+        <div className={`card-item ${compact ? "compact" : ""}`}>
+            <img src={card.imagem || "/placeholder.png"} alt={card.nome} />
 
             <div className="card-body">
                 <strong>{card.nome}</strong>
-                <small>({card.numero_completo})</small>
-                <br />
-                <small>{card.set.nome}</small>
+                <small>{card.numero_completo}</small>
 
-                {card.preco_med && (
-                    <div className="price">
-                        R$ {card.preco_med}
-                    </div>
-                )}
-
-                {/* ✅ CHECKBOX APENAS QUANDO NÃO FOR COMPACT */}
-                {!compact && card.owned !== undefined && onToggleOwned && (
+                {!compact && (
                     <label className="owned-checkbox">
                         <input
                             type="checkbox"
                             checked={owned}
-                            onChange={(e) =>
-                                onToggleOwned?.(e.target.checked)
-                            }
+                            onChange={(e) => handleToggle(e.target.checked)}
                         />
                         <span>Tenho</span>
                     </label>
