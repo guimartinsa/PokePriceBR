@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import api from "../../api/api";
 import type { Card } from "../../types/Card";
 
-import { CardGrid } from "../../components/cards/CardGrid";
+//import { CardGrid } from "../../components/cards/CardGrid";
 import { Loading } from "../../components/Loading";
 import { Section } from "../../components/ui/Section";
 import { StatBlock } from "../../components/ui/StatBlock";

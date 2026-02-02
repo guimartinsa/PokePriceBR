@@ -25,9 +25,15 @@ export async function fetchCollections(): Promise<Collection[]> {
 }
 
 /* 🔹 Criar nova coleção */
+/* 🔹 Criar coleção */
 export async function createCollection(name: string): Promise<Collection> {
     const res = await api.post<Collection>("/collections/", { name });
     return res.data;
+}
+
+/* 🔹 Deletar coleção */
+export async function deleteCollection(id: number): Promise<void> {
+    await api.delete(`/collections/${id}/`);
 }
 
 /* ===============================
