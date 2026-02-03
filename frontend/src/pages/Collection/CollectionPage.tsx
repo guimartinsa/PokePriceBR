@@ -17,6 +17,7 @@ import {
     type CollectionCard,
 } from "../../services/collection";
 import { CardItemDetail } from "../../components/cards/CardItemDetail";
+import { AddCardsPanel } from "./AddCardsPanel";
 
 /* 🔹 Tipo local: carta + owned */
 type CardWithOwned = Card & {
@@ -71,6 +72,9 @@ export default function CollectionPage() {
 
         return true;
     });
+
+    const [addMode, setAddMode] = useState(false);
+
 
 
 
@@ -177,6 +181,36 @@ export default function CollectionPage() {
 
             {/* 🃏 Lista */}
             <SearchFilters filters={filters} onChange={setFilters} />
+
+            <button
+                onClick={() => setAddMode((v) => !v)}
+                style={{
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    background: "#ff0808",
+                    color: "#fff",
+                    border: "none",
+                    cursor: "pointer",
+                    marginBottom: 16,
+                }}
+            >
+                {addMode ? "✖ Fechar busca" : "➕ Adicionar cartas"}
+            </button>
+            {addMode && (
+                <AddCardsPanel
+                    collectionCardIds={collection.map((c) => c.id)}
+                    onAdd={(cardId) => {
+                        toggleCollectionCard(collectionId, cardId, false);
+
+                        setCollection((prev) => {
+                            if (prev.some((c) => c.id === cardId)) return prev;
+
+                            return [...prev];
+                        });
+                    }}
+                />
+            )}
+
 
             <Section title="Suas Cartas">
                 {filteredCollection.length === 0 ? (

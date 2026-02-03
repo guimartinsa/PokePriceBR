@@ -1,0 +1,31 @@
+.add-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+}
+
+.add-card {
+    position: relative;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.add-card img {
+    width: 100%;
+    border-radius: 8px;
+}
+
+.add-card.added img {
+    filter: brightness(40%);
+}
+
+.check-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    color: #4caf50;
+    font-weight: bold;
+}
