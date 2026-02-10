@@ -108,11 +108,11 @@ DATABASES = {
         "USER": os.getenv("DB_USER"),
         "PASSWORD": os.getenv("DB_PASSWORD"),
         "HOST": os.getenv("DB_HOST"),
-        "PORT": os.getenv("DB_PORT", "5432"),
-        "CONN_MAX_AGE": 600,
+        "PORT": os.getenv("DB_PORT", "6453"),
+        "CONN_MAX_AGE": 0,
         "OPTIONS": {
             "sslmode": "require",
-            "target_session_attrs": "read-write",
+        #"target_session_attrs": "read-write",
         },
     }
 }
