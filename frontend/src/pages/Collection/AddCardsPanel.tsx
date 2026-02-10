@@ -13,6 +13,7 @@ type Props = {
 export function AddCardsPanel({ collectionCardIds, onAdd }: Props) {
     const [cards, setCards] = useState<Card[]>([]);
     const [page, setPage] = useState(1);
+    setPage
 
     const [filters, setFilters] = useState<SearchFiltersState>({
         nome: "",
