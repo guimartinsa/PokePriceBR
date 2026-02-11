@@ -1,4 +1,7 @@
 import api from "../api/api";
+import type {Card} from "../types/Card"
+
+
 
 /* ===============================
    TIPOS
@@ -9,10 +12,8 @@ export type Collection = {
     name: string;
 };
 
-export type CollectionCard = {
-    card_id: number;
-    nome: string;
-    imagem: string;
+export type CollectionCard = Card &{
+
     owned: boolean;
 };
 

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import api from "../../api/api";
-import type { Card } from "../../types/Card";
+//import api from "../../api/api";
+//import type { Card } from "../../types/Card";
 
 //import { CardGrid } from "../../components/cards/CardGrid";
 import { Loading } from "../../components/Loading";
@@ -15,14 +15,13 @@ import {
     fetchCollectionCards,
     toggleCollectionCard,
     type CollectionCard,
+    //type CollectionCard,
 } from "../../services/collection";
 import { CardItemDetail } from "../../components/cards/CardItemDetail";
 import { AddCardsPanel } from "./AddCardsPanel";
 
 /* 🔹 Tipo local: carta + owned */
-type CardWithOwned = Card & {
-    owned: boolean;
-};
+/*type CardWithOwned = Card & {owned: boolean;};*/
 
 export default function CollectionPage() {
     /* 🔹 Params */
@@ -30,7 +29,7 @@ export default function CollectionPage() {
     const collectionId = id ? Number(id) : null;
 
     /* 🔹 State */
-    const [collection, setCollection] = useState<CardWithOwned[]>([]);
+    const [collection, setCollection] = useState<CollectionCard[]>([]);
     const [loading, setLoading] = useState(true);
 
     const [stats, setStats] = useState({
@@ -91,55 +90,32 @@ export default function CollectionPage() {
 
     /* 🔹 Load */
     async function loadCollection() {
-        setLoading(true);
+    setLoading(true);
 
-        try {
-            const collectionCards: CollectionCard[] =
-                await fetchCollectionCards(collectionId!);
+    try {
+        const cards = await fetchCollectionCards(collectionId!);
 
-            if (collectionCards.length === 0) {
-                setCollection([]);
-                setStats({ total: 0, unique: 0, totalValue: 0 });
-                return;
-            }
+        setCollection(cards);
 
-            const cards = await Promise.all(
-                collectionCards.map((item) =>
-                    api.get<Card>(`/cards/${item.card_id}/`).then((r) => r.data)
-                )
-            );
+        const unique = new Set(cards.map((c) => c.id)).size;
 
-            const combined: CardWithOwned[] = collectionCards
-                .map((item) => {
-                    const card = cards.find((c) => c.id === item.card_id);
-                    if (!card) return null;
+        const totalValue = cards.reduce(
+            (sum, c) => sum + parseFloat(c.preco_med || "0"),
+            0
+        );
 
-                    return {
-                        ...card,
-                        owned: item.owned,
-                    };
-                })
-                .filter((c): c is CardWithOwned => Boolean(c));
-
-            setCollection(combined);
-
-            const unique = new Set(combined.map((c) => c.id)).size;
-            const totalValue = combined.reduce(
-                (sum, c) => sum + parseFloat(c.preco_med || "0"),
-                0
-            );
-
-            setStats({
-                total: combined.length,
-                unique,
-                totalValue,
-            });
-        } catch (err) {
-            console.error("Erro ao carregar coleção:", err);
-        } finally {
-            setLoading(false);
-        }
+        setStats({
+            total: cards.length,
+            unique,
+            totalValue,
+        });
+    } catch (err) {
+        console.error("Erro ao carregar coleção:", err);
+    } finally {
+        setLoading(false);
     }
+}
+
 
     /* 🔹 Early returns */
     if (loading) return <Loading />;

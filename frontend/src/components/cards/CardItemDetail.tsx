@@ -1,4 +1,4 @@
-import { useState } from "react";
+//import { useState } from "react";
 
 import type { Card } from "../../types/Card";
 import "./style.css";
@@ -6,6 +6,7 @@ import "./style.css";
 type Props = {
     card: Card & { owned?: boolean };
     compact?: boolean;
+    showOwnedToggle?: boolean;
 
     /** usado na CollectionPage */
     onToggleOwned?: (value: boolean) => void;
@@ -16,16 +17,11 @@ export function CardItemDetail({
     compact = false,
     onToggleOwned,
 }: Props) {
-    const [localOwned, setLocalOwned] = useState<boolean>(
-        card.owned ?? false
-    );
+    //const [localOwned, setLocalOwned] = useState<boolean>(card.owned ?? false);
 
-    const owned = card.owned ?? localOwned;
+    //const owned = card.owned ?? localOwned;
 
-    function handleToggle(value: boolean) {
-        setLocalOwned(value);
-        onToggleOwned?.(value);
-    }
+    //function handleToggle(value: boolean) {setLocalOwned(value);onToggleOwned?.(value);}
 
     return (
         <div className={`card-item ${compact ? "compact" : ""}`}>
@@ -39,8 +35,8 @@ export function CardItemDetail({
                     <label className="owned-checkbox">
                         <input
                             type="checkbox"
-                            checked={owned}
-                            onChange={(e) => handleToggle(e.target.checked)}
+                            checked={!!card.owned}
+                            onChange={(e) => onToggleOwned?.(e.target.checked)}
                         />
                         <span>Tenho</span>
                     </label>

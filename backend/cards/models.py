@@ -41,6 +41,14 @@ class Card(models.Model):
 
     ativa = models.BooleanField(default=True)  # 👈 NOVO
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["set", "ativa"]),
+            models.Index(fields=["raridade"]),
+            models.Index(fields=["tcgdex_id"]),
+        ]
+
+
     # Preços NORMAL
     preco_min = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True
