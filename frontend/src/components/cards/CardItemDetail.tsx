@@ -38,7 +38,7 @@ export function CardItemDetail({
                             checked={!!card.owned}
                             onChange={(e) => onToggleOwned?.(e.target.checked)}
                         />
-                        <span>Tenho</span>
+                        <span>Normal</span>
                     </label>
                 )}
             </div>
