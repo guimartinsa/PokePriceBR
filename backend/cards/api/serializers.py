@@ -71,8 +71,27 @@ class CollectionSerializer(serializers.ModelSerializer):
 
 
 class CollectionCardSerializer(serializers.ModelSerializer):
-    card_id = serializers.IntegerField(source="card.id")
+    id = serializers.IntegerField(source="card.id")
+    nome = serializers.CharField(source="card.nome")
+    imagem = serializers.CharField(source="card.imagem")
+    numero_completo = serializers.CharField(source="card.numero_completo")
+    raridade = serializers.CharField(source="card.raridade", allow_null=True)
+
+    preco_med = serializers.DecimalField(
+        source="card.preco_med",
+        max_digits=10,
+        decimal_places=2,
+        allow_null=True
+    )
 
     class Meta:
         model = CollectionCard
-        fields = ["card_id", "owned"]
+        fields = [
+            "id",
+            "nome",
+            "imagem",
+            "numero_completo",
+            "raridade",
+            "preco_med",
+            "owned",
+        ]

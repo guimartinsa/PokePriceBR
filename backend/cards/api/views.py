@@ -352,12 +352,12 @@ def collection_delete_view(request, collection_id):
     )
 
 
-@api_view(["GET"])
+"""@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def collection_cards_view(request, collection_id):
-    """
-    GET: Lista todas as cartas de uma coleção
-    """
+
+    #GET: Lista todas as cartas de uma coleção
+
     # Verifica se a coleção pertence ao usuário
     collection = get_object_or_404(
         Collection,
@@ -368,7 +368,30 @@ def collection_cards_view(request, collection_id):
     cards = CollectionCard.objects.filter(collection=collection)
     serializer = CollectionCardSerializer(cards, many=True)
     
+    return Response(serializer.data)"""
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def collection_cards_view(request, collection_id):
+    """
+    GET: Lista todas as cartas de uma coleção
+    """
+
+    collection = get_object_or_404(
+        Collection,
+        id=collection_id,
+        user=request.user
+    )
+
+    cards = (
+        CollectionCard.objects
+        .filter(collection=collection)
+        .select_related("card")  # 🔥 ESSENCIAL
+    )
+
+    serializer = CollectionCardSerializer(cards, many=True)
     return Response(serializer.data)
+
 
 
 @api_view(["POST"])

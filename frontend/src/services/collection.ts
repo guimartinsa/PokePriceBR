@@ -11,6 +11,8 @@ export type Collection = {
 
 export type CollectionCard = {
     card_id: number;
+    nome: string;
+    imagem: string;
     owned: boolean;
 };
 
