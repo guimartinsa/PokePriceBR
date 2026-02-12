@@ -12,9 +12,6 @@ export default function CollectionsListPage() {
     const [newName, setNewName] = useState("");
     const navigate = useNavigate();
 
-    useEffect(() => {
-        loadCollections();
-    }, []);
 
     async function loadCollections() {
         try {
@@ -24,6 +21,11 @@ export default function CollectionsListPage() {
             console.error(err);
         }
     }
+
+    useEffect(() => {
+        loadCollections();
+    }, []);
+
 
     async function handleCreate() {
         if (!newName.trim()) return;
