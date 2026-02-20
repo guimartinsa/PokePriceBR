@@ -4,6 +4,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from cards.models import Profile
+from core_permissions.services import refresh_subscription_status
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -16,6 +17,7 @@ User = get_user_model()
 def _build_auth_response(user, avatar=""):
     
     profile, _ = Profile.objects.get_or_create(user=user)
+    refresh_subscription_status(profile)
     final_avatar = profile.avatar_option.image_url if profile.avatar_option else (profile.avatar or avatar)
 
     refresh = RefreshToken.for_user(user)
@@ -27,6 +29,8 @@ def _build_auth_response(user, avatar=""):
             "email": user.email,
             "name": user.first_name,
             "avatar": final_avatar,
+            "plan": profile.plan,
+            "badge": "PRO" if profile.can_access_pro_features else None,
         },
     }
 
@@ -111,8 +115,12 @@ def login_with_email(request):
 def me(request):
     user = request.user
     profile, _ = Profile.objects.get_or_create(user=user)
+    refresh_subscription_status(profile)
     avatar = profile.avatar_option.image_url if profile.avatar_option else profile.avatar
     return Response({
         "email": user.email,
         "name": user.first_name,
+        "avatar": avatar,
+        "plan": profile.plan,
+        "badge": "PRO" if profile.can_access_pro_features else None,
     })

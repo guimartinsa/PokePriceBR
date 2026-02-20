@@ -1,8 +1,5 @@
 from rest_framework import serializers
-from cards.models import Card, Set
-from cards.models import CardAdminLog
-from cards.models import UserCard, Profile, Avatar
-from cards.models import Collection, CollectionCard
+from cards.models import Avatar, Card, CardAdminLog, Collection, CollectionCard, Profile, Set, UserCard
 
 
 
@@ -44,6 +41,7 @@ class CardAdminLogSerializer(serializers.ModelSerializer):
         fields = ["id", "action", "user", "created_at", "note"]
 
 #users
+
 class AvatarSerializer(serializers.ModelSerializer):
     class Meta:
         model = Avatar
@@ -56,18 +54,72 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ["email", "name", "avatar", "avatar_option", "avatar_url", "bio"]
+        fields = [
+            "email",
+            "name",
+            "avatar",
+            "avatar_upload",
+            "avatar_option",
+            "avatar_url",
+            "bio",
+            "plan",
+            "badge",
+            "trial_used",
+            "subscription_end_date",
+            "api_usage_count",
+            "api_usage_reset_date",
+        ]
+        read_only_fields = [
+            "plan",
+            "trial_used",
+            "subscription_end_date",
+            "api_usage_count",
+            "api_usage_reset_date",
+        ]
 
-        def get_avatar_url(self, obj):
-            if obj.avatar_option:
-                return obj.avatar_option.image_url
-            return obj.avatar
+    def get_avatar_url(self, obj):
+        if obj.avatar_upload:
+            return obj.avatar_upload.url
+        if obj.avatar_option:
+            return obj.avatar_option.image_url
+        return obj.avatar
+
+    def get_badge(self, obj):
+        return "PRO" if obj.can_access_pro_features else None
+
+    def validate_avatar_upload(self, avatar_upload):
+        profile = self.instance
+        if profile and not profile.can_access_pro_features and not profile.is_admin_plan:
+            raise serializers.ValidationError("Upload de avatar personalizado exige plano PRO.")
+
+        max_size = 2 * 1024 * 1024
+        if avatar_upload.size > max_size:
+            raise serializers.ValidationError("Avatar excede 2MB.")
+
+        valid_types = {"image/jpeg", "image/png", "image/webp"}
+        content_type = getattr(avatar_upload, "content_type", "")
+        if content_type not in valid_types:
+            raise serializers.ValidationError("Tipo de arquivo inválido. Use JPG, PNG ou WEBP.")
+
+        return avatar_upload
+
+    def validate(self, attrs):
+        profile = self.instance
+        if profile and not profile.can_access_pro_features and attrs.get("avatar"):
+            raise serializers.ValidationError(
+                {"avatar": "Plano FREE permite apenas avatares predefinidos."}
+            )
+        return attrs
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop("user", None)
         if user_data:
             instance.user.first_name = user_data.get("first_name", instance.user.first_name)
             instance.user.save(update_fields=["first_name"])
+            
+        if not instance.can_access_pro_features and validated_data.get("avatar_option") is None:
+            validated_data.pop("avatar", None)
+            
         return super().update(instance, validated_data)
 
 class UserCardSerializer(serializers.ModelSerializer):
@@ -81,8 +133,7 @@ class UserCardSerializer(serializers.ModelSerializer):
 class CollectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Collection
-        fields = ["id", "name", "created_at"]
-
+        fields = ["id", "name", "is_public", "created_at"]
 
 class CollectionCardSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source="card.id")
@@ -128,4 +179,5 @@ class CollectionCardSerializer(serializers.ModelSerializer):
             "preco_med",
             "preco_max",
             "owned",
+            "custom_photo",
         ]

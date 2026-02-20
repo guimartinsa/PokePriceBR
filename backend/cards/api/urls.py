@@ -22,6 +22,9 @@ from .views import (
     collection_cards_view,
     toggle_card_owned,
     atualizar_colecao_view,
+    admin_force_downgrade_view,
+    admin_suspend_user_view,
+    export_collection_view,
 )
 
 from .auth import (
@@ -69,5 +72,8 @@ urlpatterns = [
     path("collections/<int:collection_id>/cards/", collection_cards_view),
     path("collections/<int:collection_id>/toggle/", toggle_card_owned),
     path("collections/<int:collection_id>/atualizar-precos/", atualizar_colecao_view),
+    path("collections/<int:collection_id>/export/", export_collection_view),
+    path("admin/users/<int:user_id>/suspend/", admin_suspend_user_view),
+    path("admin/users/<int:user_id>/force-downgrade/", admin_force_downgrade_view),
 
 ]

@@ -7,6 +7,17 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
+from core_permissions.decorators import require_admin, require_pro
+from core_permissions.services import (
+    PlanLimitError,
+    enforce_card_creation_limit,
+    enforce_collection_creation_limit,
+    enforce_public_collection_limit,
+    refresh_subscription_status,
+    consume_external_api_usage,
+)
+from accounts.services import get_or_create_profile
+
 from django.shortcuts import get_object_or_404
 from django.db import models
 
@@ -45,6 +56,13 @@ class CardListView(ListAPIView):
         search_term = search or nome
         
         if search_term:
+            if self.request.user.is_authenticated:
+                profile = get_or_create_profile(self.request.user)
+                refresh_subscription_status(profile)
+                try:
+                    consume_external_api_usage(profile)
+                except PlanLimitError:
+                    return Card.objects.none()
             qs = qs.filter(nome__icontains=search_term)
 
         # Filtro por set
@@ -310,22 +328,33 @@ def collections_view(request):
     POST: Cria uma nova coleção
     """
     if request.method == "GET":
+        profile = get_or_create_profile(request.user)
+        refresh_subscription_status(profile)
         collections = Collection.objects.filter(user=request.user)
         serializer = CollectionSerializer(collections, many=True)
         return Response(serializer.data)
 
     if request.method == "POST":
+        profile = get_or_create_profile(request.user)
+        refresh_subscription_status(profile)
         name = request.data.get("name")
+        is_public = bool(request.data.get("is_public", False))
 
         if not name:
             return Response(
                 {"error": "Nome é obrigatório"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        try:
+            enforce_collection_creation_limit(profile)
+            enforce_public_collection_limit(profile, is_public)
+        except PlanLimitError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
 
         collection = Collection.objects.create(
             user=request.user,
-            name=name
+            name=name,
+            is_public=is_public,
         )
 
         serializer = CollectionSerializer(collection)
@@ -399,6 +428,9 @@ def toggle_card_owned(request, collection_id):
         user=request.user
     )
 
+    profile = get_or_create_profile(request.user)
+    refresh_subscription_status(profile)
+
     card_id = request.data.get("card_id")
     owned = request.data.get("owned", False)
 
@@ -407,6 +439,12 @@ def toggle_card_owned(request, collection_id):
             {"error": "card_id é obrigatório"},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+    if owned:
+        try:
+            enforce_card_creation_limit(profile)
+        except PlanLimitError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
 
     # Cria ou atualiza o registro
     collection_card, created = CollectionCard.objects.get_or_create(
@@ -421,4 +459,61 @@ def toggle_card_owned(request, collection_id):
 
     return Response({"ok": True, "owned": owned})
 
+api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@require_admin
+def admin_suspend_user_view(request, user_id):
+    from django.contrib.auth import get_user_model
 
+    user = get_object_or_404(get_user_model(), id=user_id)
+    profile = get_or_create_profile(user)
+    profile.is_suspended = True
+    profile.save(update_fields=["is_suspended"])
+    return Response({"status": "ok", "suspended": True})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@require_admin
+def admin_force_downgrade_view(request, user_id):
+    from django.contrib.auth import get_user_model
+    from cards.models import Profile
+
+    user = get_object_or_404(get_user_model(), id=user_id)
+    profile = get_or_create_profile(user)
+    profile.plan = Profile.PlanChoices.FREE
+    profile.subscription_end_date = None
+    profile.stripe_subscription_id = ""
+    profile.save(update_fields=["plan", "subscription_end_date", "stripe_subscription_id"])
+    return Response({"status": "ok", "plan": profile.plan})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@require_pro
+def export_collection_view(request, collection_id):
+    collection = get_object_or_404(Collection, id=collection_id, user=request.user)
+    format_type = (request.query_params.get("format") or "json").lower()
+
+    cards = CollectionCard.objects.filter(collection=collection).select_related("card")
+    payload = [
+        {
+            "id": item.card.id,
+            "nome": item.card.nome,
+            "numero_completo": item.card.numero_completo,
+            "owned": item.owned,
+        }
+        for item in cards
+    ]
+
+    if format_type == "csv":
+        import csv
+        from io import StringIO
+
+        output = StringIO()
+        writer = csv.DictWriter(output, fieldnames=["id", "nome", "numero_completo", "owned"])
+        writer.writeheader()
+        writer.writerows(payload)
+        return Response({"format": "csv", "content": output.getvalue()})
+
+    return Response({"format": "json", "content": payload})

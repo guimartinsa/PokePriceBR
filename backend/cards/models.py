@@ -1,6 +1,7 @@
 from django.db import models
 from cards.services.liga_url import gerar_liga_url
 from django.conf import settings
+from django.utils import timezone
 
 
 class Set(models.Model):
@@ -174,8 +175,14 @@ class CardAdminLog(models.Model):
 User = settings.AUTH_USER_MODEL
 
 class Profile(models.Model):
+    class PlanChoices(models.TextChoices):
+        FREE = "FREE", "Free"
+        PRO = "PRO", "Pro"
+        ADMIN = "ADMIN", "Admin"
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     avatar = models.URLField(blank=True, null=True)
+    avatar_upload = models.ImageField(upload_to="avatars/", blank=True, null=True)
     avatar_option = models.ForeignKey(
         "Avatar",
         on_delete=models.SET_NULL,
@@ -184,10 +191,35 @@ class Profile(models.Model):
         null=True,
     )
     bio = models.TextField(blank=True)
+
+    plan = models.CharField(max_length=20, choices=PlanChoices.choices, default=PlanChoices.FREE)
+    stripe_customer_id = models.CharField(max_length=100, blank=True, default="")
+    stripe_subscription_id = models.CharField(max_length=100, blank=True, default="")
+    trial_used = models.BooleanField(default=False)
+    is_trial_active = models.BooleanField(default=False)
+    subscription_end_date = models.DateTimeField(blank=True, null=True)
+    api_usage_count = models.PositiveIntegerField(default=0)
+    api_usage_reset_date = models.DateField(default=timezone.localdate)
+    is_suspended = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.user.email
+    
+    @property
+    def is_admin_plan(self):
+        return self.plan == self.PlanChoices.ADMIN or self.user.is_staff or self.user.is_superuser
+
+    @property
+    def can_access_pro_features(self):
+        if self.is_admin_plan:
+            return True
+        if self.plan != self.PlanChoices.PRO:
+            return False
+        if not self.subscription_end_date:
+            return True
+        return timezone.now() <= self.subscription_end_date
     
 class Avatar(models.Model):
     name = models.CharField(max_length=80, unique=True)
@@ -242,6 +274,7 @@ class Collection(models.Model):
         related_name="collections"
     )
     name = models.CharField(max_length=120)
+    is_public = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -258,6 +291,7 @@ class CollectionCard(models.Model):
         "cards.Card",
         on_delete=models.CASCADE
     )
+    custom_photo = models.ImageField(upload_to="collection-cards/", blank=True, null=True)
     owned = models.BooleanField(default=False)
 
     class Meta:
