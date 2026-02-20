@@ -19,6 +19,15 @@ import { AddCardsPanel } from "./AddCardsPanel";
 /* 🔹 Tipo local: carta + owned */
 /*type CardWithOwned = Card & {owned: boolean;};*/
 
+function getLowestPrice(card: { preco_min?: string | null; preco_med?: string | null; preco_max?: string | null }): string | null {
+    const values = [card.preco_min, card.preco_med, card.preco_max]
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value) && value > 0);
+
+    if (values.length === 0) return null;
+    return Math.min(...values).toFixed(2);
+}
+
 export default function CollectionPage() {
     /* 🔹 Params */
     const { id } = useParams();
@@ -223,8 +232,9 @@ export default function CollectionPage() {
                             {selectedCard.numero_completo} • {selectedCard.set?.nome}
                         </p>
                         <p>Raridade: {selectedCard.raridade || "Não informada"}</p>
-                        <p>Menor valor: {selectedCard.preco_min ? `R$ ${selectedCard.preco_min}` : "Indisponível"}</p>
+                        <p>Menor valor: {getLowestPrice(selectedCard) ? `R$ ${getLowestPrice(selectedCard)}` : "Indisponível"}</p>
                         <p>Preço médio: {selectedCard.preco_med ? `R$ ${selectedCard.preco_med}` : "Indisponível"}</p>
+                        <p>Preço maximo: {selectedCard.preco_max ? `R$ ${selectedCard.preco_max}` : "Indisponível"}</p>
 
                         {selectedCard.liga_url && (
                             <a href={selectedCard.liga_url} target="_blank" rel="noreferrer" className="liga-link-button">

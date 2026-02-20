@@ -11,6 +11,15 @@ type Props = {
     onToggleOwned?: (value: boolean) => void;
 };
 
+function getLowestPrice(card: Pick<Card, "preco_min" | "preco_med" | "preco_max">): string | null {
+    const values = [card.preco_min, card.preco_med, card.preco_max]
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value) && value > 0);
+
+    if (values.length === 0) return null;
+    return Math.min(...values).toFixed(2);
+}
+
 export function CardItemDetail({
     card,
     compact = false,
@@ -18,7 +27,7 @@ export function CardItemDetail({
     onToggleOwned,
 
 }: Props) {
-
+    const lowestPrice = getLowestPrice(card);
     return (
         <div
             className={`card-item ${compact ? "compact" : ""} ${onClick ? "is-clickable" : ""}`}
@@ -37,6 +46,9 @@ export function CardItemDetail({
             <div className="card-body">
                 <strong>{card.nome}</strong>
                 <small>{card.numero_completo}</small>
+                <p className="price-min">
+                    Menor valor: {lowestPrice ? `R$ ${lowestPrice}` : "Indisponível"}
+                </p>
 
                 {card.preco_min && <p className="price-min">Menor valor: R$ {card.preco_min}</p>}
 

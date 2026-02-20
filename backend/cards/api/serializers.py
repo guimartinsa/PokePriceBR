@@ -94,6 +94,13 @@ class CollectionCardSerializer(serializers.ModelSerializer):
         allow_null=True
     )
 
+    preco_max = serializers.DecimalField(
+        source="card.preco_max",
+        max_digits=10,
+        decimal_places=2,
+        allow_null=True
+    )
+
     class Meta:
         model = CollectionCard
         fields = [
@@ -106,5 +113,6 @@ class CollectionCardSerializer(serializers.ModelSerializer):
             "liga_url",
             "preco_min",
             "preco_med",
+            "preco_max",
             "owned",
         ]
