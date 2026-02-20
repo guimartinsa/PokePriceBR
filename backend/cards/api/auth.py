@@ -3,6 +3,7 @@ from google.auth.transport import requests
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from cards.models import Profile
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -13,6 +14,10 @@ User = get_user_model()
 
 
 def _build_auth_response(user, avatar=""):
+    
+    profile, _ = Profile.objects.get_or_create(user=user)
+    final_avatar = profile.avatar_option.image_url if profile.avatar_option else (profile.avatar or avatar)
+
     refresh = RefreshToken.for_user(user)
 
     return {
@@ -21,7 +26,7 @@ def _build_auth_response(user, avatar=""):
         "user": {
             "email": user.email,
             "name": user.first_name,
-            "avatar": avatar,
+            "avatar": final_avatar,
         },
     }
 
@@ -105,6 +110,8 @@ def login_with_email(request):
 @permission_classes([IsAuthenticated])
 def me(request):
     user = request.user
+    profile, _ = Profile.objects.get_or_create(user=user)
+    avatar = profile.avatar_option.image_url if profile.avatar_option else profile.avatar
     return Response({
         "email": user.email,
         "name": user.first_name,

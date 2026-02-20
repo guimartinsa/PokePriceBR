@@ -6,7 +6,7 @@ from cards.models import Card, CardAdminLog
 from django.contrib import messages
 from cards.services.admin_log import log_admin_action
 
-from cards.models import Set, Card
+from cards.models import Set, Card, Avatar, Profile
 
 from cards.tasks.import_cards import import_cards_from_set_task
 from cards.tasks.atualizar_todas_cartas import atualizar_todas_cartas
@@ -209,3 +209,16 @@ class SetAdmin(admin.ModelAdmin):
         if obj:
             return ("codigo_liga",)
         return ()
+
+
+@admin.register(Avatar)
+class AvatarAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_active", "created_at")
+    list_filter = ("is_active",)
+    search_fields = ("name",)
+
+
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ("user", "avatar_option", "created_at")
+    search_fields = ("user__email", "user__first_name")

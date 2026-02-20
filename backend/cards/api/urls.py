@@ -1,7 +1,7 @@
 from django.urls import path
 
 from cards.api.collection import collection_view
-from cards.api.profile import profile_view
+from cards.api.profile import avatars_view, profile_view
 from .views import (
     CardListView,
     CardDetailView,
@@ -62,6 +62,7 @@ urlpatterns = [
     path("auth/register/", register_with_email),
     path("me/", me, name="me"),
     path("profile/", profile_view),
+    path("profile/avatars/", avatars_view),
     # Collections
     path("collections/", collections_view),
     path("collections/<int:collection_id>/", collection_delete_view),  # 🆕 NOVA ROTA

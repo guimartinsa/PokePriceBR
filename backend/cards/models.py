@@ -176,11 +176,30 @@ User = settings.AUTH_USER_MODEL
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     avatar = models.URLField(blank=True, null=True)
+    avatar_option = models.ForeignKey(
+        "Avatar",
+        on_delete=models.SET_NULL,
+        related_name="profiles",
+        blank=True,
+        null=True,
+    )
     bio = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.user.email
+    
+    class Avatar(models.Model):
+        name = models.CharField(max_length=80, unique=True)
+        image_url = models.URLField()
+        is_active = models.BooleanField(default=True)
+        created_at = models.DateTimeField(auto_now_add=True)
+
+        class Meta:
+            ordering = ["name"]
+
+        def __str__(self):
+            return self.name
 
 #user card
 class UserCard(models.Model):
