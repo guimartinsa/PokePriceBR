@@ -1,11 +1,14 @@
-import { useState } from "react";
+//import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import LoginButton from "../login/LoginButton";
+//import LoginButton from "../login/LoginButton";
+
+const fallbackAvatar = "https://ui-avatars.com/api/?name=User&background=222b38&color=fff";
 
 export default function TopBar() {
     const { user, loading, isAuthenticated, logout } = useAuth();
     // Força re-render após login bem-sucedido
-    const [, setTick] = useState(0);
+    //const [, setTick] = useState(0);
 
     if (loading) return null; // não flash de UI enquanto verifica token
 
@@ -23,9 +26,14 @@ export default function TopBar() {
         >
             {isAuthenticated && user ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <span style={{ color: "#b9c2cf", fontSize: 14 }}>
-                        {user.name || user.email}
-                    </span>
+                    <Link to="/perfil" style={{ display: "flex", alignItems: "center", gap: 8, color: "#b9c2cf", textDecoration: "none" }}>
+                        <img
+                            src={user.avatar || fallbackAvatar}
+                            alt="Avatar do usuário"
+                            style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }}
+                        />
+                        <span style={{ fontSize: 14 }}>{user.name || user.email}</span>
+                    </Link>
                     <button
                         onClick={logout}
                         style={{
@@ -42,12 +50,9 @@ export default function TopBar() {
                     </button>
                 </div>
             ) : (
-                <LoginButton
-                    onLogin={() => {
-                        // Força o hook useAuth a re-verificar
-                        setTick((t) => t + 1);
-                    }}
-                />
+                <Link to="/auth" style={{ color: "#b9c2cf", textDecoration: "none", fontSize: 14 }}>
+                    Entrar
+                </Link>
             )}
         </header>
     );

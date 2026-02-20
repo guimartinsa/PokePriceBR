@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 
 export function Hero() {
+    const { isAuthenticated } = useAuth();
     return (
         <section className="hero">
             <h1>
@@ -15,9 +17,11 @@ export function Hero() {
 
             <div className="hero-actions">
                 <button className="cta">Add Your Cards</button>
-                <Link to="/auth" className="cta cta-secondary">
-                    Criar minha conta
-                </Link>
+                {!isAuthenticated && (
+                    <Link to="/auth" className="cta cta-secondary">
+                        Criar minha conta
+                    </Link>
+                )}
             </div>
         </section>
     );
