@@ -40,7 +40,8 @@ class Card(models.Model):
     set = models.ForeignKey(Set, on_delete=models.CASCADE, related_name="cartas")
 
     ativa = models.BooleanField(default=True)  # 👈 NOVO
-
+    last_price_update = models.DateTimeField(null=True, blank=True)
+    is_updating = models.BooleanField(default=False)
     class Meta:
         indexes = [
             models.Index(fields=["set", "ativa"]),

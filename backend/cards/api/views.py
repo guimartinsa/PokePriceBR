@@ -22,7 +22,7 @@ from cards.tasks.atualizar_todas_cartas import atualizar_todas_cartas
 from cards.tasks.atualizar_preco_carta import atualizar_preco_carta_task
 from cards.tasks.import_sets import import_sets_from_tcgdex_task
 from cards.tasks.import_cards import import_cards_from_set_task
-
+from cards.tasks.price_updates import atualizar_colecao_task
 
 from .serializers import CardAdminLogSerializer, CardSerializer
 from .serializers import CollectionSerializer, CollectionCardSerializer
@@ -351,25 +351,6 @@ def collection_delete_view(request, collection_id):
         status=status.HTTP_204_NO_CONTENT
     )
 
-
-"""@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def collection_cards_view(request, collection_id):
-
-    #GET: Lista todas as cartas de uma coleção
-
-    # Verifica se a coleção pertence ao usuário
-    collection = get_object_or_404(
-        Collection,
-        id=collection_id,
-        user=request.user
-    )
-
-    cards = CollectionCard.objects.filter(collection=collection)
-    serializer = CollectionCardSerializer(cards, many=True)
-    
-    return Response(serializer.data)"""
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def collection_cards_view(request, collection_id):
@@ -392,7 +373,18 @@ def collection_cards_view(request, collection_id):
     serializer = CollectionCardSerializer(cards, many=True)
     return Response(serializer.data)
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def atualizar_colecao_view(request, collection_id):
+    collection = get_object_or_404(
+        Collection,
+        id=collection_id,
+        user=request.user,
+    )
 
+    atualizar_colecao_task.delay(collection.id)
+
+    return Response({"status": "Atualização iniciada"}, status=status.HTTP_202_ACCEPTED)
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
