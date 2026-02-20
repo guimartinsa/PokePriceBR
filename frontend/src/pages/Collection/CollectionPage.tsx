@@ -14,6 +14,7 @@ import { SearchFilters, type SearchFiltersState } from "../../components/filters
 import {
     fetchCollectionCards,
     toggleCollectionCard,
+    atualizarPrecosColecao,
     type CollectionCard,
     //type CollectionCard,
 } from "../../services/collection";
@@ -74,8 +75,8 @@ export default function CollectionPage() {
 
     const [addMode, setAddMode] = useState(false);
 
-
-
+    const [isUpdatingPrices, setIsUpdatingPrices] = useState(false);
+    const [updateMessage, setUpdateMessage] = useState<string | null>(null);
 
     /* 🔹 Effect */
     useEffect(() => {
@@ -90,31 +91,31 @@ export default function CollectionPage() {
 
     /* 🔹 Load */
     async function loadCollection() {
-    setLoading(true);
+        setLoading(true);
 
-    try {
-        const cards = await fetchCollectionCards(collectionId!);
+        try {
+            const cards = await fetchCollectionCards(collectionId!);
 
-        setCollection(cards);
+            setCollection(cards);
 
-        const unique = new Set(cards.map((c) => c.id)).size;
+            const unique = new Set(cards.map((c) => c.id)).size;
 
-        const totalValue = cards.reduce(
-            (sum, c) => sum + parseFloat(c.preco_med || "0"),
-            0
-        );
+            const totalValue = cards.reduce(
+                (sum, c) => sum + parseFloat(c.preco_med || "0"),
+                0
+            );
 
-        setStats({
-            total: cards.length,
-            unique,
-            totalValue,
-        });
-    } catch (err) {
-        console.error("Erro ao carregar coleção:", err);
-    } finally {
-        setLoading(false);
+            setStats({
+                total: cards.length,
+                unique,
+                totalValue,
+            });
+        } catch (err) {
+            console.error("Erro ao carregar coleção:", err);
+        } finally {
+            setLoading(false);
+        }
     }
-}
 
 
     /* 🔹 Early returns */
@@ -158,20 +159,56 @@ export default function CollectionPage() {
             {/* 🃏 Lista */}
             <SearchFilters filters={filters} onChange={setFilters} />
 
-            <button
-                onClick={() => setAddMode((v) => !v)}
-                style={{
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "#ff0808",
-                    color: "#fff",
-                    border: "none",
-                    cursor: "pointer",
-                    marginBottom: 16,
-                }}
-            >
-                {addMode ? "✖ Fechar busca" : "➕ Adicionar cartas"}
-            </button>
+            <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+                <button
+                    onClick={() => setAddMode((v) => !v)}
+                    style={{
+                        padding: "8px 12px",
+                        borderRadius: 8,
+                        background: "#ff0808",
+                        color: "#fff",
+                        border: "none",
+                        cursor: "pointer",
+                    }}
+                >
+                    {addMode ? "✖ Fechar busca" : "➕ Adicionar cartas"}
+                </button>
+
+                <button
+                    onClick={async () => {
+                        try {
+                            setIsUpdatingPrices(true);
+                            setUpdateMessage(null);
+                            const response = await atualizarPrecosColecao(collectionId);
+                            setUpdateMessage(response.status);
+                        } catch (error) {
+                            console.error("Erro ao iniciar atualização de preços:", error);
+                            setUpdateMessage("Erro ao iniciar atualização");
+                        } finally {
+                            setIsUpdatingPrices(false);
+                        }
+                    }}
+                    disabled={isUpdatingPrices}
+                    style={{
+                        padding: "8px 12px",
+                        borderRadius: 8,
+                        background: isUpdatingPrices ? "#9e9e9e" : "#1f6feb",
+                        color: "#fff",
+                        border: "none",
+                        cursor: isUpdatingPrices ? "not-allowed" : "pointer",
+                    }}
+                >
+                    {isUpdatingPrices ? "Atualizando..." : "🔄 Atualizar preços"}
+                </button>
+            </div>
+
+            {updateMessage && (
+                <p style={{ marginTop: -8, marginBottom: 16, color: "#c3d1ff" }}>
+                    {updateMessage}
+                </p>
+            )}
+
+
             {addMode && (
                 <AddCardsPanel
                     collectionCardIds={collection.map((c) => c.id)}

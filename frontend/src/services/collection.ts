@@ -74,3 +74,10 @@ export async function addCardToCollection(
         owned: false,
     });
 }
+
+export async function atualizarPrecosColecao(collectionId: number): Promise<{ status: string }> {
+    const res = await api.post<{ status: string }>(
+        `/collections/${collectionId}/atualizar-precos/`
+    );
+    return res.data;
+}

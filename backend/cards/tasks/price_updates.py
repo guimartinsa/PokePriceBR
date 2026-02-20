@@ -1,4 +1,5 @@
 from datetime import timedelta
+import logging
 
 from celery import shared_task
 from django.db import transaction
@@ -6,6 +7,8 @@ from django.utils import timezone
 
 from cards.models import Card, Collection, CollectionCard
 from cards.services.liga_scraper import atualizar_preco_carta
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task(bind=True, rate_limit="10/m")
@@ -41,7 +44,16 @@ def atualizar_preco_task(self, card_id):
         card.save(update_fields=["is_updating"])
 
     try:
-        atualizar_preco_carta(card)
+        try:
+            atualizar_preco_carta(card)
+        except Exception as exc:
+            logger.exception("Falha ao atualizar preço da carta %s", card_id)
+            return {
+                "status": "failed",
+                "card_id": card_id,
+                "error": str(exc),
+            }
+
         Card.objects.filter(id=card_id).update(last_price_update=timezone.now())
         return {
             "status": "updated",
