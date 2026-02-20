@@ -9,6 +9,7 @@ import CollectionPage from "../pages/Collection/CollectionPage";
 import { CameraView } from "../components/camera/CameraView";
 import { ProfilePage } from "../pages/ProfilePage";
 import CollectionsListPage from "../pages/Collection/CollectionsListPage";
+import AuthPage from "../pages/AuthPage";
 
 export default function AppRoutes() {
   return (
@@ -21,6 +22,7 @@ export default function AppRoutes() {
         <Route path="/collections/:id" element={<CollectionPage  />} />
 
         <Route path="/perfil" element={<ProfilePage />} />
+        <Route path="/auth" element={<AuthPage />} />
 
         <Route path="/scan" element={<CameraView />} />
       </Route>
