@@ -3,7 +3,7 @@ import { CardAutocomplete } from "../CardAutocomplete";
 import { SetAutocomplete } from "../SetAutocomplete";
 //import { RaridadeSelect } from "./Raridadeselect";
 import { IllustratorAutocomplete } from "./Illustratorautocomplete";
-import { OverNumberToggle } from "./Overnumbertoggle";
+//import { OverNumberToggle } from "./Overnumbertoggle";
 import { PriceRangeFilter } from "./Pricerangefilter";
 
 export interface SearchFiltersState {
