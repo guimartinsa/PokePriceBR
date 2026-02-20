@@ -103,7 +103,15 @@ export function ProfilePage() {
                 />
             </label>
 
-            <button onClick={logout}>Sair</button>
+            <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+                <button onClick={handleSave} disabled={saving}>
+                    {saving ? "Salvando..." : "Salvar perfil"}
+                </button>
+                <button onClick={handleDeleteAccount} style={{ backgroundColor: "#b3261e" }}>
+                    Excluir conta
+                </button>
+                <button onClick={logout}>Sair</button>
+            </div>
         </div>
     );
 }
