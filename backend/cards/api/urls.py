@@ -26,7 +26,9 @@ from .views import (
 
 from .auth import (
     google_login,
+    login_with_email,
     me,
+    register_with_email,
 )
 
 urlpatterns = [
@@ -56,6 +58,8 @@ urlpatterns = [
     path("sets/autocomplete/", SetAutocompleteView.as_view(), name="set-autocomplete"),
     #users
     path("auth/google/", google_login),
+    path("auth/login/", login_with_email),
+    path("auth/register/", register_with_email),
     path("me/", me, name="me"),
     path("profile/", profile_view),
     # Collections

@@ -3,9 +3,19 @@ import { api } from "../api/api";
 export type AuthUser = {
     email: string;
     name: string;
-    avatar?: string ;
+    avatar?: string;
 };
 
+type AuthResponse = {
+    access: string;
+    refresh: string;
+    user: AuthUser;
+};
+
+function saveTokens(data: AuthResponse) {
+    localStorage.setItem("access", data.access);
+    localStorage.setItem("refresh", data.refresh);
+}
 
 /**
  * Busca dados do usuário autenticado via /me/
@@ -30,15 +40,24 @@ export async function fetchMe(): Promise<AuthUser | null> {
  * Envia token Google para o backend e salva os tokens retornados
  */
 export async function loginWithGoogle(googleToken: string): Promise<AuthUser> {
-    const res = await api.post<{
-        access: string;
-        refresh: string;
-        user: AuthUser;
-    }>("auth/google/", { token: googleToken });
+    const res = await api.post<AuthResponse>("auth/google/", { token: googleToken });
+    saveTokens(res.data);
+    return res.data.user;
+}
 
-    localStorage.setItem("access", res.data.access);
-    localStorage.setItem("refresh", res.data.refresh);
+export async function loginWithEmail(email: string, password: string): Promise<AuthUser> {
+    const res = await api.post<AuthResponse>("auth/login/", { email, password });
+    saveTokens(res.data);
+    return res.data.user;
+}
 
+export async function registerWithEmail(
+    name: string,
+    email: string,
+    password: string,
+): Promise<AuthUser> {
+    const res = await api.post<AuthResponse>("auth/register/", { name, email, password });
+    saveTokens(res.data);
     return res.data.user;
 }
 

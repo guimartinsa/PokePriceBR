@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export function Hero() {
     return (
         <section className="hero">
@@ -11,9 +13,12 @@ export function Hero() {
                 Track your Pokémon card collection, prices and build your decks.
             </p>
 
-            <button className="cta">
-                Add Your Cards
-            </button>
+            <div className="hero-actions">
+                <button className="cta">Add Your Cards</button>
+                <Link to="/auth" className="cta cta-secondary">
+                    Criar minha conta
+                </Link>
+            </div>
         </section>
     );
 }
