@@ -113,6 +113,8 @@ export default function CollectionPage() {
         );
     }
 
+    const selectedCardLowestPrice = selectedCard ? getLowestPrice(selectedCard) : null;
+
     /* 🔹 UI */
     return (
         <div style={{ padding: "20px" }}>
@@ -226,24 +228,47 @@ export default function CollectionPage() {
                         <button className="collection-modal-close" onClick={() => setSelectedCard(null)}>
                             ✕
                         </button>
-                        <img src={selectedCard.imagem || "/placeholder.png"} alt={selectedCard.nome} />
-                        <h3>{selectedCard.nome}</h3>
-                        <p>
-                            {selectedCard.numero_completo} • {selectedCard.set?.nome}
-                        </p>
-                        <p>Raridade: {selectedCard.raridade || "Não informada"}</p>
-                        <p>Menor valor: {getLowestPrice(selectedCard) ? `R$ ${getLowestPrice(selectedCard)}` : "Indisponível"}</p>
-                        <p>Preço médio: {selectedCard.preco_med ? `R$ ${selectedCard.preco_med}` : "Indisponível"}</p>
-                        <p>Preço maximo: {selectedCard.preco_max ? `R$ ${selectedCard.preco_max}` : "Indisponível"}</p>
 
-                        {selectedCard.liga_url && (
-                            <a href={selectedCard.liga_url} target="_blank" rel="noreferrer" className="liga-link-button">
-                                Ver na Liga Pokémon
-                            </a>
-                        )}
+                        <div className="collection-modal-content">
+                            <img src={selectedCard.imagem || "/placeholder.png"} alt={selectedCard.nome} />
+
+                            <div className="collection-modal-info">
+                                <span className="collection-modal-tag">Detalhes da Carta</span>
+                                <h3>{selectedCard.nome}</h3>
+                                <p className="collection-modal-subtitle">
+                                    {selectedCard.numero_completo} • {selectedCard.set?.nome}
+                                </p>
+
+                                <div className="collection-modal-price-grid">
+                                    <div>
+                                        <small>Menor valor</small>
+                                        <strong>{selectedCardLowestPrice ? `R$ ${selectedCardLowestPrice}` : "Indisponível"}</strong>
+                                    </div>
+                                    <div>
+                                        <small>Preço médio</small>
+                                        <strong>{selectedCard.preco_med ? `R$ ${selectedCard.preco_med}` : "Indisponível"}</strong>
+                                    </div>
+                                    <div>
+                                        <small>Maior valor</small>
+                                        <strong>{selectedCard.preco_max ? `R$ ${selectedCard.preco_max}` : "Indisponível"}</strong>
+                                    </div>
+                                </div>
+
+                                <p className="collection-modal-rarity">Raridade: {selectedCard.raridade || "Não informada"}</p>
+
+                                {selectedCard.liga_url && (
+                                    <a href={selectedCard.liga_url} target="_blank" rel="noreferrer" className="liga-link-button">
+                                        Ver na Liga Pokémon
+                                    </a>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
         </div>
     );
 }
+
+
+

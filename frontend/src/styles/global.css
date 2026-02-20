@@ -534,7 +534,7 @@ input:focus {
         font-weight: 500;
     }
 
-    .filters-label ul{
+    .filters-label ul {
         color: #2a3b59;
     }
 
@@ -551,7 +551,8 @@ input:focus {
     .collection-modal-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(6, 10, 18, 0.78);
+        backdrop-filter: blur(5px);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -561,36 +562,110 @@ input:focus {
 
     .collection-modal-card {
         position: relative;
-        width: min(420px, 100%);
-        background: #0f1724;
-        border: 1px solid #2a3b59;
-        border-radius: 12px;
-        padding: 16px;
+        width: min(760px, 100%);
+        border-radius: 16px;
+        border: 1px solid #2e4261;
+        background: linear-gradient(180deg, #111c2d 0%, #0d1524 100%);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
         color: #e5ecf7;
+        padding: 20px;
+    }
+
+    .collection-modal-content {
         display: grid;
-        gap: 8px;
+        grid-template-columns: 230px 1fr;
+        gap: 20px;
+        align-items: start;
     }
 
     .collection-modal-card img {
         width: 100%;
+        border-radius: 12px;
+        border: 1px solid #2e4261;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .collection-modal-info {
+        display: grid;
+        gap: 12px;
+    }
+
+    .collection-modal-tag {
+        width: fit-content;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        background: rgba(246, 196, 0, 0.16);
+        color: #f6c400;
+        border: 1px solid rgba(246, 196, 0, 0.45);
+    }
+
+    .collection-modal-info h3 {
+        margin: 0;
+        font-size: clamp(1.3rem, 2.4vw, 1.8rem);
+    }
+
+    .collection-modal-subtitle {
+        color: #a8b8cc;
+        font-size: 0.95rem;
+    }
+
+    .collection-modal-price-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(130px, 1fr));
+        gap: 12px;
+    }
+
+    .collection-modal-price-grid div {
+        background: #142138;
+        border: 1px solid #2d4568;
         border-radius: 10px;
+        padding: 10px 12px;
+        display: grid;
+        gap: 4px;
+    }
+
+    .collection-modal-price-grid small {
+        color: #9fb2cc;
+    }
+
+    .collection-modal-price-grid strong {
+        color: #f6c400;
+    }
+
+    .collection-modal-rarity {
+        color: #c9d6e7;
     }
 
     .collection-modal-close {
         position: absolute;
-        top: 8px;
-        right: 8px;
-        width: 32px;
-        height: 32px;
+        top: 10px;
+        right: 10px;
+        width: 34px;
+        height: 34px;
         border: none;
         border-radius: 50%;
-        background: #1f2b40;
+        background: #1d2a40;
         color: #fff;
+    }
+
+    .collection-modal-close:hover {
+        border-color: transparent;
+        background: #2a3f5f;
+    }
+
+    @media (max-width: 720px) {
+        .collection-modal-content {
+            grid-template-columns: 1fr;
+        }
     }
 
     .liga-link-button {
         display: inline-flex;
         justify-content: center;
+        align-items: center;
+        width: fit-content;
         margin-top: 8px;
         padding: 10px 14px;
         background: #f6c400;
