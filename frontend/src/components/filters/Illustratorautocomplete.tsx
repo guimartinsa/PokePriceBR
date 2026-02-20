@@ -53,7 +53,7 @@ export function IllustratorAutocomplete({ value, onChange }: Props) {
                         top: "100%",
                         left: 0,
                         right: 0,
-                        background: "#fff",
+                        background: "#242424",
                         border: "1px solid #ddd",
                         borderRadius: "6px",
                         listStyle: "none",
@@ -71,7 +71,7 @@ export function IllustratorAutocomplete({ value, onChange }: Props) {
                             style={{
                                 padding: "12px",
                                 cursor: "pointer",
-                                borderBottom: "1px solid #f0f0f0",
+                                borderBottom: "1px solid #f5f5f5",
                             }}
                             onMouseDown={() => {
                                 onChange(ilustrador);

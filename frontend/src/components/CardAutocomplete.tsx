@@ -54,7 +54,7 @@ export function CardAutocomplete({ value, onSelect }: Props) {
               <div>
                 <strong>{card.nome}</strong>
                 <small>
-                  {card.numero_completo} • {card.set.codigo_liga}
+                  Nº {card.numero_completo} • Set {card.set.codigo_liga}
                 </small>
               </div>
             </li>

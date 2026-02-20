@@ -35,6 +35,7 @@ class CardSerializer(serializers.ModelSerializer):
             "preco_max",
 
             "is_over_number",
+            "liga_url",
             "set",
         ]
 
@@ -76,6 +77,15 @@ class CollectionCardSerializer(serializers.ModelSerializer):
     imagem = serializers.CharField(source="card.imagem")
     numero_completo = serializers.CharField(source="card.numero_completo")
     raridade = serializers.CharField(source="card.raridade", allow_null=True)
+    liga_url = serializers.CharField(source="card.liga_url", allow_null=True)
+    set = SetSerializer(source="card.set", read_only=True)
+
+    preco_min = serializers.DecimalField(
+        source="card.preco_min",
+        max_digits=10,
+        decimal_places=2,
+        allow_null=True
+    )
 
     preco_med = serializers.DecimalField(
         source="card.preco_med",
@@ -92,6 +102,9 @@ class CollectionCardSerializer(serializers.ModelSerializer):
             "imagem",
             "numero_completo",
             "raridade",
+            "set",
+            "liga_url",
+            "preco_min",
             "preco_med",
             "owned",
         ]

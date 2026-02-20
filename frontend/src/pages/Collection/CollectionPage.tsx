@@ -1,22 +1,17 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-//import api from "../../api/api";
-//import type { Card } from "../../types/Card";
 
-//import { CardGrid } from "../../components/cards/CardGrid";
 import { Loading } from "../../components/Loading";
 import { Section } from "../../components/ui/Section";
 import { StatBlock } from "../../components/ui/StatBlock";
 import { SearchFilters, type SearchFiltersState } from "../../components/filters/Searchfilters";
-
 
 import {
     fetchCollectionCards,
     toggleCollectionCard,
     atualizarPrecosColecao,
     type CollectionCard,
-    //type CollectionCard,
 } from "../../services/collection";
 import { CardItemDetail } from "../../components/cards/CardItemDetail";
 import { AddCardsPanel } from "./AddCardsPanel";
@@ -32,6 +27,7 @@ export default function CollectionPage() {
     /* 🔹 State */
     const [collection, setCollection] = useState<CollectionCard[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedCard, setSelectedCard] = useState<CollectionCard | null>(null);
 
     const [stats, setStats] = useState({
         total: 0,
@@ -50,31 +46,16 @@ export default function CollectionPage() {
     });
 
     const filteredCollection = collection.filter((card) => {
-        if (filters.nome && !card.nome.toLowerCase().includes(filters.nome.toLowerCase())) {
-            return false;
-        }
-
-        if (filters.raridade && card.raridade !== filters.raridade) {
-            return false;
-        }
-
-        /*if (filters.ilustrador && card.ilustrador !== filters.ilustrador) {
-            return false;
-        }*/
-
-        if (filters.preco_min && Number(card.preco_med) < Number(filters.preco_min)) {
-            return false;
-        }
-
-        if (filters.preco_max && Number(card.preco_med) > Number(filters.preco_max)) {
-            return false;
-        }
+        if (filters.nome && !card.nome.toLowerCase().includes(filters.nome.toLowerCase())) return false;
+        if (filters.set && card.set?.codigo_liga !== filters.set) return false;
+        if (filters.raridade && card.raridade !== filters.raridade) return false;
+        if (filters.preco_min && Number(card.preco_med) < Number(filters.preco_min)) return false;
+        if (filters.preco_max && Number(card.preco_med) > Number(filters.preco_max)) return false;
 
         return true;
     });
 
     const [addMode, setAddMode] = useState(false);
-
     const [isUpdatingPrices, setIsUpdatingPrices] = useState(false);
     const [updateMessage, setUpdateMessage] = useState<string | null>(null);
 
@@ -100,16 +81,10 @@ export default function CollectionPage() {
 
             const unique = new Set(cards.map((c) => c.id)).size;
 
-            const totalValue = cards.reduce(
-                (sum, c) => sum + parseFloat(c.preco_med || "0"),
-                0
-            );
+            const totalValue = cards.reduce((sum, c) => sum + parseFloat(c.preco_med || "0"), 0);
 
-            setStats({
-                total: cards.length,
-                unique,
-                totalValue,
-            });
+            setStats({ total: cards.length, unique, totalValue });
+
         } catch (err) {
             console.error("Erro ao carregar coleção:", err);
         } finally {
@@ -128,8 +103,6 @@ export default function CollectionPage() {
             </div>
         );
     }
-
-
 
     /* 🔹 UI */
     return (
@@ -150,10 +123,7 @@ export default function CollectionPage() {
             >
                 <StatBlock value={stats.total} label="Total de Cartas" />
                 <StatBlock value={stats.unique} label="Cartas Únicas" />
-                <StatBlock
-                    value={`R$ ${stats.totalValue.toFixed(2)}`}
-                    label="Valor Estimado"
-                />
+                <StatBlock value={`R$ ${stats.totalValue.toFixed(2)}`} label="Valor Estimado" />
             </div>
 
             {/* 🃏 Lista */}
@@ -165,7 +135,7 @@ export default function CollectionPage() {
                     style={{
                         padding: "8px 12px",
                         borderRadius: 8,
-                        background: "#ff0808",
+                        background: "#d61d1d",
                         color: "#fff",
                         border: "none",
                         cursor: "pointer",
@@ -192,7 +162,7 @@ export default function CollectionPage() {
                     style={{
                         padding: "8px 12px",
                         borderRadius: 8,
-                        background: isUpdatingPrices ? "#9e9e9e" : "#1f6feb",
+                        background: isUpdatingPrices ? "#7b8594" : "#1f6feb",
                         color: "#fff",
                         border: "none",
                         cursor: isUpdatingPrices ? "not-allowed" : "pointer",
@@ -202,22 +172,15 @@ export default function CollectionPage() {
                 </button>
             </div>
 
-            {updateMessage && (
-                <p style={{ marginTop: -8, marginBottom: 16, color: "#c3d1ff" }}>
-                    {updateMessage}
-                </p>
-            )}
-
+            {updateMessage && <p style={{ marginTop: -8, marginBottom: 16, color: "#c3d1ff" }}>{updateMessage}</p>}
 
             {addMode && (
                 <AddCardsPanel
                     collectionCardIds={collection.map((c) => c.id)}
                     onAdd={(cardId) => {
                         toggleCollectionCard(collectionId, cardId, false);
-
                         setCollection((prev) => {
                             if (prev.some((c) => c.id === cardId)) return prev;
-
                             return [...prev];
                         });
                     }}
@@ -234,11 +197,10 @@ export default function CollectionPage() {
                             <CardItemDetail
                                 key={card.id}
                                 card={card}
+                                onClick={() => setSelectedCard(card)}
                                 onToggleOwned={(owned) => {
                                     setCollection((prev) =>
-                                        prev.map((c) =>
-                                            c.id === card.id ? { ...c, owned } : c
-                                        )
+                                        prev.map((c) => (c.id === card.id ? { ...c, owned } : c))
                                     );
 
                                     toggleCollectionCard(collectionId, card.id, owned);
@@ -249,6 +211,29 @@ export default function CollectionPage() {
                 )}
             </Section>
 
+            {selectedCard && (
+                <div className="collection-modal-overlay" onClick={() => setSelectedCard(null)}>
+                    <div className="collection-modal-card" onClick={(e) => e.stopPropagation()}>
+                        <button className="collection-modal-close" onClick={() => setSelectedCard(null)}>
+                            ✕
+                        </button>
+                        <img src={selectedCard.imagem || "/placeholder.png"} alt={selectedCard.nome} />
+                        <h3>{selectedCard.nome}</h3>
+                        <p>
+                            {selectedCard.numero_completo} • {selectedCard.set?.nome}
+                        </p>
+                        <p>Raridade: {selectedCard.raridade || "Não informada"}</p>
+                        <p>Menor valor: {selectedCard.preco_min ? `R$ ${selectedCard.preco_min}` : "Indisponível"}</p>
+                        <p>Preço médio: {selectedCard.preco_med ? `R$ ${selectedCard.preco_med}` : "Indisponível"}</p>
+
+                        {selectedCard.liga_url && (
+                            <a href={selectedCard.liga_url} target="_blank" rel="noreferrer" className="liga-link-button">
+                                Ver na Liga Pokémon
+                            </a>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

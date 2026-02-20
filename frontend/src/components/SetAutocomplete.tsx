@@ -26,7 +26,7 @@ export function SetAutocomplete({ value, onChange }: Props) {
   }, [debouncedValue]);
 
   return (
-    <div style={{ position: "relative", width: 220 }}>
+    <div style={{ position: "relative", width: "100%" }}>
       <input
         placeholder="Set (ex: DRI)"
         value={value}
@@ -38,36 +38,19 @@ export function SetAutocomplete({ value, onChange }: Props) {
       />
 
       {open && sets.length > 0 && (
-        <ul
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            background: "#0b111a",
-            border: "1px solid #ddd",
-            borderRadius: 6,
-            listStyle: "none",
-            padding: 0,
-            margin: 4,
-            zIndex: 10,
-            maxHeight: 200,
-            overflowY: "auto",
-          }}
-        >
+          <ul className="autocomplete-list">
           {sets.map((set) => (
             <li
               key={set.id}
-              style={{
-                padding: 8,
-                cursor: "pointer",
-              }}
               onMouseDown={() => {
                 onChange(set.codigo);
                 setOpen(false);
               }}
             >
-              <strong>{set.codigo}</strong> – {set.nome}
+              <div>
+                <strong>{set.codigo}</strong>
+                <small>{set.nome}</small>
+              </div>
             </li>
           ))}
         </ul>

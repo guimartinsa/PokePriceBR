@@ -24,7 +24,7 @@ export function PriceRangeFilter({
                     padding: "10px 12px",
                     borderRadius: "6px",
                     border: "1px solid #ddd",
-                    background: "#fff",
+                    background: "#0f1a26 ",
                     cursor: "pointer",
                     display: "flex",
                     justifyContent: "space-between",
@@ -41,7 +41,7 @@ export function PriceRangeFilter({
                     style={{
                         marginTop: "8px",
                         padding: "12px",
-                        background: "#f9f9f9",
+                        background: "#0f1a26 ",
                         borderRadius: "6px",
                         border: "1px solid #eee",
                     }}
