@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react"; import { fetchCards } from "../../api/cards";
+import { useEffect, useMemo, useState } from "react";
+import { fetchCards } from "../../api/cards";
 import type { Card } from "../../types/Card";
 import { SearchFilters, type SearchFiltersState } from "../../components/filters/Searchfilters";
 import "./addCardsPanel.css";
@@ -59,8 +60,10 @@ export function AddCardsPanel({ collectionCardIds, onAdd }: Props) {
     const addedSet = useMemo(() => new Set(addedCardIds), [addedCardIds]);
 
     return (
-        <div>
-            <SearchFilters filters={filters} onChange={setFilters} />
+        <div className="add-cards-panel">
+            <div className="add-cards-filters">
+                <SearchFilters filters={filters} onChange={setFilters} />
+            </div>
 
             <div className="add-cards-toolbar">
                 <span>Página {page}</span>
@@ -78,29 +81,32 @@ export function AddCardsPanel({ collectionCardIds, onAdd }: Props) {
                 </div>
             </div>
 
-            <div className="add-cards-grid">
-                {cards.map((card) => {
-                    const added = addedSet.has(card.id);
+            <div className="add-cards-grid-wrapper">
+                <div className="add-cards-grid">
+                    {cards.map((card) => {
+                        const added = addedSet.has(card.id);
 
-                    return (
-                        <button
-                            key={card.id}
-                            className={`add-card ${added ? "added" : ""}`}
-                            onClick={async () => {
-                                if (added) return;
+                        return (
+                            <button
+                                key={card.id}
+                                className={`add-card ${added ? "added" : ""}`}
+                                onClick={async () => {
+                                    if (added) return;
 
-                                setAddedCardIds((prev) => [...prev, card.id]);
-                                await onAdd(card.id);
-                            }}                        >
-                            <img src={card.imagem || "/placeholder.png"} alt={card.nome} />
-                            {added && (
-                                <div className="check-overlay">
-                                    <img src={CheckballIcon} alt="Carta adicionada" width={65} height={65} />
-                                </div>
-                            )}
-                        </button>
-                    );
-                })}
+                                    setAddedCardIds((prev) => [...prev, card.id]);
+                                    await onAdd(card.id);
+                                }}
+                            >
+                                <img src={card.imagem || "/placeholder.png"} alt={card.nome} />
+                                {added && (
+                                    <div className="check-overlay">
+                                        <img src={CheckballIcon} alt="Carta adicionada" width={65} height={65} />
+                                    </div>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );

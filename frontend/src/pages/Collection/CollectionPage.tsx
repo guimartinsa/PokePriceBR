@@ -96,7 +96,7 @@ export default function CollectionPage() {
         } finally {
             if (showPageLoader) {
                 setLoading(false);
-            }        
+            }
         }
     }
 
@@ -184,7 +184,7 @@ export default function CollectionPage() {
             {showAddCardsModal && (
                 <div className="card-quick-view-overlay" onClick={() => setShowAddCardsModal(false)} role="presentation">
                     <div
-                        className="card-quick-view-modal"
+                        className="card-quick-view-modal add-cards-modal"
                         onClick={(event) => event.stopPropagation()}
                         role="dialog"
                         aria-modal="true"
@@ -244,6 +244,3 @@ export default function CollectionPage() {
         </div>
     );
 }
-
-
-

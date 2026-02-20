@@ -573,6 +573,17 @@ input:focus {
     padding: 20px;
 }
 
+.add-cards-modal {
+    display: flex;
+    flex-direction: column;
+    max-height: min(92vh, 980px);
+    width: min(1200px, 100%);
+}
+
+.add-cards-modal h3 {
+    margin-right: 36px;
+}
+
 .card-quick-view-content {
     display: grid;
     grid-template-columns: minmax(260px, 320px) 1fr;
@@ -703,6 +714,11 @@ input:focus {
 }
 
 @media (max-width: 860px) {
+    .add-cards-modal {
+        max-height: calc(100vh - 24px);
+        padding: 14px;
+    }
+
     .card-quick-view-content {
         grid-template-columns: 1fr;
     }
