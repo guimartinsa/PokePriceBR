@@ -1,8 +1,7 @@
 from django.http import JsonResponse
 
 from accounts.services import get_or_create_profile
-from backend.core_permissions.services import refresh_subscription_status
-
+from core_permissions.services import refresh_subscription_status
 
 class SubscriptionStateMiddleware:
     def __init__(self, get_response):
