@@ -189,17 +189,17 @@ class Profile(models.Model):
     def __str__(self):
         return self.user.email
     
-    class Avatar(models.Model):
-        name = models.CharField(max_length=80, unique=True)
-        image_url = models.URLField()
-        is_active = models.BooleanField(default=True)
-        created_at = models.DateTimeField(auto_now_add=True)
+class Avatar(models.Model):
+    name = models.CharField(max_length=80, unique=True)
+    image_url = models.URLField()
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
-        class Meta:
-            ordering = ["name"]
+    class Meta:
+        ordering = ["name"]
 
-        def __str__(self):
-            return self.name
+    def __str__(self):
+        return self.name
 
 #user card
 class UserCard(models.Model):
