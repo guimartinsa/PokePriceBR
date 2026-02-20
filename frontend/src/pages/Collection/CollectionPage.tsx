@@ -16,17 +16,12 @@ import {
 import { CardItemDetail } from "../../components/cards/CardItemDetail";
 import { AddCardsPanel } from "./AddCardsPanel";
 
+import { CardQuickViewModal } from "../../components/cards/CardQuickViewModal";
+
 /* 🔹 Tipo local: carta + owned */
 /*type CardWithOwned = Card & {owned: boolean;};*/
 
-function getLowestPrice(card: { preco_min?: string | null; preco_med?: string | null; preco_max?: string | null }): string | null {
-    const values = [card.preco_min, card.preco_med, card.preco_max]
-        .map((value) => Number(value))
-        .filter((value) => Number.isFinite(value) && value > 0);
 
-    if (values.length === 0) return null;
-    return Math.min(...values).toFixed(2);
-}
 
 export default function CollectionPage() {
     /* 🔹 Params */
@@ -112,8 +107,6 @@ export default function CollectionPage() {
             </div>
         );
     }
-
-    const selectedCardLowestPrice = selectedCard ? getLowestPrice(selectedCard) : null;
 
     /* 🔹 UI */
     return (
@@ -223,48 +216,11 @@ export default function CollectionPage() {
             </Section>
 
             {selectedCard && (
-                <div className="collection-modal-overlay" onClick={() => setSelectedCard(null)}>
-                    <div className="collection-modal-card" onClick={(e) => e.stopPropagation()}>
-                        <button className="collection-modal-close" onClick={() => setSelectedCard(null)}>
-                            ✕
-                        </button>
-
-                        <div className="collection-modal-content">
-                            <img src={selectedCard.imagem || "/placeholder.png"} alt={selectedCard.nome} />
-
-                            <div className="collection-modal-info">
-                                <span className="collection-modal-tag">Detalhes da Carta</span>
-                                <h3>{selectedCard.nome}</h3>
-                                <p className="collection-modal-subtitle">
-                                    {selectedCard.numero_completo} • {selectedCard.set?.nome}
-                                </p>
-
-                                <div className="collection-modal-price-grid">
-                                    <div>
-                                        <small>Menor valor</small>
-                                        <strong>{selectedCardLowestPrice ? `R$ ${selectedCardLowestPrice}` : "Indisponível"}</strong>
-                                    </div>
-                                    <div>
-                                        <small>Preço médio</small>
-                                        <strong>{selectedCard.preco_med ? `R$ ${selectedCard.preco_med}` : "Indisponível"}</strong>
-                                    </div>
-                                    <div>
-                                        <small>Maior valor</small>
-                                        <strong>{selectedCard.preco_max ? `R$ ${selectedCard.preco_max}` : "Indisponível"}</strong>
-                                    </div>
-                                </div>
-
-                                <p className="collection-modal-rarity">Raridade: {selectedCard.raridade || "Não informada"}</p>
-
-                                {selectedCard.liga_url && (
-                                    <a href={selectedCard.liga_url} target="_blank" rel="noreferrer" className="liga-link-button">
-                                        Ver na Liga Pokémon
-                                    </a>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                                <CardQuickViewModal
+                    card={selectedCard}
+                    open={!!selectedCard}
+                    onClose={() => setSelectedCard(null)}
+                />
             )}
         </div>
     );

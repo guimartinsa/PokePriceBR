@@ -4,9 +4,10 @@ import { CardItemDetail } from "./CardItemDetail";
 type Props<T extends Card> = {
     cards: T[];
     compact?: boolean;
+    onCardClick?: (card: T) => void;
 };
 
-export function CardGrid<T extends Card>({ cards, compact = false }: Props<T>) {
+export function CardGrid<T extends Card>({ cards, compact = false, onCardClick }: Props<T>) {
     if (cards.length === 0) {
         return (
             <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
@@ -22,6 +23,7 @@ export function CardGrid<T extends Card>({ cards, compact = false }: Props<T>) {
                     key={card.id}
                     card={card}
                     compact={compact}
+                    onClick={onCardClick ? () => onCardClick(card) : undefined}
                 />
             ))}
         </div>

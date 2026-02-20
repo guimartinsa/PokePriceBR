@@ -7,6 +7,7 @@ import { CardGrid } from "../../components/cards/CardGrid";
 import { Loading } from "../../components/Loading";
 import { SearchFilters, type SearchFiltersState } from "../../components/filters/Searchfilters";
 import { useDebounce } from "../../hooks/useDebounce";
+import { CardQuickViewModal } from "../../components/cards/CardQuickViewModal";
 
 export default function CardListPage() {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -32,6 +33,7 @@ export default function CardListPage() {
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [selectedCard, setSelectedCard] = useState<Card | null>(null);
     const debounceFilters = useDebounce(filters, 400);
 
     /* ======================
@@ -139,7 +141,7 @@ export default function CardListPage() {
             )}
 
             {/* LISTA usando CardGrid */}
-            <CardGrid cards={cards} />
+            <CardGrid cards={cards} onCardClick={setSelectedCard} />
 
             {error && (
                 <p style={{ color: "red", textAlign: "center", marginTop: "20px" }}>
@@ -152,6 +154,15 @@ export default function CardListPage() {
 
             {/* SENTINELA */}
             {hasMore && !loading && <div ref={loadMoreRef} style={{ height: 40 }} />}
+
+            {selectedCard && (
+                <CardQuickViewModal
+                    card={selectedCard}
+                    open={!!selectedCard}
+                    onClose={() => setSelectedCard(null)}
+                    showCollectionActions
+                />
+            )}
 
             {/* MENSAGEM DE FIM */}
             {!hasMore && cards.length > 0 && (
