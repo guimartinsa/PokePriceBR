@@ -59,7 +59,7 @@ export default function CollectionPage() {
         return true;
     });
 
-    const [addMode, setAddMode] = useState(false);
+    const [showAddCardsModal, setShowAddCardsModal] = useState(false);
     const [isUpdatingPrices, setIsUpdatingPrices] = useState(false);
     const [updateMessage, setUpdateMessage] = useState<string | null>(null);
 
@@ -70,13 +70,15 @@ export default function CollectionPage() {
             return;
         }
 
-        loadCollection();
+        loadCollection(true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [collectionId]);
 
     /* 🔹 Load */
-    async function loadCollection() {
-        setLoading(true);
+    async function loadCollection(showPageLoader = false) {
+        if (showPageLoader) {
+            setLoading(true);
+        }
 
         try {
             const cards = await fetchCollectionCards(collectionId!);
@@ -92,7 +94,9 @@ export default function CollectionPage() {
         } catch (err) {
             console.error("Erro ao carregar coleção:", err);
         } finally {
-            setLoading(false);
+            if (showPageLoader) {
+                setLoading(false);
+            }        
         }
     }
 
@@ -135,8 +139,7 @@ export default function CollectionPage() {
 
             <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
                 <button
-                    onClick={() => setAddMode((v) => !v)}
-                    style={{
+                    onClick={() => setShowAddCardsModal(true)} style={{
                         padding: "8px 12px",
                         borderRadius: 8,
                         background: "#d61d1d",
@@ -145,7 +148,7 @@ export default function CollectionPage() {
                         cursor: "pointer",
                     }}
                 >
-                    {addMode ? "✖ Fechar busca" : "➕ Adicionar cartas"}
+                    ➕ Adicionar cartas
                 </button>
 
                 <button
@@ -178,17 +181,33 @@ export default function CollectionPage() {
 
             {updateMessage && <p style={{ marginTop: -8, marginBottom: 16, color: "#c3d1ff" }}>{updateMessage}</p>}
 
-            {addMode && (
-                <AddCardsPanel
-                    collectionCardIds={collection.map((c) => c.id)}
-                    onAdd={(cardId) => {
-                        toggleCollectionCard(collectionId, cardId, false);
-                        setCollection((prev) => {
-                            if (prev.some((c) => c.id === cardId)) return prev;
-                            return [...prev];
-                        });
-                    }}
-                />
+            {showAddCardsModal && (
+                <div className="card-quick-view-overlay" onClick={() => setShowAddCardsModal(false)} role="presentation">
+                    <div
+                        className="card-quick-view-modal"
+                        onClick={(event) => event.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="add-cards-modal-title"
+                    >
+                        <button
+                            type="button"
+                            className="card-quick-view-close"
+                            onClick={() => setShowAddCardsModal(false)}
+                            aria-label="Fechar modal"
+                        >
+                            ✕
+                        </button>
+                        <h3 id="add-cards-modal-title" style={{ marginBottom: 12 }}>Adicionar cartas</h3>
+                        <AddCardsPanel
+                            collectionCardIds={collection.map((c) => c.id)}
+                            onAdd={async (cardId) => {
+                                await toggleCollectionCard(collectionId, cardId, false);
+                                await loadCollection();
+                            }}
+                        />
+                    </div>
+                </div>
             )}
 
 
@@ -216,7 +235,7 @@ export default function CollectionPage() {
             </Section>
 
             {selectedCard && (
-                                <CardQuickViewModal
+                <CardQuickViewModal
                     card={selectedCard}
                     open={!!selectedCard}
                     onClose={() => setSelectedCard(null)}

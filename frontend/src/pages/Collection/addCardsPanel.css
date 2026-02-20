@@ -1,13 +1,33 @@
+.add-cards-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 16px 0;
+}
+
+.add-cards-toolbar button {
+    margin-left: 8px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid #3a3a3a;
+    background: #1d1d1d;
+    color: #fff;
+}
+
 .add-cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 16px;
+    
 }
 
 .add-card {
     position: relative;
     cursor: pointer;
     transition: 0.2s;
+    border: none;
+    background: transparent;
+    padding: 0;
 }
 
 .add-card img {

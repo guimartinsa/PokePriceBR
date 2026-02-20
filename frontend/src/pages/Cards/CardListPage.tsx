@@ -68,6 +68,7 @@ export default function CardListPage() {
     useEffect(() => {
         if (!hasMore || isFetchingRef.current) return;
 
+        isFetchingRef.current = true;
         setLoading(true);
         setError(null);
 
@@ -89,8 +90,11 @@ export default function CardListPage() {
                 setHasMore(Boolean(data.next));
             })
             .catch(() => setError("Erro ao carregar cartas"))
-            .finally(() => setLoading(false));
-    }, [page, debounceFilters]);
+            .finally(() => {
+                isFetchingRef.current = false;
+                setLoading(false);
+            });
+            }, [page, debounceFilters]);
 
     /* ======================
        INTERSECTION OBSERVER

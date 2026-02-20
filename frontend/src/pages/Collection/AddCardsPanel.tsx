@@ -1,19 +1,22 @@
-import { useEffect, useState } from "react";
-import { fetchCards } from "../../api/cards";
+import { useEffect, useMemo, useState } from "react"; import { fetchCards } from "../../api/cards";
 import type { Card } from "../../types/Card";
 import { SearchFilters, type SearchFiltersState } from "../../components/filters/Searchfilters";
 import "./addCardsPanel.css";
-import CheckballIcon from "../../assets/icons/checkball-icon.svg"
+import CheckballIcon from "../../assets/icons/checkball-icon.svg";
+
 
 type Props = {
     collectionCardIds: number[];
-    onAdd(cardId: number): void;
+    onAdd(cardId: number): Promise<void> | void;
 };
 
 export function AddCardsPanel({ collectionCardIds, onAdd }: Props) {
     const [cards, setCards] = useState<Card[]>([]);
     const [page, setPage] = useState(1);
-    setPage
+
+    const [hasMore, setHasMore] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [addedCardIds, setAddedCardIds] = useState<number[]>(collectionCardIds);
 
     const [filters, setFilters] = useState<SearchFiltersState>({
         nome: "",
@@ -26,7 +29,17 @@ export function AddCardsPanel({ collectionCardIds, onAdd }: Props) {
     });
 
     useEffect(() => {
-        fetchCards({ 
+        setAddedCardIds(collectionCardIds);
+    }, [collectionCardIds]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [filters]);
+
+    useEffect(() => {
+        setLoading(true);
+
+        fetchCards({
             page,
             nome: filters.nome || undefined,
             set: filters.set || undefined,
@@ -35,33 +48,57 @@ export function AddCardsPanel({ collectionCardIds, onAdd }: Props) {
             over: filters.over ?? undefined, // 🔥 AQUI É A CORREÇÃO
             preco_min: filters.preco_min || undefined,
             preco_max: filters.preco_max || undefined,
-        }).then((data) => {
-            setCards(data.results);
-        });
+        })
+            .then((data) => {
+                setCards(data.results);
+                setHasMore(Boolean(data.next));
+            })
+            .finally(() => setLoading(false));
     }, [filters, page]);
+
+    const addedSet = useMemo(() => new Set(addedCardIds), [addedCardIds]);
 
     return (
         <div>
             <SearchFilters filters={filters} onChange={setFilters} />
 
+            <div className="add-cards-toolbar">
+                <span>Página {page}</span>
+                <div>
+                    <button
+                        type="button"
+                        onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                        disabled={page === 1 || loading}
+                    >
+                        ← Anterior
+                    </button>
+                    <button type="button" onClick={() => setPage((prev) => prev + 1)} disabled={!hasMore || loading}>
+                        Próxima →
+                    </button>
+                </div>
+            </div>
+
             <div className="add-cards-grid">
                 {cards.map((card) => {
-                    const added = collectionCardIds.includes(card.id);
+                    const added = addedSet.has(card.id);
 
                     return (
-                        <div
+                        <button
                             key={card.id}
                             className={`add-card ${added ? "added" : ""}`}
-                            onClick={() => onAdd(card.id)}
-                        >
-                            <img src={card.imagem || "/placeholder.png"} />
+                            onClick={async () => {
+                                if (added) return;
 
+                                setAddedCardIds((prev) => [...prev, card.id]);
+                                await onAdd(card.id);
+                            }}                        >
+                            <img src={card.imagem || "/placeholder.png"} alt={card.nome} />
                             {added && (
                                 <div className="check-overlay">
-                                    <img src= {CheckballIcon} alt="" width={65} height={65} />
+                                    <img src={CheckballIcon} alt="Carta adicionada" width={65} height={65} />
                                 </div>
                             )}
-                        </div>
+                        </button>
                     );
                 })}
             </div>
