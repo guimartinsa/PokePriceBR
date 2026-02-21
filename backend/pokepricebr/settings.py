@@ -24,9 +24,9 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    'pricedex.com.br',
-    'api.pricedex.com.br',
-    'www.pricedex.com.br',
+    "pricedex.com.br",
+    "www.pricedex.com.br",
+    "api.pricedex.com.br",
 ]
 
 
@@ -169,8 +169,8 @@ CELERY_TIMEZONE = TIME_ZONE
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://api.pricedex.com.br",
-    "https://www.pricedex.com.brp",
+    "https://pricedex.com.br",
+    "https://www.pricedex.com.br",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
