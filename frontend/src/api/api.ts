@@ -1,15 +1,25 @@
 import axios from "axios";
 
-const apiUrl = import.meta.env.PROD 
-  ? "https://pokepricebr.onrender.com/api"
-  : "http://127.0.0.1:8000/api";
+function normalizeBackendBaseUrl(rawUrl?: string): string {
+  if (!rawUrl) {
+    return import.meta.env.PROD
+      ? "https://pokepricebr.onrender.com"
+      : "http://127.0.0.1:8000";
+  }
+
+  const withProtocol = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
+  return withProtocol.replace(/\/+$/, "").replace(/\/api$/, "");
+}
+
+const backendBaseUrl = normalizeBackendBaseUrl(import.meta.env.VITE_API_URL);
+const apiUrl = `${backendBaseUrl}/api`;
 
 export const api = axios.create({
   baseURL: apiUrl,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
-  }
+  },
 });
 
 // Interceptor de REQUEST: injeta Bearer token se existir
@@ -28,10 +38,10 @@ if (!import.meta.env.PROD) {
   api.interceptors.response.use(
     (response) => response,
     (error) => {
-      console.error('❌ API Error:', {
+      console.error("❌ API Error:", {
         url: error.config?.url,
         status: error.response?.status,
-        data: error.response?.data
+        data: error.response?.data,
       });
       return Promise.reject(error);
     }
