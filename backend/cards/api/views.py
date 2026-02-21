@@ -110,13 +110,14 @@ class CardDetailView(RetrieveAPIView):
 
 class AtualizarPrecoCartaView(APIView):
     def post(self, request, pk):
-        atualizar_preco_carta_task(pk)
+        task = atualizar_preco_carta_task.delay(pk)
 
         return Response(
             {
                 "status": "accepted",
                 "message": "Atualização enviada para processamento",
                 "card_id": pk,
+                "task_id": task.id,
             },
             status=status.HTTP_202_ACCEPTED,
         )
