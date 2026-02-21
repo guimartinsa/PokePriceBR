@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from billing.services import handle_checkout_completed
+from billing.services import handle_checkout_completed, handle_invoice_paid
 from cards.models import Profile
 
 
@@ -64,3 +64,32 @@ class CheckoutCompletedWebhookTests(TestCase):
         self.assertEqual(self.profile.plan, Profile.PlanChoices.PRO)
         self.assertEqual(self.profile.stripe_subscription_id, "sub_test_123")
         self.assertEqual(self.profile.stripe_customer_id, "cus_test_123")
+
+
+class InvoicePaidWebhookTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="invoice-user",
+            email="invoice@example.com",
+            password="12345678",
+        )
+        self.profile = Profile.objects.create(
+            user=self.user,
+            stripe_customer_id="cus_invoice_123",
+            is_trial_active=True,
+        )
+
+    def test_updates_subscription_and_disables_trial(self):
+        event_data = {
+            "customer": "cus_invoice_123",
+            "subscription": "sub_invoice_123",
+            "lines": {"data": [{"period": {"end": 1735689600}}]},
+        }
+
+        handle_invoice_paid(event_data)
+
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.plan, Profile.PlanChoices.PRO)
+        self.assertEqual(self.profile.stripe_subscription_id, "sub_invoice_123")
+        self.assertFalse(self.profile.is_trial_active)
+        self.assertIsNotNone(self.profile.subscription_end_date)
