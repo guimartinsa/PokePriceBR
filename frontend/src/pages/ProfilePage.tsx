@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { AxiosError } from "axios";;
+import { AxiosError } from "axios";
 import { useAuth } from "../hooks/useAuth";
 import { deleteAccount, fetchAvatars, fetchProfile, updateProfile, type AvatarOption } from "../services/profile";
 import { activateTrial, createCheckoutSession } from "../services/billing";
