@@ -51,6 +51,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
     name = serializers.CharField(source="user.first_name", required=False, allow_blank=True)
     avatar_url = serializers.SerializerMethodField(read_only=True)
+    badge = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Profile

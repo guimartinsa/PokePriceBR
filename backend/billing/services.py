@@ -11,6 +11,7 @@ stripe.api_key = getattr(settings, "STRIPE_SECRET_KEY", "")
 class StripeWebhookError(Exception):
     pass
 
+
 class BillingConfigurationError(Exception):
     pass
 
@@ -28,6 +29,7 @@ def validate_stripe_configuration():
         raise BillingConfigurationError(
             "Configuração Stripe incompleta. Defina: " + ", ".join(missing)
         )
+
 
 def create_or_get_stripe_customer(profile: Profile):
     if profile.stripe_customer_id:
@@ -58,13 +60,53 @@ def create_checkout_session(profile: Profile):
     )
 
 
-def handle_checkout_completed(event_data: dict):
+def _resolve_profile_from_event(event_data: dict, event_name: str):
     customer_id = event_data.get("customer")
-    subscription_id = event_data.get("subscription")
+    metadata = event_data.get("metadata") or {}
+    user_id = metadata.get("user_id")
+    customer_details = event_data.get("customer_details") or {}
+    customer_email = customer_details.get("email") or event_data.get("customer_email")
 
-    profile = Profile.objects.filter(stripe_customer_id=customer_id).first()
+    subscription_id = event_data.get("subscription")
+    if not subscription_id and event_name == "customer.subscription.deleted":
+        subscription_id = event_data.get("id")
+
+    profile = None
+    if customer_id:
+        profile = Profile.objects.filter(stripe_customer_id=customer_id).first()
+
+    if not profile and subscription_id:
+        profile = Profile.objects.filter(stripe_subscription_id=subscription_id).first()
+
+    if not profile and user_id:
+        profile = Profile.objects.filter(user_id=user_id).first()
+
+    if not profile and customer_email:
+        profile = Profile.objects.filter(user__email__iexact=customer_email).first()
+
     if not profile:
-        raise StripeWebhookError("Profile não encontrado para customer informado.")
+        raise StripeWebhookError(
+            f"Profile não encontrado para evento {event_name}. customer={customer_id}, subscription={subscription_id}, user_id={user_id}, email={customer_email}"
+        )
+
+    update_fields = []
+    if customer_id and profile.stripe_customer_id != customer_id:
+        profile.stripe_customer_id = customer_id
+        update_fields.append("stripe_customer_id")
+
+    if subscription_id and profile.stripe_subscription_id != subscription_id:
+        profile.stripe_subscription_id = subscription_id
+        update_fields.append("stripe_subscription_id")
+
+    if update_fields:
+        profile.save(update_fields=update_fields)
+
+    return profile
+
+
+def handle_checkout_completed(event_data: dict):
+    profile = _resolve_profile_from_event(event_data, "checkout.session.completed")
+    subscription_id = event_data.get("subscription")
 
     profile.plan = Profile.PlanChoices.PRO
     profile.stripe_subscription_id = subscription_id or ""
@@ -73,12 +115,8 @@ def handle_checkout_completed(event_data: dict):
 
 
 def handle_invoice_paid(event_data: dict):
-    customer_id = event_data.get("customer")
+    profile = _resolve_profile_from_event(event_data, "invoice.paid")
     period_end = event_data.get("lines", {}).get("data", [{}])[0].get("period", {}).get("end")
-
-    profile = Profile.objects.filter(stripe_customer_id=customer_id).first()
-    if not profile:
-        raise StripeWebhookError("Profile não encontrado para invoice informado.")
 
     profile.plan = Profile.PlanChoices.PRO
     if period_end:
@@ -87,12 +125,8 @@ def handle_invoice_paid(event_data: dict):
 
 
 def handle_subscription_deleted(event_data: dict):
-    customer_id = event_data.get("customer")
+    profile = _resolve_profile_from_event(event_data, "customer.subscription.deleted")
     ended_at = event_data.get("current_period_end")
-
-    profile = Profile.objects.filter(stripe_customer_id=customer_id).first()
-    if not profile:
-        raise StripeWebhookError("Profile não encontrado para subscription informada.")
 
     # grace period: mantém PRO até o fim do período
     if ended_at:
