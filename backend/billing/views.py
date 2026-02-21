@@ -10,6 +10,7 @@ from rest_framework.response import Response
 
 from accounts.services import get_or_create_profile
 from billing.services import (
+    BillingConfigurationError,
     StripeWebhookError,
     create_checkout_session,
     handle_checkout_completed,
@@ -24,6 +25,15 @@ from core_permissions.services import PlanLimitError, apply_trial
 def create_checkout_session_view(request):
     profile = get_or_create_profile(request.user)
     checkout = create_checkout_session(profile)
+    try:
+        checkout = create_checkout_session(profile)
+    except BillingConfigurationError as exc:
+        return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    except stripe.error.StripeError as exc:
+        return Response(
+            {"detail": f"Erro ao criar sessão de checkout no Stripe: {exc.user_message or str(exc)}"},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
     return Response({"checkout_url": checkout.url}, status=status.HTTP_201_CREATED)
 
 

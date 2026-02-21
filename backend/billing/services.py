@@ -11,6 +11,23 @@ stripe.api_key = getattr(settings, "STRIPE_SECRET_KEY", "")
 class StripeWebhookError(Exception):
     pass
 
+class BillingConfigurationError(Exception):
+    pass
+
+
+def validate_stripe_configuration():
+    required_settings = {
+        "STRIPE_SECRET_KEY": settings.STRIPE_SECRET_KEY,
+        "STRIPE_PRO_PRICE_ID": settings.STRIPE_PRO_PRICE_ID,
+        "STRIPE_SUCCESS_URL": settings.STRIPE_SUCCESS_URL,
+        "STRIPE_CANCEL_URL": settings.STRIPE_CANCEL_URL,
+    }
+
+    missing = [name for name, value in required_settings.items() if not value]
+    if missing:
+        raise BillingConfigurationError(
+            "Configuração Stripe incompleta. Defina: " + ", ".join(missing)
+        )
 
 def create_or_get_stripe_customer(profile: Profile):
     if profile.stripe_customer_id:
@@ -27,6 +44,7 @@ def create_or_get_stripe_customer(profile: Profile):
 
 
 def create_checkout_session(profile: Profile):
+    validate_stripe_configuration()
     customer_id = create_or_get_stripe_customer(profile)
 
     return stripe.checkout.Session.create(
