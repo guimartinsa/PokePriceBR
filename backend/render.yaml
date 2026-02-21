@@ -35,6 +35,6 @@ services:
       - key: STRIPE_PRO_PRICE_ID
         sync: false
       - key: STRIPE_SUCCESS_URL
-        value: https://pricedexbr.vercel.app/profile?billing=success
+        value: https://pricedexbr.vercel.app/perfil?billing=success
       - key: STRIPE_CANCEL_URL
-        value: https://pricedexbr.vercel.app/profile?billing=cancel
+        value: https://pricedexbr.vercel.app/perfil?billing=cancel

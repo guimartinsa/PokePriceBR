@@ -1,5 +1,5 @@
 // router/index.tsx
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "../components/layout/AppLayout";
 
 import HomePage from "../pages/Home/HomePage";
@@ -22,7 +22,9 @@ export default function AppRoutes() {
         <Route path="/collections/:id" element={<CollectionPage  />} />
 
         <Route path="/perfil" element={<ProfilePage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile" element={<Navigate to="/perfil" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+        
         <Route path="/auth" element={<AuthPage />} />
 
         <Route path="/scan" element={<CameraView />} />
