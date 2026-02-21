@@ -22,6 +22,7 @@ export default function AppRoutes() {
         <Route path="/collections/:id" element={<CollectionPage  />} />
 
         <Route path="/perfil" element={<ProfilePage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/auth" element={<AuthPage />} />
 
         <Route path="/scan" element={<CameraView />} />
