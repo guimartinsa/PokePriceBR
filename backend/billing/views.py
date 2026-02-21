@@ -13,6 +13,7 @@ from billing.services import (
     BillingConfigurationError,
     StripeWebhookError,
     create_checkout_session,
+    confirm_checkout_session,
     handle_checkout_completed,
     handle_invoice_paid,
     handle_subscription_updated,
@@ -35,6 +36,33 @@ def create_checkout_session_view(request):
             status=status.HTTP_502_BAD_GATEWAY,
         )
     return Response({"checkout_url": checkout.url}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def confirm_checkout_session_view(request):
+    session_id = request.data.get("session_id")
+    if not session_id:
+        return Response({"detail": "session_id é obrigatório"}, status=status.HTTP_400_BAD_REQUEST)
+
+    profile = get_or_create_profile(request.user)
+
+    try:
+        session = confirm_checkout_session(profile, session_id)
+    except stripe.error.StripeError as exc:
+        return Response(
+            {"detail": f"Erro ao confirmar checkout no Stripe: {exc.user_message or str(exc)}"},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    return Response(
+        {
+            "status": "ok",
+            "plan": profile.plan,
+            "payment_status": session.get("payment_status"),
+            "session_status": session.get("status"),
+        }
+    )
 
 
 @csrf_exempt

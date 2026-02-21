@@ -3,7 +3,7 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { AxiosError } from "axios";;
 import { useAuth } from "../hooks/useAuth";
 import { deleteAccount, fetchAvatars, fetchProfile, updateProfile, type AvatarOption } from "../services/profile";
-import { activateTrial, createCheckoutSession } from "../services/billing";
+import { activateTrial, confirmCheckoutSession, createCheckoutSession } from "../services/billing";
 import { logout } from "../services/auth";
 
 
@@ -34,6 +34,23 @@ export function ProfilePage() {
             load();
         }
     }, [user]);
+
+    useEffect(() => {
+        async function confirmIfNeeded() {
+            if (!user || billingStatus !== "success") return;
+            const sessionId = searchParams.get("session_id");
+            if (!sessionId) return;
+
+            try {
+                await confirmCheckoutSession(sessionId);
+                await refreshUser();
+            } catch {
+                // webhook ainda pode processar em seguida
+            }
+        }
+
+        confirmIfNeeded();
+    }, [user, billingStatus, searchParams, refreshUser]);
 
     const selectedAvatar = useMemo(
         () => avatars.find((avatar) => avatar.id === Number(avatarOption)),

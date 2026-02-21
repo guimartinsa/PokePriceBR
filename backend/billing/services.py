@@ -49,15 +49,54 @@ def create_checkout_session(profile: Profile):
     validate_stripe_configuration()
     customer_id = create_or_get_stripe_customer(profile)
 
+    success_url = settings.STRIPE_SUCCESS_URL
+    if "{CHECKOUT_SESSION_ID}" not in success_url:
+        separator = "&" if "?" in success_url else "?"
+        success_url = f"{success_url}{separator}session_id={{CHECKOUT_SESSION_ID}}"
+
     return stripe.checkout.Session.create(
         customer=customer_id,
         mode="subscription",
         payment_method_types=["card"],
         line_items=[{"price": settings.STRIPE_PRO_PRICE_ID, "quantity": 1}],
-        success_url=settings.STRIPE_SUCCESS_URL,
+        success_url=success_url,
         cancel_url=settings.STRIPE_CANCEL_URL,
         metadata={"user_id": profile.user_id},
     )
+
+
+def confirm_checkout_session(profile: Profile, session_id: str):
+    session = stripe.checkout.Session.retrieve(
+        session_id,
+        expand=["subscription"],
+    )
+
+    session_customer_id = session.get("customer")
+    if session_customer_id and profile.stripe_customer_id != session_customer_id:
+        profile.stripe_customer_id = session_customer_id
+
+    subscription = session.get("subscription") or {}
+    subscription_id = subscription.get("id") or session.get("subscription")
+    subscription_status = subscription.get("status")
+    period_end = subscription.get("current_period_end")
+
+    if subscription_status in {"active", "trialing", "past_due"}:
+        profile.plan = Profile.PlanChoices.PRO
+        profile.is_trial_active = False
+        profile.stripe_subscription_id = subscription_id or profile.stripe_subscription_id
+        if period_end:
+            profile.subscription_end_date = timezone.datetime.fromtimestamp(period_end, tz=timezone.utc)
+        profile.save(
+            update_fields=[
+                "plan",
+                "is_trial_active",
+                "stripe_customer_id",
+                "stripe_subscription_id",
+                "subscription_end_date",
+            ]
+        )
+
+    return session
 
 
 def _resolve_profile_from_event(event_data: dict, event_name: str):

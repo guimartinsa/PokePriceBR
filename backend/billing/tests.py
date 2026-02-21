@@ -6,6 +6,8 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from billing.services import (
+    confirm_checkout_session,
+    create_checkout_session,
     handle_checkout_completed,
     handle_invoice_paid,
     handle_subscription_updated,
@@ -141,3 +143,72 @@ class SubscriptionUpdatedWebhookTests(TestCase):
         self.assertEqual(self.profile.stripe_subscription_id, "sub_sub_123")
         self.assertFalse(self.profile.is_trial_active)
         self.assertIsNotNone(self.profile.subscription_end_date)
+
+class CheckoutSessionServiceTests(TestCase):
+    @patch("billing.services.stripe.checkout.Session.create")
+    @patch("billing.services.create_or_get_stripe_customer")
+    def test_includes_checkout_session_id_on_success_url(self, mock_customer, mock_session_create):
+        user = get_user_model().objects.create_user(
+            username="create-session-user",
+            email="create-session@example.com",
+            password="12345678",
+        )
+        profile = Profile.objects.create(user=user)
+        mock_customer.return_value = "cus_session_123"
+
+        create_checkout_session(profile)
+
+        kwargs = mock_session_create.call_args.kwargs
+        self.assertIn("session_id={CHECKOUT_SESSION_ID}", kwargs["success_url"])
+
+
+class ConfirmCheckoutSessionTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = get_user_model().objects.create_user(
+            username="confirm-user",
+            email="confirm@example.com",
+            password="12345678",
+        )
+        self.profile = Profile.objects.create(user=self.user, stripe_customer_id="cus_confirm_123")
+        self.client.force_authenticate(self.user)
+
+    @patch("billing.services.stripe.checkout.Session.retrieve")
+    def test_confirm_checkout_session_updates_profile(self, mock_retrieve):
+        mock_retrieve.return_value = {
+            "id": "cs_test_123",
+            "customer": "cus_confirm_123",
+            "subscription": {
+                "id": "sub_confirm_123",
+                "status": "active",
+                "current_period_end": 1735689600,
+            },
+            "payment_status": "paid",
+            "status": "complete",
+        }
+
+        confirm_checkout_session(self.profile, "cs_test_123")
+
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.plan, Profile.PlanChoices.PRO)
+        self.assertEqual(self.profile.stripe_subscription_id, "sub_confirm_123")
+        self.assertFalse(self.profile.is_trial_active)
+        self.assertIsNotNone(self.profile.subscription_end_date)
+
+    @patch("billing.views.confirm_checkout_session")
+    def test_confirm_checkout_session_view(self, mock_confirm):
+        mock_confirm.return_value = {
+            "payment_status": "paid",
+            "status": "complete",
+        }
+
+        response = self.client.post("/api/billing/checkout/confirm/", {"session_id": "cs_test_123"}, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["status"], "ok")
+
+    def test_confirm_checkout_session_view_requires_session_id(self):
+        response = self.client.post("/api/billing/checkout/confirm/", {}, format="json")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["detail"], "session_id é obrigatório")

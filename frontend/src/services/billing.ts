@@ -19,3 +19,14 @@ export async function activateTrial() {
     const res = await api.post<TrialActivationResponse>("/billing/trial/activate/");
     return res.data;
 }
+export type ConfirmCheckoutResponse = {
+    status: string;
+    plan: "free" | "pro";
+    payment_status: string | null;
+    session_status: string | null;
+};
+
+export async function confirmCheckoutSession(sessionId: string) {
+    const res = await api.post<ConfirmCheckoutResponse>("/billing/checkout/confirm/", { session_id: sessionId });
+    return res.data;
+}
