@@ -15,6 +15,7 @@ from billing.services import (
     create_checkout_session,
     handle_checkout_completed,
     handle_invoice_paid,
+    handle_subscription_updated,
     handle_subscription_deleted,
 )
 from core_permissions.services import PlanLimitError, apply_trial
@@ -61,6 +62,8 @@ def stripe_webhook_view(request):
             handle_checkout_completed(data)
         elif event_type == "invoice.paid":
             handle_invoice_paid(data)
+        elif event_type == "customer.subscription.updated":
+            handle_subscription_updated(data)
         elif event_type == "customer.subscription.deleted":
             handle_subscription_deleted(data)
     except StripeWebhookError as exc:

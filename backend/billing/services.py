@@ -62,6 +62,7 @@ def create_checkout_session(profile: Profile):
 
 def _resolve_profile_from_event(event_data: dict, event_name: str):
     customer_id = event_data.get("customer")
+    subscription_id = event_data.get("subscription") or event_data.get("id")
     metadata = event_data.get("metadata") or {}
     user_id = metadata.get("user_id")
     customer_details = event_data.get("customer_details") or {}
@@ -71,6 +72,9 @@ def _resolve_profile_from_event(event_data: dict, event_name: str):
     if customer_id:
         profile = Profile.objects.filter(stripe_customer_id=customer_id).first()
 
+    if not profile and subscription_id:
+        profile = Profile.objects.filter(stripe_subscription_id=subscription_id).first()
+
     if not profile and user_id:
         profile = Profile.objects.filter(user_id=user_id).first()
 
@@ -79,7 +83,7 @@ def _resolve_profile_from_event(event_data: dict, event_name: str):
 
     if not profile:
         raise StripeWebhookError(
-            f"Profile não encontrado para evento {event_name}. customer={customer_id}, user_id={user_id}, email={customer_email}"
+            f"Profile não encontrado para evento {event_name}. customer={customer_id}, subscription={subscription_id}, user_id={user_id}, email={customer_email}"
         )
 
     if customer_id and profile.stripe_customer_id != customer_id:
@@ -111,6 +115,30 @@ def handle_invoice_paid(event_data: dict):
     profile = _resolve_profile_from_event(event_data, "invoice.paid")
     period_end = event_data.get("lines", {}).get("data", [{}])[0].get("period", {}).get("end")
     subscription_id = event_data.get("subscription")
+
+    if not period_end:
+        period_end = event_data.get("period_end") or event_data.get("current_period_end")
+
+    profile.plan = Profile.PlanChoices.PRO
+    profile.is_trial_active = False
+    if subscription_id:
+        profile.stripe_subscription_id = subscription_id
+    if period_end:
+        profile.subscription_end_date = timezone.datetime.fromtimestamp(period_end, tz=timezone.utc)
+    profile.save(
+        update_fields=[
+            "plan",
+            "subscription_end_date",
+            "is_trial_active",
+            "stripe_subscription_id",
+        ]
+    )
+
+
+def handle_subscription_updated(event_data: dict):
+    profile = _resolve_profile_from_event(event_data, "customer.subscription.updated")
+    subscription_id = event_data.get("id") or event_data.get("subscription")
+    period_end = event_data.get("current_period_end")
 
     profile.plan = Profile.PlanChoices.PRO
     profile.is_trial_active = False

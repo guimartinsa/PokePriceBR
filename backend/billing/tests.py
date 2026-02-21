@@ -5,7 +5,11 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from billing.services import handle_checkout_completed, handle_invoice_paid
+from billing.services import (
+    handle_checkout_completed,
+    handle_invoice_paid,
+    handle_subscription_updated,
+)
 from cards.models import Profile
 
 
@@ -91,5 +95,49 @@ class InvoicePaidWebhookTests(TestCase):
         self.profile.refresh_from_db()
         self.assertEqual(self.profile.plan, Profile.PlanChoices.PRO)
         self.assertEqual(self.profile.stripe_subscription_id, "sub_invoice_123")
+        self.assertFalse(self.profile.is_trial_active)
+        self.assertIsNotNone(self.profile.subscription_end_date)
+
+    def test_matches_profile_by_subscription_id_when_customer_is_missing(self):
+        self.profile.stripe_subscription_id = "sub_invoice_999"
+        self.profile.save(update_fields=["stripe_subscription_id"])
+
+        event_data = {
+            "subscription": "sub_invoice_999",
+            "period_end": 1735689600,
+        }
+
+        handle_invoice_paid(event_data)
+
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.plan, Profile.PlanChoices.PRO)
+        self.assertIsNotNone(self.profile.subscription_end_date)
+
+
+class SubscriptionUpdatedWebhookTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="subscription-user",
+            email="subscription@example.com",
+            password="12345678",
+        )
+        self.profile = Profile.objects.create(
+            user=self.user,
+            stripe_customer_id="cus_sub_123",
+            is_trial_active=True,
+        )
+
+    def test_updates_profile_plan_and_period_end(self):
+        event_data = {
+            "id": "sub_sub_123",
+            "customer": "cus_sub_123",
+            "current_period_end": 1735689600,
+        }
+
+        handle_subscription_updated(event_data)
+
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.plan, Profile.PlanChoices.PRO)
+        self.assertEqual(self.profile.stripe_subscription_id, "sub_sub_123")
         self.assertFalse(self.profile.is_trial_active)
         self.assertIsNotNone(self.profile.subscription_end_date)
