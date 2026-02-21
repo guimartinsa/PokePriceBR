@@ -43,6 +43,9 @@ export function ProfilePage() {
     if (loading) return <p>Carregando...</p>;
     if (!user) return <Navigate to="/" />;
 
+    const userPlan = "plan" in user && typeof user.plan === "string" ? user.plan.toUpperCase() : "FREE";
+    const userBadge = "badge" in user && typeof user.badge === "string" ? user.badge : "";
+
     async function handleSave() {
         setSaving(true);
         try {
@@ -94,8 +97,8 @@ export function ProfilePage() {
             <h1>Meu Perfil</h1>
             <p style={{ color: "#8f9bad" }}>{user.email}</p>
             <p style={{ color: "#8f9bad", marginTop: 4 }}>
-                Plano atual: <strong>{user.plan?.toUpperCase() || "FREE"}</strong>
-                {user.badge ? ` (${user.badge})` : ""}
+                Plano atual: <strong>{userPlan}</strong>
+                {userBadge ? ` (${userBadge})` : ""}
             </p>
 
             {billingStatus === "success" && (
