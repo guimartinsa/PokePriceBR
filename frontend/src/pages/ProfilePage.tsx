@@ -21,7 +21,8 @@ export function ProfilePage() {
     const [startingCheckout, setStartingCheckout] = useState(false);
 
     const billingStatus = searchParams.get("billing");
-
+    const stripeMode = import.meta.env.VITE_STRIPE_MODE === "live" ? "live" : "test";
+    const stripeModeLabel = stripeMode === "live" ? "produção" : "testes";
     useEffect(() => {
         async function load() {
             const [profileData, avatarsData] = await Promise.all([fetchProfile(), fetchAvatars()]);
@@ -76,8 +77,9 @@ export function ProfilePage() {
         try {
             const data = await createCheckoutSession();
             window.location.href = data.checkout_url;
-        } catch {
-            alert("Não foi possível iniciar o checkout Stripe.");
+        } catch (error) {
+            const axiosError = error as AxiosError<{ detail?: string }>;
+            alert(axiosError.response?.data?.detail || "Não foi possível iniciar o checkout Stripe.");
             setStartingCheckout(false);
         }
     }
@@ -113,16 +115,18 @@ export function ProfilePage() {
             )}
 
             <div style={{ marginTop: 16, padding: 12, border: "1px solid #2f3845", borderRadius: 8 }}>
-                <h2 style={{ marginTop: 0 }}>Assinatura (Stripe - ambiente de testes)</h2>
+                <h2 style={{ marginTop: 0 }}>Assinatura (Stripe - ambiente de {stripeModeLabel})</h2>
                 <p style={{ color: "#8f9bad" }}>
-                    Integração com Stripe em modo de teste. Use cartões de teste da Stripe no checkout.
+                    {stripeMode === "test"
+                        ? "Integração com Stripe em modo de teste. Use cartões de teste da Stripe no checkout."
+                        : "Integração com Stripe em modo de produção. Use um cartão real no checkout."}
                 </p>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button onClick={handleActivateTrial} disabled={activatingTrial}>
                         {activatingTrial ? "Ativando..." : "Ativar período de testes"}
                     </button>
                     <button onClick={handleStartCheckout} disabled={startingCheckout}>
-                        {startingCheckout ? "Redirecionando..." : "Assinar PRO (Stripe Test)"}
+                        {startingCheckout ? "Redirecionando..." : stripeMode === "test" ? "Assinar PRO (Stripe Test)" : "Assinar PRO"}
                     </button>
                 </div>
             </div>
