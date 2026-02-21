@@ -24,8 +24,9 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    'pokepricebr.onrender.com',
-    '.vercel.app',
+    'pricedex.com.br',
+    'api.pricedex.com.br',
+    'www.pricedex.com.br',
 ]
 
 
@@ -168,15 +169,15 @@ CELERY_TIMEZONE = TIME_ZONE
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://pokepricebr.onrender.com",
-    "https://pricedexbr.vercel.app",
+    "https://api.pricedex.com.br",
+    "https://www.pricedex.com.brp",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://pokepricebr.onrender.com",
-    "https://pricedexbr.vercel.app",
+    "https://pricedex.com.br",
+    "https://www.pricedex.com.br",
 ]
 
 
