@@ -10,6 +10,8 @@ type AuthResponse = {
     access: string;
     refresh: string;
     user: AuthUser;
+    plan?: "free" | "pro";
+    badge?: string | null;
 };
 
 function saveTokens(data: AuthResponse) {
