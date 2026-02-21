@@ -1,6 +1,40 @@
 services:
   - type: web
-    name: pricedex-backend
+    name: pokepricebr-backend
     env: python
-    buildCommand: pip install -r requirements.txt && python manage.py migrate && python manage.py loaddata seed.json || true && python manage.py createsuperuser --noinput
-    startCommand: gunicorn core.wsgi:application
+    plan: free
+    rootDir: backend
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
+      python manage.py migrate
+      python manage.py loaddata ../seed.json || true
+    startCommand: gunicorn pokepricebr.wsgi:application
+    healthCheckPath: /api/cards/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.10
+      - key: DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "6453"
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRO_PRICE_ID
+        sync: false
+      - key: STRIPE_SUCCESS_URL
+        value: https://pricedexbr.vercel.app/profile?billing=success
+      - key: STRIPE_CANCEL_URL
+        value: https://pricedexbr.vercel.app/profile?billing=cancel

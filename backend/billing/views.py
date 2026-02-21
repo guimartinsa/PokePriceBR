@@ -24,7 +24,6 @@ from core_permissions.services import PlanLimitError, apply_trial
 @permission_classes([IsAuthenticated])
 def create_checkout_session_view(request):
     profile = get_or_create_profile(request.user)
-    checkout = create_checkout_session(profile)
     try:
         checkout = create_checkout_session(profile)
     except BillingConfigurationError as exc:
