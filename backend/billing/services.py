@@ -96,17 +96,36 @@ def handle_checkout_completed(event_data: dict):
     profile.plan = Profile.PlanChoices.PRO
     profile.stripe_subscription_id = subscription_id or ""
     profile.is_trial_active = False
-    profile.save(update_fields=["plan", "stripe_subscription_id", "is_trial_active"])
+    profile.subscription_end_date = None
+    profile.save(
+        update_fields=[
+            "plan",
+            "stripe_subscription_id",
+            "is_trial_active",
+            "subscription_end_date",
+        ]
+    )
 
 
 def handle_invoice_paid(event_data: dict):
     profile = _resolve_profile_from_event(event_data, "invoice.paid")
     period_end = event_data.get("lines", {}).get("data", [{}])[0].get("period", {}).get("end")
+    subscription_id = event_data.get("subscription")
 
     profile.plan = Profile.PlanChoices.PRO
+    profile.is_trial_active = False
+    if subscription_id:
+        profile.stripe_subscription_id = subscription_id
     if period_end:
         profile.subscription_end_date = timezone.datetime.fromtimestamp(period_end, tz=timezone.utc)
-    profile.save(update_fields=["plan", "subscription_end_date"])
+    profile.save(
+        update_fields=[
+            "plan",
+            "subscription_end_date",
+            "is_trial_active",
+            "stripe_subscription_id",
+        ]
+    )
 
 
 def handle_subscription_deleted(event_data: dict):
