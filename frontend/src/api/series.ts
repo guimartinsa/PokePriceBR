@@ -19,7 +19,22 @@ export type SeriesItem = {
     sets: SeriesSet[];
 };
 
+type SeriesApiResponse = SeriesItem[] | { results?: SeriesItem[] };
+
+function normalizeSeries(items: SeriesItem[]): SeriesItem[] {
+    return items.map((serie) => ({
+        ...serie,
+        sets: Array.isArray(serie.sets) ? serie.sets : [],
+    }));
+}
+
 export async function fetchSeries(): Promise<SeriesItem[]> {
-    const res = await api.get<SeriesItem[]>("/series/");
-    return res.data;
+    const res = await api.get<SeriesApiResponse>("/series/");
+    const payload = Array.isArray(res.data) ? res.data : res.data.results;
+
+    if (!Array.isArray(payload)) {
+        return [];
+    }
+
+    return normalizeSeries(payload);
 }

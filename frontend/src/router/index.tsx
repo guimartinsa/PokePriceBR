@@ -11,6 +11,7 @@ import { ProfilePage } from "../pages/ProfilePage";
 import CollectionsListPage from "../pages/Collection/CollectionsListPage";
 import AuthPage from "../pages/AuthPage";
 import SeriesPage from "../pages/SeriesPage";
+import SetPage from "../pages/SetPage";
 
 export default function AppRoutes() {
   return (
@@ -31,6 +32,7 @@ export default function AppRoutes() {
         <Route path="/scan" element={<CameraView />} />
 
         <Route path="/series" element={<SeriesPage />} />
+        <Route path="/series/sets/:setCode" element={<SetPage />} />
       </Route>
     </Routes>
   );
