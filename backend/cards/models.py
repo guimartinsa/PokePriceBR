@@ -14,6 +14,15 @@ class Set(models.Model):
 
     tcgdex_id = models.CharField(max_length=50, db_index=True, null=True, blank=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tcgdex_id"],
+                condition=~models.Q(tcgdex_id__isnull=True) & ~models.Q(tcgdex_id=""),
+                name="cards_set_unique_non_blank_tcgdex_id",
+            )
+        ]
+
     def __str__(self):
         return self.nome
 

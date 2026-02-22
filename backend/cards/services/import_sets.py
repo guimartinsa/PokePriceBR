@@ -62,17 +62,29 @@ def import_sets_from_tcgdex(tcgdex_ids=None):
 
         serie = set_data.get("serie") or {}
 
-        _, was_created = Set.objects.update_or_create(
-            tcgdex_id=tcgdex_id,
-            defaults={
-                "nome": nome,
-                "codigo_liga": codigo_liga,
-                "logo": _normalize_logo_url(set_data.get("logo")),
-                "release_date": set_data.get("releaseDate"),
-                "serie_id": serie.get("id"),
-                "serie_nome": serie.get("name"),
-            },
-        )
+        defaults = {
+            "nome": nome,
+            "codigo_liga": codigo_liga,
+            "logo": _normalize_logo_url(set_data.get("logo")),
+            "release_date": set_data.get("releaseDate"),
+            "serie_id": serie.get("id"),
+            "serie_nome": serie.get("name"),
+        }
+
+        existing_sets = Set.objects.filter(tcgdex_id=tcgdex_id).order_by("id")
+
+        if existing_sets.exists():
+            target_set = existing_sets.first()
+            existing_sets.exclude(id=target_set.id).delete()
+
+            for field, value in defaults.items():
+                setattr(target_set, field, value)
+
+            target_set.save(update_fields=list(defaults.keys()))
+            was_created = False
+        else:
+            Set.objects.create(tcgdex_id=tcgdex_id, **defaults)
+            was_created = True
 
         if was_created:
             created += 1
