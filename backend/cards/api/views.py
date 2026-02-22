@@ -43,6 +43,7 @@ from cards.api.serializers import SeriesSerializer, SetSerializer
 
 from django.db.models import Count
 from django.db.models import Q
+from celery.result import AsyncResult
 
 class CardListView(ListAPIView):
     serializer_class = CardSerializer
@@ -137,6 +138,32 @@ class AtualizarTodasCartasView(APIView):
             status=status.HTTP_202_ACCEPTED,
         )
     
+class TaskStatusView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request, task_id):
+        result = AsyncResult(task_id)
+        payload = {
+            "task_id": task_id,
+            "state": result.state,
+        }
+
+        if isinstance(result.info, dict):
+            payload["meta"] = result.info
+
+            total = result.info.get("total")
+            atualizadas = result.info.get("atualizadas")
+            if total and isinstance(total, int) and isinstance(atualizadas, int):
+                payload["progress"] = min(round((atualizadas / total) * 100, 2), 100.0)
+        elif result.info:
+            payload["meta"] = str(result.info)
+
+        if result.successful():
+            payload["result"] = result.result
+
+        return Response(payload)
+    
+
 class ExcluirCartaView(APIView):
     permission_classes = [IsAdminUser]
 

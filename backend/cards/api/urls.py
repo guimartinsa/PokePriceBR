@@ -7,6 +7,7 @@ from .views import (
     CardDetailView,
     AtualizarPrecoCartaView,
     AtualizarTodasCartasView,
+    TaskStatusView,
     ExcluirCartaView,
     ImportCardsFromSetView,
     RestaurarCartaView,
@@ -42,6 +43,7 @@ urlpatterns = [
 
     path("cards/<int:pk>/atualizar-preco/", AtualizarPrecoCartaView.as_view(), name="card-atualizar-preco",),
     path("cards/atualizar-todas/", AtualizarTodasCartasView.as_view(), name="cards-atualizar-todas",),
+    path("tasks/<str:task_id>/", TaskStatusView.as_view(), name="task-status"),
 
     path("cards/<int:pk>/excluir/", ExcluirCartaView.as_view()),
     path("cards/<int:pk>/restaurar/", RestaurarCartaView.as_view()),

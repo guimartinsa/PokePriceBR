@@ -1,4 +1,8 @@
 from django.contrib import admin
+from django.http import JsonResponse
+from django.urls import path, reverse
+from django.utils.html import format_html
+from celery.result import AsyncResult
 from cards.tasks.update_card_from_tcgdex import update_card_from_tcgdex_task
 from cards.tasks.update_set_cards_from_tcgdex import update_set_cards_from_tcgdex_task
 from cards.tasks.atualizar_precos_set_task import atualizar_precos_set_task
@@ -59,6 +63,48 @@ class CardAdmin(admin.ModelAdmin):
         "atualizar_detalhes_tcgdex",
     ]
 
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "task-status/",
+                self.admin_site.admin_view(self.task_status_view),
+                name="cards_card_task_status",
+            )
+        ]
+        return custom_urls + urls
+
+    def task_status_view(self, request):
+        task_id = request.GET.get("task_id")
+        if not task_id:
+            return JsonResponse(
+                {
+                    "error": "Informe task_id na querystring, ex: ?task_id=<uuid>",
+                },
+                status=400,
+            )
+
+        result = AsyncResult(task_id)
+        payload = {
+            "task_id": task_id,
+            "state": result.state,
+        }
+
+        if isinstance(result.info, dict):
+            payload["meta"] = result.info
+            total = result.info.get("total")
+            atualizadas = result.info.get("atualizadas")
+            if total and isinstance(total, int) and isinstance(atualizadas, int):
+                payload["progress"] = min(round((atualizadas / total) * 100, 2), 100.0)
+        elif result.info:
+            payload["meta"] = str(result.info)
+
+        if result.successful():
+            payload["result"] = result.result
+
+        return JsonResponse(payload)
+
+
     @admin.action(description="Excluir cartas selecionadas")
     def excluir_cartas(self, request, queryset):
         atualizadas = 0
@@ -107,11 +153,18 @@ class CardAdmin(admin.ModelAdmin):
 
     @admin.action(description="Atualizar preços (GLOBAL)")
     def atualizar_precos_global(self, request, queryset):
-        atualizar_todas_cartas.delay()
+        task = atualizar_todas_cartas.delay()
+        status_url = reverse("admin:cards_card_task_status")
 
         self.message_user(
             request,
-            "Atualização GLOBAL de preços iniciada (Celery).",
+            format_html(
+                'Atualização GLOBAL de preços iniciada (task {}). '
+                '<a href="{}?task_id={}" target="_blank" rel="noopener">Ver andamento</a>.',
+                task.id,
+                status_url,
+                task.id,
+            ),
             level=messages.SUCCESS,
         )
 
