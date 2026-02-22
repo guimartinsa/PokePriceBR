@@ -31,6 +31,8 @@ export default function SetPage() {
     const [filters, setFilters] = useState<SearchFiltersState>(createDefaultFilters(setCode));
     const [cards, setCards] = useState<(Card & { owned?: boolean })[]>([]);
     const [loadingCards, setLoadingCards] = useState(false);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
 
     const [collections, setCollections] = useState<Collection[]>([]);
     const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
@@ -41,6 +43,9 @@ export default function SetPage() {
     useEffect(() => {
         setFilters(createDefaultFilters(setCode));
         setSetName(setCode);
+        setPage(1);
+        setHasMore(true);
+        setCards([]);
 
         fetchSeries().then((series) => {
             const selectedSet = series
@@ -81,6 +86,15 @@ export default function SetPage() {
     }, [selectedCollectionId]);
 
     useEffect(() => {
+        setCards((prev) => prev.map((card) => ({ ...card, owned: ownedCardIds.has(card.id) })));
+    }, [ownedCardIds]);
+
+    useEffect(() => {
+        setPage(1);
+        setHasMore(true);
+    }, [setCode, filters.nome, filters.raridade, filters.ilustrador, filters.over, filters.preco_min, filters.preco_max]);
+
+    useEffect(() => {
         if (!setCode) {
             setCards([]);
             return;
@@ -88,7 +102,7 @@ export default function SetPage() {
 
         setLoadingCards(true);
         fetchCards({
-            page: 1,
+            page,
             set: setCode,
             nome: filters.nome || undefined,
             raridade: filters.raridade || undefined,
@@ -98,15 +112,16 @@ export default function SetPage() {
             preco_max: filters.preco_max || undefined,
         })
             .then((data) => {
-                setCards(
-                    data.results.map((card) => ({
-                        ...card,
-                        owned: ownedCardIds.has(card.id),
-                    })),
-                );
+                const nextCards = data.results.map((card) => ({
+                    ...card,
+                    owned: ownedCardIds.has(card.id),
+                }));
+
+                setCards((prev) => (page === 1 ? nextCards : [...prev, ...nextCards]));
+                setHasMore(Boolean(data.next));
             })
             .finally(() => setLoadingCards(false));
-    }, [setCode, filters.nome, filters.raridade, filters.ilustrador, filters.over, filters.preco_min, filters.preco_max, ownedCardIds]);
+    }, [setCode, page, filters.nome, filters.raridade, filters.ilustrador, filters.over, filters.preco_min, filters.preco_max, ownedCardIds]);
 
     const safeFilters = useMemo(
         () => ({
@@ -193,15 +208,38 @@ export default function SetPage() {
             ) : cards.length === 0 ? (
                 <p>Nenhuma carta encontrada.</p>
             ) : (
-                <div className="card-grid">
-                    {cards.map((card) => (
-                        <CardItemDetail
-                            key={card.id}
-                            card={card}
-                            onToggleOwned={selectedCollectionId ? (owned) => handleToggleOwned(card.id, owned) : undefined}
-                        />
-                    ))}
-                </div>
+                <>
+                    <div className="card-grid">
+                        {cards.map((card) => (
+                            <CardItemDetail
+                                key={card.id}
+                                card={card}
+                                onToggleOwned={selectedCollectionId ? (owned) => handleToggleOwned(card.id, owned) : undefined}
+                            />
+                        ))}
+                    </div>
+
+                    {hasMore && (
+                        <button
+                            type="button"
+                            onClick={() => setPage((prev) => prev + 1)}
+                            disabled={loadingCards}
+                            style={{
+                                margin: "20px auto 0",
+                                display: "block",
+                                borderRadius: 10,
+                                border: "1px solid #2c3440",
+                                background: "#151a21",
+                                color: "inherit",
+                                padding: "10px 16px",
+                                cursor: loadingCards ? "not-allowed" : "pointer",
+                                opacity: loadingCards ? 0.7 : 1,
+                            }}
+                        >
+                            {loadingCards ? "Carregando..." : "Carregar mais"}
+                        </button>
+                    )}
+                </>
             )}
         </main>
     );
