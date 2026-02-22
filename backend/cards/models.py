@@ -29,6 +29,7 @@ class Set(models.Model):
 class Series(models.Model):
     tcgdex_id = models.CharField(max_length=50, unique=True, db_index=True)
     nome = models.CharField(max_length=100)
+    logo = models.URLField(blank=True, null=True)
 
     def __str__(self):
         return self.nome

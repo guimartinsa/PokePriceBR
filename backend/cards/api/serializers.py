@@ -19,7 +19,7 @@ class SeriesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Series
-        fields = ["id", "tcgdex_id", "nome", "sets"]
+        fields = ["id", "tcgdex_id", "nome", "logo", "sets"]
 
     def get_sets(self, obj):
         queryset = Set.objects.filter(serie_id=obj.tcgdex_id).order_by("nome")
