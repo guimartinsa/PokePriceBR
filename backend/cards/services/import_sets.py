@@ -25,17 +25,19 @@ def _normalize_logo_url(logo_url):
     return logo_url if logo_url.endswith(".webp") else f"{logo_url}.webp"
 
 
-def import_sets_from_tcgdex():
+def import_sets_from_tcgdex(tcgdex_ids=None):
     """
     Importa todos os sets da TCGdex com dados detalhados.
     Usa tcgdex_id como chave única.
     Pode ser chamado manualmente, via Celery ou via painel admin.
     """
 
-    response = requests.get(TCGDEX_SETS_URL, timeout=30)
-    response.raise_for_status()
-
-    sets_data = response.json()
+    if tcgdex_ids:
+        sets_data = [{"id": tcgdex_id} for tcgdex_id in tcgdex_ids]
+    else:
+        response = requests.get(TCGDEX_SETS_URL, timeout=30)
+        response.raise_for_status()
+        sets_data = response.json()
 
     created = 0
     updated = 0
