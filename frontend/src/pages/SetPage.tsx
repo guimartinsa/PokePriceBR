@@ -40,6 +40,8 @@ export default function SetPage() {
 
     const [setName, setSetName] = useState<string>(setCode);
 
+    const isInitialLoading = loadingCards && page === 1;
+
     useEffect(() => {
         setFilters(createDefaultFilters(setCode));
         setSetName(setCode);
@@ -203,7 +205,7 @@ export default function SetPage() {
                 }
             />
 
-            {loadingCards ? (
+            {isInitialLoading ? (
                 <Loading />
             ) : cards.length === 0 ? (
                 <p>Nenhuma carta encontrada.</p>
