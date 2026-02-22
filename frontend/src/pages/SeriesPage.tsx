@@ -1,12 +1,28 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { fetchSeries, type SeriesItem } from "../api/series";
+import "./series.css";
+
+function getSeriesReleaseDate(serie: SeriesItem): string | null {
+    const validDates = serie.sets
+        .map((setItem) => setItem.release_date)
+        .filter((date): date is string => Boolean(date));
+
+    if (validDates.length === 0) return null;
+
+    return validDates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
+}
+
+const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+});
 
 export default function SeriesPage() {
     const [series, setSeries] = useState<SeriesItem[]>([]);
     const [loadingSeries, setLoadingSeries] = useState(true);
-    const [expandedSeriesId, setExpandedSeriesId] = useState<number | null>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -15,78 +31,55 @@ export default function SeriesPage() {
             .finally(() => setLoadingSeries(false));
     }, []);
 
+    const sortedSeries = useMemo(
+        () =>
+            [...series].sort((a, b) => {
+                const dateA = getSeriesReleaseDate(a);
+                const dateB = getSeriesReleaseDate(b);
+
+                if (!dateA && !dateB) return a.nome.localeCompare(b.nome);
+                if (!dateA) return 1;
+                if (!dateB) return -1;
+
+                return new Date(dateB).getTime() - new Date(dateA).getTime();
+            }),
+        [series],
+    );
+
+
     if (loadingSeries) return <p style={{ padding: 16 }}>Carregando series...</p>;
 
     return (
-        <main style={{ padding: 16, maxWidth: 1200, margin: "0 auto" }}>
-            <h1>Series</h1>
+        <main className="series-page">
+            <header className="series-page__header">
+                <h1>Series</h1>
+                <p>Toque em uma serie para abrir a pagina exclusiva com os sets.</p>
+            </header>
 
-            {series.map((serie) => {
-                const isExpanded = expandedSeriesId === serie.id;
+            <section className="series-grid" aria-label="Lista de series">
+                {sortedSeries.map((serie) => {
+                    const releaseDate = getSeriesReleaseDate(serie);
 
                 return (
-                    <section key={serie.id} style={{ marginBottom: 14, border: "1px solid #2c3440", borderRadius: 12 }}>
                         <button
+                            key={serie.id}
                             type="button"
-                            onClick={() => setExpandedSeriesId(isExpanded ? null : serie.id)}
-                            style={{
-                                width: "100%",
-                                background: "transparent",
-                                color: "inherit",
-                                border: "none",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                padding: "12px 14px",
-                                cursor: "pointer",
-                            }}
+                            className="series-card"
+                            onClick={() => navigate(`/series/${serie.id}`)}
                         >
-                            <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                {serie.logo ? <img src={serie.logo} alt={`Logo da serie ${serie.nome}`} style={{ height: 30 }} /> : null}
-                                <strong>{serie.nome}</strong>
+                            <div className="series-card__logo-wrap">
+                                {serie.logo ? <img src={serie.logo} alt={`Logo da serie ${serie.nome}`} className="series-card__logo" /> : null}
+                            </div>
+
+                            <strong className="series-card__name">{serie.nome}</strong>
+                            <span className="series-card__date">
+                                {releaseDate ? dateFormatter.format(new Date(releaseDate)) : "Data indisponivel"}
                             </span>
-                            <span>{isExpanded ? "-" : "+"}</span>
                         </button>
 
-                        {isExpanded && (
-                            <div style={{ padding: "0 14px 14px", display: "grid", gap: 8 }}>
-                                {serie.sets.map((setItem) => {
-                                    const setCode = setItem.codigo_liga;
-
-                                    return (
-                                        <button
-                                            key={setItem.id}
-                                            type="button"
-                                            onClick={() => setCode && navigate(`/series/sets/${encodeURIComponent(setCode)}`)}
-                                            disabled={!setCode}
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: 10,
-                                                width: "100%",
-                                                textAlign: "left",
-                                                borderRadius: 10,
-                                                border: "1px solid #2c3440",
-                                                background: "#151a21",
-                                                color: "inherit",
-                                                padding: "10px",
-                                                cursor: setCode ? "pointer" : "not-allowed",
-                                                opacity: setCode ? 1 : 0.6,
-                                            }}
-                                        >
-                                            {setItem.logo ? <img src={setItem.logo} alt={`Logo do set ${setItem.nome}`} style={{ height: 24 }} /> : null}
-                                            <span>
-                                                {setItem.nome}
-                                                {setCode ? ` (${setCode})` : ""}
-                                            </span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </section>
-                );
-            })}
+                    );
+                })}
+            </section>
         </main>
     );
 }
