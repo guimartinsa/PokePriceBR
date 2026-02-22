@@ -6,11 +6,29 @@ from cards.models import Card, CardAdminLog
 from django.contrib import messages
 from cards.services.admin_log import log_admin_action
 
-from cards.models import Set, Card, Avatar, Profile
+from cards.models import Set, Card, Avatar, Profile, Series
 
 from cards.tasks.import_cards import import_cards_from_set_task
 from cards.tasks.atualizar_todas_cartas import atualizar_todas_cartas
-from cards.tasks.import_sets import import_sets_from_tcgdex_task
+from cards.tasks.import_sets import import_series_from_tcgdex_task, import_sets_from_tcgdex_task
+
+@admin.register(Series)
+class SeriesAdmin(admin.ModelAdmin):
+    list_display = ("nome", "tcgdex_id")
+    search_fields = ("nome", "tcgdex_id")
+    ordering = ("nome",)
+
+    actions = ["importar_series_tcgdex"]
+
+    @admin.action(description="Importar/atualizar séries da TCGdex")
+    def importar_series_tcgdex(self, request, queryset):
+        task = import_series_from_tcgdex_task.delay()
+
+        self.message_user(
+            request,
+            f"Importação/atualização de séries iniciada (task {task.id}).",
+            level=messages.SUCCESS,
+        )
 
 
 
