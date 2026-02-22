@@ -7,6 +7,10 @@ from django.utils import timezone
 class Set(models.Model):
     nome = models.CharField(max_length=100)
     codigo_liga = models.CharField(max_length=10, db_index=True, null=True, blank=True)
+    logo = models.URLField(blank=True, null=True)
+    release_date = models.DateField(blank=True, null=True)
+    serie_id = models.CharField(max_length=50, blank=True, null=True)
+    serie_nome = models.CharField(max_length=100, blank=True, null=True)
 
     tcgdex_id = models.CharField(max_length=50, db_index=True, null=True, blank=True)
 

@@ -10,6 +10,7 @@ from cards.models import Set, Card, Avatar, Profile
 
 from cards.tasks.import_cards import import_cards_from_set_task
 from cards.tasks.atualizar_todas_cartas import atualizar_todas_cartas
+from cards.tasks.import_sets import import_sets_from_tcgdex_task
 
 
 
@@ -134,12 +135,38 @@ class SetAdmin(admin.ModelAdmin):
     inlines = [CardInline]
 
     actions = [
+        "importar_sets_tcgdex",
         "importar_cartas_do_set",
         "atualizar_precos_do_set",
         "atualizar_detalhes_do_set",
     ]
 
     # -------- AÇÕES -------- #
+
+    @admin.action(description="Importar/atualizar sets da TCGdex")
+    def importar_sets_tcgdex(self, request, queryset):
+        set_ids = list(
+            queryset.exclude(tcgdex_id__isnull=True)
+            .exclude(tcgdex_id="")
+            .values_list("tcgdex_id", flat=True)
+        )
+
+        if not set_ids:
+            self.message_user(
+                request,
+                "Nenhum set selecionado possui tcgdex_id para importar.",
+                level=messages.WARNING,
+            )
+            return
+
+        task = import_sets_from_tcgdex_task.delay(set_ids=set_ids)
+
+        self.message_user(
+            request,
+            f"Importação iniciada para {len(set_ids)} set(s) selecionado(s) (task {task.id}).",
+            level=messages.SUCCESS,
+        )
+
 
     @admin.action(description="Importar cartas do set (TCGdex)")
     def importar_cartas_do_set(self, request, queryset):
