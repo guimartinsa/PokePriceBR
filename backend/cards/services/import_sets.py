@@ -33,7 +33,7 @@ def import_series_from_tcgdex():
         detail_data = detail_response.json()
 
         nome = detail_data.get("name") or item.get("name")
-        logo = _normalize_logo_url(detail_data.get("logo") or item.get("logo"))
+        logo = _normalize_logo_url(_extract_logo_url(detail_data) or _extract_logo_url(item))
 
         if not tcgdex_id or not nome:
             skipped += 1
@@ -78,7 +78,25 @@ def _normalize_logo_url(logo_url):
         if not logo_url:
             return None
 
-    return logo_url if logo_url.endswith(".webp") else f"{logo_url}.webp"
+    if any(logo_url.endswith(ext) for ext in (".webp", ".png", ".jpg", ".jpeg", ".svg")):
+        return logo_url
+
+    return f"{logo_url}.webp"
+
+
+def _extract_logo_url(payload):
+    if not isinstance(payload, dict):
+        return None
+
+    direct_logo = payload.get("logo")
+    if direct_logo:
+        return direct_logo
+
+    logos = payload.get("logos")
+    if isinstance(logos, dict):
+        return logos.get("high") or logos.get("logo") or logos.get("low")
+
+    return None
 
 
 def import_sets_from_tcgdex(tcgdex_ids=None):
@@ -121,7 +139,7 @@ def import_sets_from_tcgdex(tcgdex_ids=None):
         defaults = {
             "nome": nome,
             "codigo_liga": codigo_liga,
-            "logo": _normalize_logo_url(set_data.get("logo")),
+            "logo": _normalize_logo_url(_extract_logo_url(set_data) or _extract_logo_url(item)),
             "release_date": set_data.get("releaseDate"),
             "serie_id": serie.get("id"),
             "serie_nome": serie.get("name"),
