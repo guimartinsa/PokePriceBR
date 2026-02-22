@@ -6,10 +6,11 @@ TCGDEX_SETS_URL = "https://api.tcgdex.net/v2/en/sets"
 TCGDEX_SET_DETAIL_URL = "https://api.tcgdex.net/v2/en/sets/{set_id}"
 
 TCGDEX_SERIES_URL = "https://api.tcgdex.net/v2/en/series"
+TCGDEX_SERIES_DETAIL_URL = "https://api.tcgdex.net/v2/en/series/{series_id}"
 
 
 def import_series_from_tcgdex():
-    """Importa séries da TCGdex sem reprocessar sets."""
+    """Importa séries da TCGdex com detalhes (incluindo logo)."""
     response = requests.get(TCGDEX_SERIES_URL, timeout=30)
     response.raise_for_status()
     series_data = response.json()
@@ -20,8 +21,19 @@ def import_series_from_tcgdex():
 
     for item in series_data:
         tcgdex_id = item.get("id")
-        nome = item.get("name")
-        logo = _normalize_logo_url(item.get("logo"))
+        if not tcgdex_id:
+            skipped += 1
+            continue
+
+        detail_response = requests.get(
+            TCGDEX_SERIES_DETAIL_URL.format(series_id=tcgdex_id),
+            timeout=30,
+        )
+        detail_response.raise_for_status()
+        detail_data = detail_response.json()
+
+        nome = detail_data.get("name") or item.get("name")
+        logo = _normalize_logo_url(detail_data.get("logo") or item.get("logo"))
 
         if not tcgdex_id or not nome:
             skipped += 1
@@ -60,6 +72,11 @@ def _extract_codigo_liga(set_data):
 def _normalize_logo_url(logo_url):
     if not logo_url:
         return None
+
+    if isinstance(logo_url, dict):
+        logo_url = logo_url.get("high") or logo_url.get("logo") or logo_url.get("low")
+        if not logo_url:
+            return None
 
     return logo_url if logo_url.endswith(".webp") else f"{logo_url}.webp"
 
