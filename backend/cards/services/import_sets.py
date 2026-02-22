@@ -1,9 +1,47 @@
 import requests
-from cards.models import Set
+from cards.models import Series, Set
 
 
 TCGDEX_SETS_URL = "https://api.tcgdex.net/v2/en/sets"
 TCGDEX_SET_DETAIL_URL = "https://api.tcgdex.net/v2/en/sets/{set_id}"
+
+TCGDEX_SERIES_URL = "https://api.tcgdex.net/v2/en/series"
+
+
+def import_series_from_tcgdex():
+    """Importa séries da TCGdex sem reprocessar sets."""
+    response = requests.get(TCGDEX_SERIES_URL, timeout=30)
+    response.raise_for_status()
+    series_data = response.json()
+
+    created = 0
+    updated = 0
+    skipped = 0
+
+    for item in series_data:
+        tcgdex_id = item.get("id")
+        nome = item.get("name")
+
+        if not tcgdex_id or not nome:
+            skipped += 1
+            continue
+
+        _, was_created = Series.objects.update_or_create(
+            tcgdex_id=tcgdex_id,
+            defaults={"nome": nome},
+        )
+
+        if was_created:
+            created += 1
+        else:
+            updated += 1
+
+    return {
+        "total": len(series_data),
+        "created": created,
+        "updated": updated,
+        "skipped": skipped,
+    }
 
 
 def _extract_codigo_liga(set_data):

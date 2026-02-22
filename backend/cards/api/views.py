@@ -22,7 +22,7 @@ from django.shortcuts import get_object_or_404
 from django.db import models
 
 from cards.models import Card, CardAdminLog
-from cards.models import Set
+from cards.models import Series, Set
 from cards.models import Collection, CollectionCard
 
 from cards.services.liga_scraper import atualizar_preco_carta
@@ -31,14 +31,14 @@ from .serializers import SetSerializer
 
 from cards.tasks.atualizar_todas_cartas import atualizar_todas_cartas
 from cards.tasks.atualizar_preco_carta import atualizar_preco_carta_task
-from cards.tasks.import_sets import import_sets_from_tcgdex_task
+from cards.tasks.import_sets import import_series_from_tcgdex_task, import_sets_from_tcgdex_task
 from cards.tasks.import_cards import import_cards_from_set_task
 from cards.tasks.price_updates import atualizar_colecao_task
 
 from .serializers import CardAdminLogSerializer, CardSerializer
 from .serializers import CollectionSerializer, CollectionCardSerializer
 
-from cards.api.serializers import SetSerializer
+from cards.api.serializers import SeriesSerializer, SetSerializer
 
 
 from django.db.models import Count
@@ -224,6 +224,34 @@ class ImportCardsFromSetView(APIView):
 
 
 #----sets-----#
+
+class SeriesListView(ListAPIView):
+    serializer_class = SeriesSerializer
+
+    def get_queryset(self):
+        qs = Series.objects.all().order_by("nome")
+
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(nome__icontains=search)
+
+        return qs
+
+
+class ImportSeriesFromTCGDexView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        task = import_series_from_tcgdex_task.delay()
+
+        return Response(
+            {
+                "status": "ok",
+                "message": "Importação de séries iniciada",
+                "task_id": task.id,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 class SetListView(ListAPIView):
     serializer_class = SetSerializer

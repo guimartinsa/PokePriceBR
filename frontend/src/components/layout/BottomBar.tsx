@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import IconeBusca from "../../assets/icons/busca-icon.svg";
-import IconeCamera from "../../assets/icons/camera-pokemon.svg"; 
+import IconeCamera from "../../assets/icons/camera-pokemon.svg";
 import IconeColecao from "../../assets/icons/colecaoicon.svg";
 import IconHome from "../../assets/icons/home-icon.svg";
 import WishlistIcon from "../../assets/icons/wishlist-icon.svg";
@@ -27,12 +27,12 @@ export default function BottomBar() {
                 <img src={IconeCamera} alt="" width={45} height={45} />
             </button>
 
-            <button>
-                <img src= {WishlistIcon} alt="" width={45} height={45}/>
+            <button onClick={() => navigate("/series")}>
+                <img src={WishlistIcon} alt="" width={45} height={45} />
             </button>
 
             <button onClick={() => navigate("/collection")}>
-                <img src={IconeColecao} alt="" width={35} height={35}/>
+                <img src={IconeColecao} alt="" width={35} height={35} />
             </button>
         </nav>
     );

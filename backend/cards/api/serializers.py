@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from cards.models import Avatar, Card, CardAdminLog, Collection, CollectionCard, Profile, Set, UserCard
+from cards.models import Avatar, Card, CardAdminLog, Collection, CollectionCard, Profile, Series, Set, UserCard
 
 
 
@@ -7,6 +7,24 @@ class SetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Set
         fields = ["id", "nome", "codigo_liga", "logo", "release_date", "serie_id", "serie_nome", "tcgdex_id"]
+
+class SeriesSetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Set
+        fields = ["id", "nome", "codigo_liga", "logo", "release_date", "serie_id", "serie_nome", "tcgdex_id"]
+
+
+class SeriesSerializer(serializers.ModelSerializer):
+    sets = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Series
+        fields = ["id", "tcgdex_id", "nome", "sets"]
+
+    def get_sets(self, obj):
+        queryset = Set.objects.filter(serie_id=obj.tcgdex_id).order_by("nome")
+        return SeriesSetSerializer(queryset, many=True).data
+
 
 
 class CardSerializer(serializers.ModelSerializer):

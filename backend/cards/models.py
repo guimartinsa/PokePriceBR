@@ -26,6 +26,13 @@ class Set(models.Model):
     def __str__(self):
         return self.nome
 
+class Series(models.Model):
+    tcgdex_id = models.CharField(max_length=50, unique=True, db_index=True)
+    nome = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.nome
+
 
 class Card(models.Model):
     tcgdex_id = models.CharField(

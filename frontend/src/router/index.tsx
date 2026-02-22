@@ -10,6 +10,7 @@ import { CameraView } from "../components/camera/CameraView";
 import { ProfilePage } from "../pages/ProfilePage";
 import CollectionsListPage from "../pages/Collection/CollectionsListPage";
 import AuthPage from "../pages/AuthPage";
+import SeriesPage from "../pages/SeriesPage";
 
 export default function AppRoutes() {
   return (
@@ -19,15 +20,17 @@ export default function AppRoutes() {
         <Route path="/cards" element={<CardListPage />} />
         <Route path="/cards/:id" element={<CardDetailPage />} />
         <Route path="/collection" element={<CollectionsListPage />} />
-        <Route path="/collections/:id" element={<CollectionPage  />} />
+        <Route path="/collections/:id" element={<CollectionPage />} />
 
         <Route path="/perfil" element={<ProfilePage />} />
         <Route path="/profile" element={<Navigate to="/perfil" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
-        
+
         <Route path="/auth" element={<AuthPage />} />
 
         <Route path="/scan" element={<CameraView />} />
+
+        <Route path="/series" element={<SeriesPage />} />
       </Route>
     </Routes>
   );

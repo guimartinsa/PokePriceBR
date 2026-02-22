@@ -14,7 +14,9 @@ from .views import (
     SetAutocompleteView,
     SetDetailView,
     SetListView,
+    SeriesListView,
     ImportSetsFromTCGDexView,
+    ImportSeriesFromTCGDexView,
     RaridadesListView,  # 🆕 NOVO
     IlustradoresAutocompleteView,
     collection_delete_view,  # 🆕 NOVO
@@ -51,6 +53,8 @@ urlpatterns = [
     path("ilustradores/", IlustradoresAutocompleteView.as_view(), name="ilustradores-autocomplete"),
 
     path("sets/", SetListView.as_view(), name="set-list"),
+    path("series/", SeriesListView.as_view(), name="series-list"),
+    path("series/importar-tcgdex/", ImportSeriesFromTCGDexView.as_view(), name="series-import-tcgdex"),
     path("sets/importar-tcgdex/", ImportSetsFromTCGDexView.as_view(), name="set-import-tcgdex"),
     path(
         "sets/<int:pk>/importar-cartas/",
