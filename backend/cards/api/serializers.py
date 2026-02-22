@@ -6,7 +6,7 @@ from cards.models import Avatar, Card, CardAdminLog, Collection, CollectionCard,
 class SetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Set
-        fields = ["id", "nome", "codigo_liga"]
+        fields = ["id", "nome", "codigo_liga", "logo", "release_date", "serie_id", "serie_nome", "tcgdex_id"]
 
 
 class CardSerializer(serializers.ModelSerializer):
