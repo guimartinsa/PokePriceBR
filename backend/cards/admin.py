@@ -143,13 +143,27 @@ class SetAdmin(admin.ModelAdmin):
 
     # -------- AÇÕES -------- #
 
-    @admin.action(description="Importar/atualizar sets da TCGdex")
+    @admin.action(description="Importar/atualizar sets selecionados da TCGdex")
     def importar_sets_tcgdex(self, request, queryset):
-        task = import_sets_from_tcgdex_task.delay()
+        tcgdex_ids = list(
+            queryset.exclude(tcgdex_id__isnull=True)
+            .exclude(tcgdex_id="")
+            .values_list("tcgdex_id", flat=True)
+        )
+
+        if not tcgdex_ids:
+            self.message_user(
+                request,
+                "Nenhum set selecionado possui tcgdex_id para atualização.",
+                level=messages.WARNING,
+            )
+            return
+
+        task = import_sets_from_tcgdex_task.delay(tcgdex_ids=tcgdex_ids)
 
         self.message_user(
             request,
-            f"Importação de sets iniciada (task {task.id}).",
+            f"Importação/atualização iniciada para {len(tcgdex_ids)} set(s) selecionado(s) (task {task.id}).",
             level=messages.SUCCESS,
         )
 
