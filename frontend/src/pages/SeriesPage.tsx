@@ -18,7 +18,10 @@ export default function SeriesPage() {
             <h1>Séries</h1>
             {series.map((serie) => (
                 <section key={serie.id} style={{ marginBottom: 20 }}>
-                    <h2>{serie.nome}</h2>
+                    <h2 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {serie.logo ? <img src={serie.logo} alt={`Logo da série ${serie.nome}`} style={{ height: 28, objectFit: "contain" }} /> : null}
+                        <span>{serie.nome}</span>
+                    </h2>
                     <ul>
                         {serie.sets.map((setItem) => (
                             <li key={setItem.id}>

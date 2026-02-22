@@ -15,6 +15,7 @@ export type SeriesItem = {
     id: number;
     tcgdex_id: string;
     nome: string;
+    logo: string | null;
     sets: SeriesSet[];
 };
 

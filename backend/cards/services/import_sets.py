@@ -21,6 +21,7 @@ def import_series_from_tcgdex():
     for item in series_data:
         tcgdex_id = item.get("id")
         nome = item.get("name")
+        logo = _normalize_logo_url(item.get("logo"))
 
         if not tcgdex_id or not nome:
             skipped += 1
@@ -28,7 +29,7 @@ def import_series_from_tcgdex():
 
         _, was_created = Series.objects.update_or_create(
             tcgdex_id=tcgdex_id,
-            defaults={"nome": nome},
+            defaults={"nome": nome, "logo": logo},
         )
 
         if was_created:
