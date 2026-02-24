@@ -218,11 +218,12 @@ class SetAdmin(admin.ModelAdmin):
     list_display = (
         "nome",
         "codigo_liga",
-        #"total_cartas",
+        "release_date",
+        "total_cartas",
     )
 
     search_fields = ("nome", "codigo_liga", "tcgdex_id")
-    ordering = ("nome",)
+    ordering = ("-release_date", "nome")
     inlines = [CardInline]
 
     actions = [
@@ -286,17 +287,21 @@ class SetAdmin(admin.ModelAdmin):
     @admin.action(description="Atualizar preços das cartas do set")
     def atualizar_precos_do_set(self, request, queryset):
         total_cartas = 0
+        sets_disparados = 0
 
         for set_obj in queryset:
             cartas = Card.objects.filter(set=set_obj, ativa=True)
             total_cartas += cartas.count()
 
-            for card in cartas:
-                atualizar_precos_set_task.delay(card.id)
+            atualizar_precos_set_task.delay(set_obj.id)
+            sets_disparados += 1
 
         self.message_user(
             request,
-            f"Atualização de preços iniciada para {total_cartas} carta(s).",
+            (
+                f"Atualização de preços iniciada para {total_cartas} carta(s) "
+                f"em {sets_disparados} set(s)."
+            ),
             level=messages.SUCCESS,
         )
 
