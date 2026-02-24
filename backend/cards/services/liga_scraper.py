@@ -1,4 +1,5 @@
 from playwright.sync_api import sync_playwright
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from decimal import Decimal
 import time
 
@@ -18,50 +19,55 @@ def _parse_preco(texto: str) -> Decimal:
 def extrair_precos_liga(url: str) -> dict:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+        try:
+            page = browser.new_page()
 
-        page.goto(url, timeout=60_000)
-        page.wait_for_selector(".container-price-mkp", timeout=60_000)
+            # Mantém a task responsiva quando a página da Liga não responde.
+            page.goto(url, timeout=20_000, wait_until="domcontentloaded")
+            page.wait_for_selector(".container-price-mkp", timeout=20_000)
 
-        time.sleep(1)
+            time.sleep(1)
 
-        blocos = page.query_selector_all(".container-price-mkp")
-        resultado = {}
+            blocos = page.query_selector_all(".container-price-mkp")
+            resultado = {}
 
-        for bloco in blocos:
-            extras_el = bloco.query_selector(".extras")
-            if not extras_el:
-                continue  # <-- CRÍTICO
+            for bloco in blocos:
+                extras_el = bloco.query_selector(".extras")
+                if not extras_el:
+                    continue
 
-            tipo_raw = extras_el.inner_text().strip()
+                tipo_raw = extras_el.inner_text().strip()
 
-            MAPA_TIPOS = {
-                "N": "normal",
-                "F": "foil",
-                "RF": "reverse foil",
-                "MB": "master ball",
-                "PF": "pokeball foil",
-            }
+                MAPA_TIPOS = {
+                    "N": "normal",
+                    "F": "foil",
+                    "RF": "reverse foil",
+                    "MB": "master ball",
+                    "PF": "pokeball foil",
+                }
 
-            chave = MAPA_TIPOS.get(tipo_raw)
-            if not chave:
-                continue
+                chave = MAPA_TIPOS.get(tipo_raw)
+                if not chave:
+                    continue
 
-            try:
-                min_ = bloco.query_selector(".min .price").inner_text()
-                med_ = bloco.query_selector(".medium .price").inner_text()
-                max_ = bloco.query_selector(".max .price").inner_text()
-            except Exception:
-                continue  # se faltar algum preço, ignora bloco
+                try:
+                    min_ = bloco.query_selector(".min .price").inner_text()
+                    med_ = bloco.query_selector(".medium .price").inner_text()
+                    max_ = bloco.query_selector(".max .price").inner_text()
+                except Exception:
+                    continue
 
-            resultado[chave] = {
-                "min": _parse_preco(min_),
-                "med": _parse_preco(med_),
-                "max": _parse_preco(max_),
-            }
+                resultado[chave] = {
+                    "min": _parse_preco(min_),
+                    "med": _parse_preco(med_),
+                    "max": _parse_preco(max_),
+                }
 
-        browser.close()
-        return resultado
+            return resultado
+        except PlaywrightTimeoutError:
+            return {}
+        finally:
+            browser.close()
 
 
 
