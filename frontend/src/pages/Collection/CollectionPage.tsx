@@ -10,6 +10,7 @@ import { SearchFilters, type SearchFiltersState } from "../../components/filters
 import {
     fetchCollectionCards,
     toggleCollectionCard,
+    removeCardFromCollection,
     atualizarPrecosColecao,
     type CollectionCard,
 } from "../../services/collection";
@@ -201,8 +202,13 @@ export default function CollectionPage() {
                         <h3 id="add-cards-modal-title" style={{ marginBottom: 12 }}>Adicionar cartas</h3>
                         <AddCardsPanel
                             collectionCardIds={collection.map((c) => c.id)}
-                            onAdd={async (cardId) => {
-                                await toggleCollectionCard(collectionId, cardId, false);
+                            onToggle={async (cardId, shouldAdd) => {
+                                if (shouldAdd) {
+                                    await toggleCollectionCard(collectionId, cardId, false);
+                                } else {
+                                    await removeCardFromCollection(collectionId, cardId);
+                                }
+
                                 await loadCollection();
                             }}
                         />
@@ -239,6 +245,7 @@ export default function CollectionPage() {
                     card={selectedCard}
                     open={!!selectedCard}
                     onClose={() => setSelectedCard(null)}
+                    showCollectionActions
                 />
             )}
         </div>

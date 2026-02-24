@@ -23,6 +23,7 @@ from .views import (
     collection_delete_view,  # 🆕 NOVO
     collections_view,
     collection_cards_view,
+    collection_card_delete_view,
     toggle_card_owned,
     atualizar_colecao_view,
     admin_force_downgrade_view,
@@ -76,6 +77,7 @@ urlpatterns = [
     path("collections/", collections_view),
     path("collections/<int:collection_id>/", collection_delete_view),  # 🆕 NOVA ROTA
     path("collections/<int:collection_id>/cards/", collection_cards_view),
+    path("collections/<int:collection_id>/cards/<int:card_id>/", collection_card_delete_view),
     path("collections/<int:collection_id>/toggle/", toggle_card_owned),
     path("collections/<int:collection_id>/atualizar-precos/", atualizar_colecao_view),
     path("collections/<int:collection_id>/export/", export_collection_view),

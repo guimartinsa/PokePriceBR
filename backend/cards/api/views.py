@@ -458,6 +458,25 @@ def collection_cards_view(request, collection_id):
     serializer = CollectionCardSerializer(cards, many=True)
     return Response(serializer.data)
 
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def collection_card_delete_view(request, collection_id, card_id):
+    collection = get_object_or_404(
+        Collection,
+        id=collection_id,
+        user=request.user,
+    )
+
+    collection_card = get_object_or_404(
+        CollectionCard,
+        collection=collection,
+        card_id=card_id,
+    )
+    collection_card.delete()
+
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def atualizar_colecao_view(request, collection_id):

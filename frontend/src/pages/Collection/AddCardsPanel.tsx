@@ -8,10 +8,10 @@ import CheckballIcon from "../../assets/icons/checkball-icon.svg";
 
 type Props = {
     collectionCardIds: number[];
-    onAdd(cardId: number): Promise<void> | void;
+    onToggle(cardId: number, shouldAdd: boolean): Promise<void> | void;
 };
 
-export function AddCardsPanel({ collectionCardIds, onAdd }: Props) {
+export function AddCardsPanel({ collectionCardIds, onToggle }: Props) {
     const [cards, setCards] = useState<Card[]>([]);
     const [page, setPage] = useState(1);
 
@@ -46,7 +46,7 @@ export function AddCardsPanel({ collectionCardIds, onAdd }: Props) {
             set: filters.set || undefined,
             raridade: filters.raridade || undefined,
             ilustrador: filters.ilustrador || undefined,
-            over: filters.over ?? undefined, // 🔥 AQUI É A CORREÇÃO
+            over: filters.over ?? undefined,
             preco_min: filters.preco_min || undefined,
             preco_max: filters.preco_max || undefined,
         })
@@ -91,10 +91,18 @@ export function AddCardsPanel({ collectionCardIds, onAdd }: Props) {
                                 key={card.id}
                                 className={`add-card ${added ? "added" : ""}`}
                                 onClick={async () => {
-                                    if (added) return;
+                                    const shouldAdd = !added;
 
-                                    setAddedCardIds((prev) => [...prev, card.id]);
-                                    await onAdd(card.id);
+                                    setAddedCardIds((prev) => {
+                                        if (shouldAdd) {
+                                            if (prev.includes(card.id)) return prev;
+                                            return [...prev, card.id];
+                                        }
+
+                                        return prev.filter((id) => id !== card.id);
+                                    });
+
+                                    await onToggle(card.id, shouldAdd);
                                 }}
                             >
                                 <img src={card.imagem || "/placeholder.png"} alt={card.nome} />

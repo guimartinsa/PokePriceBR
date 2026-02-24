@@ -75,6 +75,14 @@ export async function addCardToCollection(
     });
 }
 
+
+export async function removeCardFromCollection(
+    collectionId: number,
+    cardId: number
+): Promise<void> {
+    await api.delete(`/collections/${collectionId}/cards/${cardId}/`);
+}
+
 export async function atualizarPrecosColecao(collectionId: number): Promise<{ status: string }> {
     const res = await api.post<{ status: string }>(
         `/collections/${collectionId}/atualizar-precos/`

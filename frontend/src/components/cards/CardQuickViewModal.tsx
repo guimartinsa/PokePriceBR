@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import type { CollectionCard } from "../../services/collection";
+import { fetchCollections, toggleCollectionCard, type Collection } from "../../services/collection";
 import type { Card } from "../../types/Card";
 
 type CardQuickViewModalProps = {
@@ -26,6 +27,17 @@ export function CardQuickViewModal({
     onClose,
     showCollectionActions = false,
 }: CardQuickViewModalProps) {
+    const [collections, setCollections] = useState<Collection[]>([]);
+    const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
+    const [isSavingToCollection, setIsSavingToCollection] = useState(false);
+
+    const hasCollections = collections.length > 0;
+
+    const collectionSelectValue = useMemo(
+        () => (selectedCollectionId === null ? "" : String(selectedCollectionId)),
+        [selectedCollectionId]
+    );
+
     useEffect(() => {
         if (!open) return;
 
@@ -38,6 +50,33 @@ export function CardQuickViewModal({
         window.addEventListener("keydown", handleEscape);
         return () => window.removeEventListener("keydown", handleEscape);
     }, [open, onClose]);
+
+    useEffect(() => {
+        if (!open || !showCollectionActions) return;
+
+        fetchCollections()
+            .then((response) => {
+                setCollections(response);
+
+                if (response.length === 0) {
+                    setSelectedCollectionId(null);
+                    return;
+                }
+
+                setSelectedCollectionId((current) => {
+                    if (current && response.some((collection) => collection.id === current)) {
+                        return current;
+                    }
+
+                    return response[0].id;
+                });
+            })
+            .catch((error) => {
+                console.error("Erro ao buscar coleções:", error);
+                setCollections([]);
+                setSelectedCollectionId(null);
+            });
+    }, [open, showCollectionActions]);
 
     if (!open) return null;
 
@@ -95,9 +134,46 @@ export function CardQuickViewModal({
                             )}
 
                             {showCollectionActions && (
-                                <Link to="/collection" className="card-quick-view-secondary-action" onClick={onClose}>
-                                    Adicionar à coleção
-                                </Link>
+                                <>
+                                    <select
+                                        value={collectionSelectValue}
+                                        onChange={(event) => setSelectedCollectionId(Number(event.target.value))}
+                                        disabled={!hasCollections || isSavingToCollection}
+                                        className="card-quick-view-secondary-action"
+                                    >
+                                        {hasCollections ? (
+                                            collections.map((collection) => (
+                                                <option key={collection.id} value={collection.id}>
+                                                    {collection.name}
+                                                </option>
+                                            ))
+                                        ) : (
+                                            <option value="">Sem coleções disponíveis</option>
+                                        )}
+                                    </select>
+
+                                    <button
+                                        type="button"
+                                        className="card-quick-view-secondary-action"
+                                        disabled={!selectedCollectionId || isSavingToCollection}
+                                        onClick={async () => {
+                                            if (!selectedCollectionId) return;
+
+                                            try {
+                                                setIsSavingToCollection(true);
+                                                await toggleCollectionCard(selectedCollectionId, card.id, false);
+                                            } finally {
+                                                setIsSavingToCollection(false);
+                                            }
+                                        }}
+                                    >
+                                        {isSavingToCollection ? "Adicionando..." : "Adicionar à coleção"}
+                                    </button>
+
+                                    <Link to="/collection" className="card-quick-view-secondary-action" onClick={onClose}>
+                                        Gerenciar coleções
+                                    </Link>
+                                </>
                             )}
 
                             <button type="button" className="card-quick-view-secondary-action" onClick={onClose}>
