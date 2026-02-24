@@ -15,6 +15,7 @@ from cards.models import Set, Card, Avatar, Profile, Series
 from cards.tasks.import_cards import import_cards_from_set_task
 from cards.tasks.atualizar_todas_cartas import atualizar_todas_cartas
 from cards.tasks.import_sets import import_series_from_tcgdex_task, import_sets_from_tcgdex_task
+from cards.services.liga_url import gerar_liga_url
 
 @admin.register(Series)
 class SeriesAdmin(admin.ModelAdmin):
@@ -61,6 +62,7 @@ class CardAdmin(admin.ModelAdmin):
         "restaurar_cartas",
         "atualizar_precos_global",   
         "atualizar_detalhes_tcgdex",
+        "atualizar_links_liga",
     ]
 
     def get_urls(self):
@@ -181,6 +183,24 @@ class CardAdmin(admin.ModelAdmin):
         self.message_user(
             request,
             f"{total} carta(s) enviadas para atualização de detalhes.",
+            level=messages.SUCCESS,
+        )
+
+    @admin.action(description="Atualizar link da Liga das cartas selecionadas")
+    def atualizar_links_liga(self, request, queryset):
+        atualizadas = 0
+
+        for card in queryset.select_related("set"):
+            if not card.set or not card.set.codigo_liga:
+                continue
+
+            card.liga_url = gerar_liga_url(card)
+            card.save(update_fields=["liga_url"])
+            atualizadas += 1
+
+        self.message_user(
+            request,
+            f"{atualizadas} link(s) da Liga atualizados.",
             level=messages.SUCCESS,
         )
 #------sets---------#

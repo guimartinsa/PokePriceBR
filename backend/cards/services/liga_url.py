@@ -9,7 +9,7 @@ def gerar_liga_url(card) -> str:
     Gera a URL oficial da Liga Pokémon para a carta
     """
     nome = card.nome.strip()
-    numero_completo = card.numero_completo.strip()
+    numero_completo = f"{card.numero}/{card.total_set}"
     codigo_set = card.set.codigo_liga
     numero = card.numero
 
