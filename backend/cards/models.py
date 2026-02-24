@@ -138,8 +138,11 @@ class Card(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        Gera automaticamente a URL da Liga Pokémon
+        Preenche dados de integração com a Liga Pokémon automaticamente.
         """
+        self.numero_completo = f"{self.numero}/{self.total_set}"
+        self.liga_num = self.numero_completo
+
         if not self.liga_url:
             try:
                 self.liga_url = gerar_liga_url(self)

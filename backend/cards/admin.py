@@ -230,6 +230,7 @@ class SetAdmin(admin.ModelAdmin):
         "importar_cartas_do_set",
         "atualizar_precos_do_set",
         "atualizar_detalhes_do_set",
+        "atualizar_links_liga_dos_sets",
     ]
 
     # -------- AÇÕES -------- #
@@ -310,6 +311,26 @@ class SetAdmin(admin.ModelAdmin):
         self.message_user(
             request,
             f"Atualização de detalhes iniciada para {disparados} set(s).",
+            level=messages.SUCCESS,
+        )
+
+
+    @admin.action(description="Atualizar link da Liga de todas as cartas dos sets")
+    def atualizar_links_liga_dos_sets(self, request, queryset):
+        atualizadas = 0
+
+        for set_obj in queryset:
+            if not set_obj.codigo_liga:
+                continue
+
+            for card in set_obj.cartas.all():
+                card.liga_url = gerar_liga_url(card)
+                card.save(update_fields=["liga_url"])
+                atualizadas += 1
+
+        self.message_user(
+            request,
+            f"{atualizadas} link(s) da Liga atualizados nas cartas dos sets selecionados.",
             level=messages.SUCCESS,
         )
 
