@@ -5,6 +5,7 @@ import { fetchCards } from "../api/cards";
 import { fetchSeries } from "../api/series";
 import { CardItemDetail } from "../components/cards/CardItemDetail";
 import { SearchFilters, type SearchFiltersState } from "../components/filters/Searchfilters";
+import { CardQuickViewModal } from "../components/cards/CardQuickViewModal";
 import { Loading } from "../components/Loading";
 import {
     fetchCollectionCards,
@@ -39,6 +40,7 @@ export default function SetPage() {
     const [ownedCardIds, setOwnedCardIds] = useState<Set<number>>(new Set());
 
     const [setName, setSetName] = useState<string>(setCode);
+    const [selectedCard, setSelectedCard] = useState<Card | null>(null);
 
     const isInitialLoading = loadingCards && page === 1;
 
@@ -216,6 +218,7 @@ export default function SetPage() {
                             <CardItemDetail
                                 key={card.id}
                                 card={card}
+                                onClick={() => setSelectedCard(card)}
                                 onToggleOwned={selectedCollectionId ? (owned) => handleToggleOwned(card.id, owned) : undefined}
                             />
                         ))}
@@ -242,6 +245,15 @@ export default function SetPage() {
                         </button>
                     )}
                 </>
+            )}
+            
+            {selectedCard && (
+                <CardQuickViewModal
+                    card={selectedCard}
+                    open={!!selectedCard}
+                    onClose={() => setSelectedCard(null)}
+                    showCollectionActions
+                />
             )}
         </main>
     );

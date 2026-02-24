@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+//import { Link } from "react-router-dom";
 
 import type { CollectionCard } from "../../services/collection";
 import { fetchCollections, toggleCollectionCard, type Collection } from "../../services/collection";
@@ -170,9 +170,7 @@ export function CardQuickViewModal({
                                         {isSavingToCollection ? "Adicionando..." : "Adicionar à coleção"}
                                     </button>
 
-                                    <Link to="/collection" className="card-quick-view-secondary-action" onClick={onClose}>
-                                        Gerenciar coleções
-                                    </Link>
+
                                 </>
                             )}
 
