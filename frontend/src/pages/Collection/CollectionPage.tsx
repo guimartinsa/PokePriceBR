@@ -34,12 +34,6 @@ export default function CollectionPage() {
     const [loading, setLoading] = useState(true);
     const [selectedCard, setSelectedCard] = useState<CollectionCard | null>(null);
 
-    const [stats, setStats] = useState({
-        total: 0,
-        unique: 0,
-        totalValue: 0,
-    });
-
     const [filters, setFilters] = useState<SearchFiltersState>({
         nome: "",
         set: "",
@@ -64,6 +58,15 @@ export default function CollectionPage() {
     const [isUpdatingPrices, setIsUpdatingPrices] = useState(false);
     const [updateMessage, setUpdateMessage] = useState<string | null>(null);
 
+    const toPriceNumber = (value: string | null) => Number.parseFloat(value ?? "0") || 0;
+
+    const uniqueCards = new Set(collection.map((card) => card.id)).size;
+    const estimatedValue = collection.reduce((sum, card) => sum + toPriceNumber(card.preco_min), 0);
+    const currentCollectionValue = collection.reduce(
+        (sum, card) => sum + (card.owned ? toPriceNumber(card.preco_min) : 0),
+        0,
+    );
+
     /* 🔹 Effect */
     useEffect(() => {
         if (!collectionId) {
@@ -85,12 +88,6 @@ export default function CollectionPage() {
             const cards = await fetchCollectionCards(collectionId!);
 
             setCollection(cards);
-
-            const unique = new Set(cards.map((c) => c.id)).size;
-
-            const totalValue = cards.reduce((sum, c) => sum + parseFloat(c.preco_med || "0"), 0);
-
-            setStats({ total: cards.length, unique, totalValue });
 
         } catch (err) {
             console.error("Erro ao carregar coleção:", err);
@@ -130,9 +127,10 @@ export default function CollectionPage() {
                     borderRadius: "12px",
                 }}
             >
-                <StatBlock value={stats.total} label="Total de Cartas" />
-                <StatBlock value={stats.unique} label="Cartas Únicas" />
-                <StatBlock value={`R$ ${stats.totalValue.toFixed(2)}`} label="Valor Estimado" />
+                <StatBlock value={collection.length} label="Total de Cartas" />
+                <StatBlock value={uniqueCards} label="Cartas Únicas" />
+                <StatBlock value={`R$ ${estimatedValue.toFixed(2)}`} label="Valor Estimado" />
+                <StatBlock value={`R$ ${currentCollectionValue.toFixed(2)}`} label="Valor Atual da Coleção" />
             </div>
 
             {/* 🃏 Lista */}
