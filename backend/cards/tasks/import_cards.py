@@ -37,7 +37,6 @@ def import_cards_from_set_task(set_id: int):
                 "numero_completo": f'{c["localId"]}/{data["cardCount"]["total"]}',
                 "raridade": c.get("rarity"),
                 "imagem": image_small,
-                #"imagem_grande": image_large,
                 "set": set_obj,
             },
         )
