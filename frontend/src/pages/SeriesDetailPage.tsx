@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { fetchCards } from "../api/cards";
 import { fetchSeries, type SeriesItem, type SeriesSet } from "../api/series";
-import { fetchCollectionCards, fetchCollections, type Collection } from "../services/collection";
+import { fetchCollectionCards, fetchCollections } from "../services/collection";
 
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
@@ -28,7 +28,6 @@ export default function SeriesDetailPage() {
     const [series, setSeries] = useState<SeriesItem[]>([]);
     const [loadingSeries, setLoadingSeries] = useState(true);
 
-    const [collections, setCollections] = useState<Collection[]>([]);
     const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
     const [progressBySetCode, setProgressBySetCode] = useState<ProgressBySetCode>({});
 
@@ -39,12 +38,11 @@ export default function SeriesDetailPage() {
 
         fetchCollections()
             .then((items) => {
-                setCollections(items);
                 if (items.length > 0) {
                     setSelectedCollectionId(items[0].id);
                 }
             })
-            .catch(() => setCollections([]));
+            .catch(() => setSelectedCollectionId(null));
     }, []);
 
     const selectedSeries = useMemo(
