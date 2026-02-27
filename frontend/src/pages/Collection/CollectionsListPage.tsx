@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 import { fetchCardsAutocomplete } from "../../api/cardsAutocomplete";
 import {
     fetchCollections,
@@ -12,6 +13,10 @@ import "./collectionsList.css";
 
 const FREE_COLLECTION_LIMIT = 1;
 
+function canCreateUnlimitedCollections(plan?: string) {
+    return plan === "PRO" || plan === "ADMIN";
+}
+
 export default function CollectionsListPage() {
     const [collections, setCollections] = useState<Collection[]>([]);
     const [newName, setNewName] = useState("");
@@ -19,8 +24,10 @@ export default function CollectionsListPage() {
     const [cardOptions, setCardOptions] = useState<CardAutocomplete[]>([]);
     const [selectedCoverCard, setSelectedCoverCard] = useState<CardAutocomplete | null>(null);
     const navigate = useNavigate();
+    const { user } = useAuth();
 
-    const reachedFreeLimit = collections.length >= FREE_COLLECTION_LIMIT;
+    const hasUnlimitedCollections = canCreateUnlimitedCollections(user?.plan);
+    const reachedFreeLimit = !hasUnlimitedCollections && collections.length >= FREE_COLLECTION_LIMIT;
 
     async function loadCollections() {
         try {
@@ -74,12 +81,16 @@ export default function CollectionsListPage() {
     }
 
     const helperMessage = useMemo(() => {
+        if (hasUnlimitedCollections) {
+            return "Seu plano permite criar coleções ilimitadas.";
+        }
+
         if (collections.length === 0) {
             return "Você pode criar sua primeira coleção grátis.";
         }
 
         return "Você já usou sua coleção grátis. Assine o Pro para criar coleções ilimitadas.";
-    }, [collections.length]);
+    }, [collections.length, hasUnlimitedCollections]);
 
     return (
         <div className="collections-page">
@@ -88,7 +99,7 @@ export default function CollectionsListPage() {
                     <h1>📁 Minhas Coleções</h1>
                     <p>{helperMessage}</p>
                 </div>
-                {collections.length > 0 && (
+                {!hasUnlimitedCollections && collections.length > 0 && (
                     <button
                         type="button"
                         className="subscribe-btn"
