@@ -298,6 +298,13 @@ class Collection(models.Model):
         related_name="collections"
     )
     name = models.CharField(max_length=120)
+    cover_card = models.ForeignKey(
+        "cards.Card",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="collection_covers",
+    )
     is_public = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

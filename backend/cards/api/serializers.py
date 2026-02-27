@@ -150,9 +150,16 @@ class UserCardSerializer(serializers.ModelSerializer):
 
 #coleção
 class CollectionSerializer(serializers.ModelSerializer):
+    cover_card_id = serializers.IntegerField(source="cover_card.id", read_only=True)
+    cover_image = serializers.CharField(source="cover_card.imagem", read_only=True)
+
     class Meta:
         model = Collection
-        fields = ["id", "name", "is_public", "created_at"]
+        fields = ["id", "name", "is_public", "created_at", "cover_card", "cover_card_id", "cover_image"]
+        extra_kwargs = {
+            "cover_card": {"write_only": True, "required": False, "allow_null": True},
+        }
+
 
 class CollectionCardSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source="card.id")

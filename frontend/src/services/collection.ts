@@ -10,6 +10,8 @@ import type {Card} from "../types/Card"
 export type Collection = {
     id: number;
     name: string;
+    cover_card_id?: number | null;
+    cover_image?: string | null;
 };
 
 export type CollectionCard = Card &{
@@ -29,8 +31,14 @@ export async function fetchCollections(): Promise<Collection[]> {
 
 /* 🔹 Criar nova coleção */
 /* 🔹 Criar coleção */
-export async function createCollection(name: string): Promise<Collection> {
-    const res = await api.post<Collection>("/collections/", { name });
+export async function createCollection(
+    name: string,
+    coverCardId?: number | null,
+): Promise<Collection> {
+    const res = await api.post<Collection>("/collections/", {
+        name,
+        cover_card_id: coverCardId ?? null,
+    });
     return res.data;
 }
 

@@ -395,7 +395,7 @@ def collections_view(request):
         refresh_subscription_status(profile)
         name = request.data.get("name")
         is_public = bool(request.data.get("is_public", False))
-
+        cover_card_id = request.data.get("cover_card_id")
         if not name:
             return Response(
                 {"error": "Nome é obrigatório"},
@@ -407,10 +407,15 @@ def collections_view(request):
         except PlanLimitError as exc:
             return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
 
+        cover_card = None
+        if cover_card_id:
+            cover_card = get_object_or_404(Card, id=cover_card_id)
+
         collection = Collection.objects.create(
             user=request.user,
             name=name,
             is_public=is_public,
+            cover_card=cover_card,
         )
 
         serializer = CollectionSerializer(collection)
