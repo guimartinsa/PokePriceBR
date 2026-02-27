@@ -60,7 +60,7 @@ export default function CollectionPage() {
 
     const toPriceNumber = (value: string | null) => Number.parseFloat(value ?? "0") || 0;
 
-    const uniqueCards = new Set(collection.map((card) => card.id)).size;
+    //const uniqueCards = new Set(collection.map((card) => card.id)).size;
     const estimatedValue = collection.reduce((sum, card) => sum + toPriceNumber(card.preco_min), 0);
     const currentCollectionValue = collection.reduce(
         (sum, card) => sum + (card.owned ? toPriceNumber(card.preco_min) : 0),
@@ -128,8 +128,7 @@ export default function CollectionPage() {
                 }}
             >
                 <StatBlock value={collection.length} label="Total de Cartas" />
-                <StatBlock value={uniqueCards} label="Cartas Únicas" />
-                <StatBlock value={`R$ ${estimatedValue.toFixed(2)}`} label="Valor Estimado" />
+                <StatBlock value={`R$ ${estimatedValue.toFixed(2)}`} label="Valor Total da Coleção" />
                 <StatBlock value={`R$ ${currentCollectionValue.toFixed(2)}`} label="Valor Atual da Coleção" />
             </div>
 

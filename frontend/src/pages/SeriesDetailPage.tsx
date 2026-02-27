@@ -131,18 +131,7 @@ export default function SeriesDetailPage() {
                 {selectedSeries.logo ? <img src={selectedSeries.logo} alt={selectedSeries.nome} className="series-detail-hero__logo" /> : null}
             </section>
 
-            {collections.length > 0 ? (
-                <label className="series-collection-picker">
-                    Colecao
-                    <select value={selectedCollectionId ?? ""} onChange={(event) => setSelectedCollectionId(Number(event.target.value))}>
-                        {collections.map((collection) => (
-                            <option key={collection.id} value={collection.id}>
-                                {collection.name}
-                            </option>
-                        ))}
-                    </select>
-                </label>
-            ) : null}
+
 
             <section className="series-set-list">
                 {orderedSets.map((setItem) => (

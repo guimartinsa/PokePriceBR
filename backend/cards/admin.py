@@ -349,10 +349,10 @@ class SetAdmin(admin.ModelAdmin):
             return False
         return True
 
-    def get_readonly_fields(self, request, obj=None):
-        if obj:
-            return ("codigo_liga",)
-        return ()
+    #def get_readonly_fields(self, request, obj=None):
+    #    if obj:
+    #        return ("codigo_liga",)
+    #    return ()
 
 
 @admin.register(Avatar)
