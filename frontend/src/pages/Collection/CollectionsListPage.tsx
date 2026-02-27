@@ -10,12 +10,10 @@ import {
 } from "../../services/collection";
 import type { CardAutocomplete } from "../../types/CardAutocomplete";
 import "./collectionsList.css";
+import { hasSubscriberPrivileges } from "../../utils/plan";
 
 const FREE_COLLECTION_LIMIT = 1;
 
-function canCreateUnlimitedCollections(plan?: string) {
-    return plan === "PRO" || plan === "ADMIN";
-}
 
 export default function CollectionsListPage() {
     const [collections, setCollections] = useState<Collection[]>([]);
@@ -26,7 +24,7 @@ export default function CollectionsListPage() {
     const navigate = useNavigate();
     const { user } = useAuth();
 
-    const hasUnlimitedCollections = canCreateUnlimitedCollections(user?.plan);
+    const hasUnlimitedCollections = hasSubscriberPrivileges(user?.plan);
     const reachedFreeLimit = !hasUnlimitedCollections && collections.length >= FREE_COLLECTION_LIMIT;
 
     async function loadCollections() {

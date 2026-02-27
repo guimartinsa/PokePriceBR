@@ -5,6 +5,7 @@ import { useAuth } from "../hooks/useAuth";
 import { deleteAccount, fetchAvatars, fetchProfile, updateProfile, type AvatarOption } from "../services/profile";
 import { activateTrial, createCheckoutSession } from "../services/billing";
 import { logout } from "../services/auth";
+import { hasSubscriberPrivileges } from "../utils/plan";
 
 
 export function ProfilePage() {
@@ -46,6 +47,8 @@ export function ProfilePage() {
 
     const userPlan = "plan" in user && typeof user.plan === "string" ? user.plan.toUpperCase() : "FREE";
     const userBadge = "badge" in user && typeof user.badge === "string" ? user.badge : "";
+    const userHasSubscriberPrivileges = hasSubscriberPrivileges(user?.plan);
+
 
     async function handleSave() {
         setSaving(true);
@@ -116,19 +119,27 @@ export function ProfilePage() {
 
             <div style={{ marginTop: 16, padding: 12, border: "1px solid #2f3845", borderRadius: 8 }}>
                 <h2 style={{ marginTop: 0 }}>Assinatura (Stripe - ambiente de {stripeModeLabel})</h2>
-                <p style={{ color: "#8f9bad" }}>
-                    {stripeMode === "test"
-                        ? "Integração com Stripe em modo de teste. Use cartões de teste da Stripe no checkout."
-                        : "Integração com Stripe em modo de produção. Use um cartão real no checkout."}
-                </p>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button onClick={handleActivateTrial} disabled={activatingTrial}>
-                        {activatingTrial ? "Ativando..." : "Ativar período de testes"}
-                    </button>
-                    <button onClick={handleStartCheckout} disabled={startingCheckout}>
-                        {startingCheckout ? "Redirecionando..." : stripeMode === "test" ? "Assinar PRO (Stripe Test)" : "Assinar PRO"}
-                    </button>
-                </div>
+                {userHasSubscriberPrivileges ? (
+                    <p style={{ color: "#8f9bad" }}>
+                        Sua conta já possui privilégios de assinante.
+                    </p>
+                ) : (
+                    <>
+                        <p style={{ color: "#8f9bad" }}>
+                            {stripeMode === "test"
+                                ? "Integração com Stripe em modo de teste. Use cartões de teste da Stripe no checkout."
+                                : "Integração com Stripe em modo de produção. Use um cartão real no checkout."}
+                        </p>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            <button onClick={handleActivateTrial} disabled={activatingTrial}>
+                                {activatingTrial ? "Ativando..." : "Ativar período de testes"}
+                            </button>
+                            <button onClick={handleStartCheckout} disabled={startingCheckout}>
+                                {startingCheckout ? "Redirecionando..." : stripeMode === "test" ? "Assinar PRO (Stripe Test)" : "Assinar PRO"}
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
 
             <label style={{ display: "block", marginTop: 16 }}>
