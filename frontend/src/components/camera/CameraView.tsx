@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ScanOverlay } from "./ScanOverlay";
 import { CaptureButton } from "./CaptureButton";
-import { uploadScan } from "../../api/scan";
+import { fetchRandomRealCard, uploadScan } from "../../api/scan";
 import { useAuth } from "../../hooks/useAuth";
 import { hasSubscriberPrivileges } from "../../utils/plan";
 import "./camera.css";
@@ -42,20 +42,23 @@ function readFreeUsage() {
     }
 }
 
-function buildFallbackResult(): CardDetection {
-    const fallbackCards = [
-        { name: "Dedenne GX", number: "195/214", priceLabel: "R$ 55,50" },
-        { name: "Pikachu V", number: "043/185", priceLabel: "R$ 19,90" },
-        { name: "Charizard ex", number: "006/165", priceLabel: "R$ 189,00" },
-    ];
-
-    const selected = fallbackCards[Math.floor(Math.random() * fallbackCards.length)];
+function buildFallbackFromCatalog(card: {
+    nome: string;
+    numero_completo?: string;
+    numero?: string;
+    preco_med?: string | null;
+}): CardDetection {
+    const rawPrice = card.preco_med;
+    const numericPrice = rawPrice ? Number(rawPrice) : NaN;
+    const formattedPrice = Number.isFinite(numericPrice)
+        ? `R$ ${numericPrice.toFixed(2).replace(".", ",")}`
+        : "Preço indisponível";
 
     return {
         id: crypto.randomUUID(),
-        name: selected.name,
-        number: selected.number,
-        priceLabel: selected.priceLabel,
+        name: card.nome,
+        number: card.numero_completo || card.numero || "N/A",
+        priceLabel: formattedPrice,
         source: "fallback",
     };
 }
@@ -202,7 +205,15 @@ export function CameraView() {
 
             if (!detection) {
                 await new Promise((resolve) => setTimeout(resolve, 450));
-                detection = buildFallbackResult();
+                const randomCard = await fetchRandomRealCard();
+
+                if (randomCard) {
+                    detection = buildFallbackFromCatalog(randomCard);
+                }
+            }
+
+            if (!detection) {
+                throw new Error("Não foi possível identificar uma carta");
             }
 
             setLastDetected(detection);
