@@ -1,28 +1,61 @@
-function getScanUrl(): string {
-    const rawUrl = import.meta.env.VITE_API_URL;
-    const baseUrl = rawUrl
-        ? (/^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`)
-            .replace(/\/+$/, "")
-            .replace(/\/api$/, "")
-        : "http://127.0.0.1:8000";
+function normalizeBaseUrl(rawUrl?: string): string {
+    if (!rawUrl) {
+        return import.meta.env.PROD
+            ? "https://pokepricebr.onrender.com"
+            : "http://127.0.0.1:8000";
+    }
 
-    return `${baseUrl}/api/scan/`;
+    return (/^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`)
+        .replace(/\/+$/, "")
+        .replace(/\/api$/, "");
+}
+
+function getScanUrls(): string[] {
+    const explicitScanUrl = import.meta.env.VITE_SCAN_API_URL as string | undefined;
+
+    if (explicitScanUrl) {
+        const normalized = (/^https?:\/\//i.test(explicitScanUrl)
+            ? explicitScanUrl
+            : `https://${explicitScanUrl}`
+        ).replace(/\/+$/, "");
+
+        return [normalized.endsWith("/scan") || normalized.endsWith("/scan/")
+            ? normalized.replace(/\/+$/, "") + "/"
+            : `${normalized}/scan/`];
+    }
+
+    const baseUrl = normalizeBaseUrl(import.meta.env.VITE_API_URL);
+
+    return [
+        `${baseUrl}/api/scan/`,
+        `${baseUrl}/scan/`,
+    ];
 }
 
 export async function uploadScan(image: Blob) {
     const formData = new FormData();
     formData.append("image", image, "scan.jpg");
 
-    const res = await fetch(
-        getScanUrl(), {
-        method: "POST",
-        body: formData,
-    }
-    );
+    const scanUrls = getScanUrls();
+    let lastError: Error | null = null;
 
-    if (!res.ok) {
-        throw new Error("Erro ao enviar imagem");
+    for (const url of scanUrls) {
+        const res = await fetch(url, {
+            method: "POST",
+            body: formData,
+        });
+
+        if (res.status === 404) {
+            lastError = new Error(`Endpoint de scan não encontrado: ${url}`);
+            continue;
+        }
+
+        if (!res.ok) {
+            throw new Error("Erro ao enviar imagem");
+        }
+
+        return res.json();
     }
 
-    return res.json();
+    throw lastError ?? new Error("Erro ao enviar imagem");
 }
