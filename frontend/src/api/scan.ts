@@ -1,3 +1,13 @@
+export class ScanApiError extends Error {
+    readonly status: number;
+
+    constructor(message: string, status: number) {
+        super(message);
+        this.name = "ScanApiError";
+        this.status = status;
+    }
+}
+
 function normalizeBaseUrl(rawUrl?: string): string {
     if (!rawUrl) {
         return import.meta.env.PROD
@@ -60,7 +70,7 @@ export async function uploadScan(image: Blob) {
             } catch {
                 // resposta sem JSON
             }
-            throw new Error(detail);
+            throw new ScanApiError(detail, res.status);;
         }
 
         return res.json();

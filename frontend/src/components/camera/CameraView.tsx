@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ScanOverlay } from "./ScanOverlay";
 import { CaptureButton } from "./CaptureButton";
-import { uploadScan } from "../../api/scan";
+import { ScanApiError, uploadScan } from "../../api/scan";
 import { useAuth } from "../../hooks/useAuth";
 import { hasSubscriberPrivileges } from "../../utils/plan";
 import "./camera.css";
@@ -18,6 +18,21 @@ const FREE_WEEKLY_SCAN_LIMIT = 30;
 const FREE_SCAN_STORAGE_KEY = "scan:free-weekly-usage";
 const TEMP_BATCH_COLLECTION_KEY = "scan:temp-batch-collection";
 const SAVED_BATCH_COLLECTIONS_KEY = "scan:saved-batch-collections";
+
+function buildScanErrorMessage(error: unknown): string {
+    if (error instanceof ScanApiError) {
+        if (error.status === 503 && /tesseract-ocr/i.test(error.message)) {
+            return "O OCR do servidor está temporariamente indisponível (Tesseract não instalado). Tente novamente mais tarde.";
+        }
+
+        if (error.message.trim().length > 0) {
+            return error.message;
+        }
+    }
+
+    return "Não foi possível identificar a carta. Tente novamente com melhor foco e iluminação.";
+}
+
 
 function getWeekId() {
     const now = new Date();
@@ -236,7 +251,7 @@ export function CameraView() {
             }
         } catch (captureError) {
             console.error("Erro no scan:", captureError);
-            setScanError("Não foi possível identificar a carta. Tente novamente com melhor foco e iluminação.");
+            setScanError(buildScanErrorMessage(captureError));
         } finally {
             setCapturing(false);
         }
