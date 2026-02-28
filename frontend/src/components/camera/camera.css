@@ -74,8 +74,8 @@
    FRAME DE CAPTURA
 ====================== */
 .scan-frame {
-    width: 70%;
-    max-width: 280px;
+    width: min(82vw, 360px);
+    max-width: 360px;
     aspect-ratio: 63 / 88; /* proporção carta Pokémon */
     border: 3px solid rgba(246, 196, 0, 0.8);
     border-radius: 16px;
@@ -364,8 +364,8 @@
 ====================== */
 @media (max-width: 480px) {
     .scan-frame {
-        width: 80%;
-        max-width: 240px;
+        width: min(86vw, 320px);
+        max-width: 320px;
     }
 
     .capture-button {
@@ -410,7 +410,7 @@
 ====================== */
 @media (orientation: landscape) {
     .scan-frame {
-        max-height: 60vh;
+        max-height: 72vh;
         width: auto;
     }
 
