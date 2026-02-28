@@ -6,13 +6,14 @@ import HomePage from "../pages/Home/HomePage";
 import CardListPage from "../pages/Cards/CardListPage";
 import CardDetailPage from "../pages/CardDetailPage";
 import CollectionPage from "../pages/Collection/CollectionPage";
-import { CameraView } from "../components/camera/CameraView";
+//import { CameraView } from "../components/camera/CameraView";
 import { ProfilePage } from "../pages/ProfilePage";
 import CollectionsListPage from "../pages/Collection/CollectionsListPage";
 import AuthPage from "../pages/AuthPage";
 import SeriesPage from "../pages/SeriesPage";
 import SeriesDetailPage from "../pages/SeriesDetailPage";
 import SetPage from "../pages/SetPage";
+import ScanPage from "../pages/ScanPage";
 
 export default function AppRoutes() {
   return (
@@ -30,7 +31,8 @@ export default function AppRoutes() {
 
         <Route path="/auth" element={<AuthPage />} />
 
-        <Route path="/scan" element={<CameraView />} />
+        {/*<Route path="/scan" element={<CameraView />} />*/}
+        <Route path="/scan" element={<ScanPage />} />
 
         <Route path="/series" element={<SeriesPage />} />
         <Route path="/series/:seriesId" element={<SeriesDetailPage />} />

@@ -6,6 +6,8 @@ import { StatsBar } from "./StatsBar";
 import "../../styles/global.css";
 //import "./home.css"
 
+import baner from "../../assets/baner-herois.jpg";
+
 export default function HomePage() {
     return (
         <div className="home">
@@ -14,7 +16,7 @@ export default function HomePage() {
 
             <section className="home-showcase" aria-label="Destaques da plataforma">
                 <div className="home-showcase-image" role="img" aria-label="Área reservada para imagem principal">
-                    <span>Imagem destaque da coleção (placeholder)</span>
+                    <img src={baner} alt="" />
                 </div>
 
                 <div className="home-showcase-content">
