@@ -1,6 +1,6 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, parser_classes
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 
 
@@ -8,22 +8,54 @@ from rest_framework.response import Response
 @parser_classes([MultiPartParser, FormParser])
 def scan_card_view(request):
     """
-    Endpoint de scan consumido pelo frontend.
+    Endpoint de scan de cartas.
 
-    Hoje o backend apenas valida o upload e retorna uma resposta explícita de
-    indisponibilidade da identificação automática (evita 404 no app).
+    Recebe uma imagem enviada pelo frontend.
+    Atualmente apenas valida e retorna resposta de sucesso.
+    Preparado para futura integração com IA/OCR.
     """
-    image = request.FILES.get("image")
-    if image is None:
+
+    try:
+        image = request.FILES.get("image")
+
+        # Validação básica
+        if image is None:
+            return Response(
+                {
+                    "success": False,
+                    "error": "Arquivo de imagem é obrigatório no campo 'image'."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validação de tamanho (evita crash no Render)
+        if image.size > 5 * 1024 * 1024:  # 5MB
+            return Response(
+                {
+                    "success": False,
+                    "error": "Imagem muito grande. Máximo permitido: 5MB."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Aqui entrará o reconhecimento futuro
+        # exemplo:
+        # result = scan_card_ai(image)
+
         return Response(
-            {"detail": "Arquivo de imagem é obrigatório no campo 'image'."},
-            status=status.HTTP_400_BAD_REQUEST,
+            {
+                "success": True,
+                "message": "Imagem recebida com sucesso.",
+                "card": None
+            },
+            status=status.HTTP_200_OK,
         )
 
-    return Response(
-        {
-            "detail": "Serviço de reconhecimento ainda não está disponível no backend.",
-            "card": None,
-        },
-        status=status.HTTP_503_SERVICE_UNAVAILABLE,
-    )
+    except Exception as e:
+        return Response(
+            {
+                "success": False,
+                "error": str(e)
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
