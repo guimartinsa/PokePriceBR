@@ -302,14 +302,12 @@ def scan_card_view(request):
         # Erros controlados (ex: texto não encontrado na imagem)
         return _error_response(str(exc), status.HTTP_422_UNPROCESSABLE_ENTITY)
     except Exception as exc:
-        # Verifica se o erro é a falta do binário do Tesseract no sistema
-        tesseract_missing = False
-        if pytesseract:
-            tesseract_err = getattr(pytesseract, "TesseractNotFoundError", None)
-            if tesseract_err and isinstance(exc, tesseract_err):
-                tesseract_missing = True
-
-        if tesseract_missing:
+        tesseract_not_found = (
+            pytesseract is not None
+            and isinstance(exc, getattr(pytesseract, "TesseractNotFoundError", tuple()))
+        )
+    except Exception:
+        if tesseract_not_found:
             return _error_response(
                 "OCR indisponível no servidor: binário tesseract-ocr não encontrado.",
                 status.HTTP_503_SERVICE_UNAVAILABLE,
