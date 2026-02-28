@@ -174,11 +174,11 @@ export function CameraView() {
             const sourceHeight = videoRef.current.videoHeight;
             const cardAspectRatio = 63 / 88;
 
-            let cropWidth = sourceWidth * 0.7;
+            let cropWidth = sourceWidth * 0.82;
             let cropHeight = cropWidth / cardAspectRatio;
 
-            if (cropHeight > sourceHeight * 0.75) {
-                cropHeight = sourceHeight * 0.75;
+            if (cropHeight > sourceHeight * 0.9) {
+                cropHeight = sourceHeight * 0.9;
                 cropWidth = cropHeight * cardAspectRatio;
             }
 

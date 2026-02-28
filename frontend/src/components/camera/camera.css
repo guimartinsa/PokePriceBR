@@ -63,25 +63,24 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(
-        ellipse at center,
-        transparent 30%,
-        rgba(0, 0, 0, 0.5) 100%
-    );
+    background: radial-gradient(ellipse at center,
+            transparent 30%,
+            rgba(0, 0, 0, 0.5) 100%);
 }
 
 /* ======================
    FRAME DE CAPTURA
 ====================== */
 .scan-frame {
-    width: 70%;
-    max-width: 280px;
-    aspect-ratio: 63 / 88; /* proporção carta Pokémon */
+    width: min(82vw, 360px);
+    max-width: 360px;
+    aspect-ratio: 63 / 88;
+    /* proporção carta Pokémon */
     border: 3px solid rgba(246, 196, 0, 0.8);
     border-radius: 16px;
     position: relative;
     overflow: hidden;
-    box-shadow: 
+    box-shadow:
         0 0 0 2px rgba(255, 255, 255, 0.3),
         0 0 30px rgba(246, 196, 0, 0.4);
 }
@@ -119,12 +118,10 @@
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        #f6c400,
-        transparent
-    );
+    background: linear-gradient(90deg,
+            transparent,
+            #f6c400,
+            transparent);
     box-shadow: 0 0 10px #f6c400;
     animation: scan 2s linear infinite;
 }
@@ -134,9 +131,11 @@
         top: 0;
         opacity: 0.3;
     }
+
     50% {
         opacity: 1;
     }
+
     100% {
         top: 100%;
         opacity: 0.3;
@@ -157,9 +156,12 @@
 }
 
 @keyframes pulse-text {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 0.7;
     }
+
     50% {
         opacity: 1;
     }
@@ -178,7 +180,7 @@
     border-radius: 50%;
     background: #f60000;
     border: 6px solid #fff;
-    box-shadow: 
+    box-shadow:
         0 8px 24px rgba(0, 0, 0, 0.4),
         0 0 0 2px rgba(246, 196, 0, 0.2);
     font-size: 32px;
@@ -318,7 +320,7 @@
 
 .capture-button:active {
     transform: translateX(-50%) scale(0.95);
-    box-shadow: 
+    box-shadow:
         0 4px 12px rgba(0, 0, 0, 0.3),
         0 0 0 2px rgba(246, 196, 0, 0.2);
 }
@@ -351,9 +353,12 @@
 }
 
 @keyframes pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 0.8;
     }
+
     50% {
         opacity: 1;
     }
@@ -364,8 +369,8 @@
 ====================== */
 @media (max-width: 480px) {
     .scan-frame {
-        width: 80%;
-        max-width: 240px;
+        width: min(86vw, 320px);
+        max-width: 320px;
     }
 
     .capture-button {
@@ -406,11 +411,11 @@
 }
 
 /* ======================
-   MODO PAISAGEM
+    MODO PAISAGEM
 ====================== */
 @media (orientation: landscape) {
     .scan-frame {
-        max-height: 60vh;
+        max-height: 72vh;
         width: auto;
     }
 
