@@ -295,27 +295,30 @@ def scan_card_view(request):
 
 # Processamento do OCR
     try:
-        # Lê o conteúdo da imagem
+        # Lê os bytes da imagem uma única vez
         image_content = image.read()
         identified = _identify_card_with_ocr(image_content)
     except RuntimeError as exc:
-        # Erros controlados (ex: texto não encontrado na imagem)
+        # Erros esperados (imagem ruim, texto não encontrado)
         return _error_response(str(exc), status.HTTP_422_UNPROCESSABLE_ENTITY)
     except Exception as exc:
-        tesseract_not_found = (
-            pytesseract is not None
-            and isinstance(exc, getattr(pytesseract, "TesseractNotFoundError", tuple()))
-        )
-    except Exception:
-        if tesseract_not_found:
+        # Verifica se o erro é especificamente a falta do executável do Tesseract no SO
+        is_tesseract_missing = False
+        if pytesseract:
+            tesseract_error_cls = getattr(pytesseract, "TesseractNotFoundError", None)
+            if tesseract_error_cls and isinstance(exc, tesseract_error_cls):
+                is_tesseract_missing = True
+
+        if is_tesseract_missing:
             return _error_response(
                 "OCR indisponível no servidor: binário tesseract-ocr não encontrado.",
                 status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-        
-        # Loga o erro real no terminal do servidor para você debugar
-        print(f"--- ERRO NO PROCESSAMENTO DE SCAN ---")
-        print(f"Tipo: {type(exc).__name__} | Detalhe: {exc}")
+
+        # Log do erro real no console para você conseguir debugar
+        print("--- ERRO CRÍTICO NO SCAN ---")
+        print(f"Tipo do erro: {type(exc).__name__}")
+        print(f"Mensagem: {str(exc)}")
         import traceback
         traceback.print_exc()
 
@@ -323,9 +326,6 @@ def scan_card_view(request):
             "Erro interno no processamento da imagem.",
             status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-
-    # A partir daqui, 'identified' existe com segurança
-    card = _find_card(name=identified["name"], number=identified["number"])
 
     card = _find_card(name=identified["name"], number=identified["number"])
 
