@@ -1,10 +1,10 @@
-import base64
-import json
-import os
 import re
+import unicodedata
+from difflib import SequenceMatcher
 from decimal import Decimal
+from io import BytesIO
 
-import requests
+from PIL import Image, ImageOps
 from rest_framework import status
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -13,98 +13,121 @@ from rest_framework.response import Response
 from cards.models import Card
 
 
-VISION_API_URL = os.getenv("SCAN_VISION_API_URL", "https://api.openai.com/v1/chat/completions")
-VISION_API_KEY = os.getenv("SCAN_VISION_API_KEY")
-VISION_MODEL = os.getenv("SCAN_VISION_MODEL", "gpt-4o-mini")
-VISION_TIMEOUT_SECONDS = int(os.getenv("SCAN_VISION_TIMEOUT_SECONDS", "25"))
+try:
+    import pytesseract
+except ImportError:  # pragma: no cover - depends on deployment image
+    pytesseract = None
 
 
-def _extract_json_from_text(content: str) -> dict:
-    content = content.strip()
+NUMBER_PATTERN = re.compile(r"\b([A-Z]{0,4}\d{1,3}\s*/\s*\d{2,3}|[A-Z]{0,4}\d{1,3})\b")
 
-    fenced_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", content, flags=re.DOTALL)
-    if fenced_match:
-        return json.loads(fenced_match.group(1))
-
-    object_match = re.search(r"\{.*\}", content, flags=re.DOTALL)
-    if object_match:
-        return json.loads(object_match.group(0))
-
-    return json.loads(content)
-
-
-def _identify_card_with_vision(image_bytes: bytes, content_type: str) -> dict:
-    if not VISION_API_KEY:
-        raise RuntimeError("Serviço de reconhecimento não configurado.")
-
-    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-
-    prompt = (
-        "Identifique a carta Pokémon da imagem e retorne SOMENTE JSON válido com as chaves: "
-        "name (string), number (string), confidence (number de 0 a 1). "
-        "Não inclua texto adicional."
+def _normalize_text(value: str) -> str:
+    no_accents = "".join(
+        char
+        for char in unicodedata.normalize("NFD", value)
+        if unicodedata.category(char) != "Mn"
     )
+    return re.sub(r"\s+", " ", no_accents).strip().upper()
 
-    payload = {
-        "model": VISION_MODEL,
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:{content_type};base64,{image_b64}"},
-                    },
-                ],
-            }
-        ],
-        "temperature": 0,
-    }
+def _extract_number_candidates(text: str) -> list[str]:
+    matches = NUMBER_PATTERN.findall(text.upper())
+    normalized = []
 
-    response = requests.post(
-        VISION_API_URL,
-        headers={
-            "Authorization": f"Bearer {VISION_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        json=payload,
-        timeout=VISION_TIMEOUT_SECONDS,
+
+    for match in matches:
+        candidate = match.replace(" ", "")
+        if candidate not in normalized:
+            normalized.append(candidate)
+
+    return normalized
+
+def _score_name_similarity(candidate_name: str, ocr_lines: list[str]) -> float:
+    normalized_name = _normalize_text(candidate_name)
+    if not normalized_name:
+        return 0.0
+
+    best_score = 0.0
+    for line in ocr_lines:
+        normalized_line = _normalize_text(line)
+        if not normalized_line:
+            continue
+
+        score = SequenceMatcher(None, normalized_name, normalized_line).ratio()
+        if normalized_name in normalized_line:
+            score = max(score, 0.92)
+
+        best_score = max(best_score, score)
+
+    return best_score
+
+def _extract_ocr_texts(image_bytes: bytes) -> tuple[str, list[str]]:
+    if pytesseract is None:
+        raise RuntimeError(
+            "OCR indisponível: instale a dependência pytesseract no backend."
+        )
+
+    image = Image.open(BytesIO(image_bytes)).convert("RGB")
+    gray = ImageOps.grayscale(image)
+    high_contrast = gray.point(lambda p: 255 if p > 150 else 0)
+
+
+    configs = ["--psm 6", "--psm 11"]
+    variants = [image, gray, high_contrast]
+    snippets = []
+
+    for variant in variants:
+        for config in configs:
+            text = pytesseract.image_to_string(variant, lang="eng", config=config)
+            cleaned = text.strip()
+            if cleaned:
+                snippets.append(cleaned)
+
+    full_text = "\n".join(snippets)
+    lines = [line.strip() for line in full_text.splitlines() if len(line.strip()) >= 3]
+
+    if not lines:
+        raise RuntimeError("Não foi possível ler texto suficiente da imagem da carta.")
+
+    return full_text, lines
+
+
+def _identify_card_with_ocr(image_bytes: bytes) -> dict:
+    full_text, lines = _extract_ocr_texts(image_bytes)
+    number_candidates = _extract_number_candidates(full_text)
+
+    best_card = None
+    best_score = 0.0
+
+    for number in number_candidates:
+        cards = Card.objects.filter(ativa=True).filter(numero__iexact=number)[:30]
+        for card in cards:
+            score = _score_name_similarity(card.nome, lines)
+            if score > best_score:
+                best_score = score
+                best_card = card
+
+    if best_card and best_score >= 0.45:
+        return {
+            "name": best_card.nome,
+            "number": best_card.numero,
+            "confidence": round(best_score, 4),
+        }
+
+    joined_text = " ".join(lines)
+    fallback_card = (
+        Card.objects.filter(ativa=True)
+        .filter(nome__icontains=joined_text[:60])
+        .order_by("id")
+        .first()
     )
+    if fallback_card:
+        return {
+            "name": fallback_card.nome,
+            "number": fallback_card.numero,
+            "confidence": 0.35,
+        }
 
-    if response.status_code >= 400:
-        raise RuntimeError("Falha no serviço de reconhecimento de imagem.")
-
-    data = response.json()
-    content = (
-        data.get("choices", [{}])[0]
-        .get("message", {})
-        .get("content", "")
-    )
-
-    if not isinstance(content, str) or not content.strip():
-        raise RuntimeError("Resposta inválida do serviço de reconhecimento.")
-
-    parsed = _extract_json_from_text(content)
-
-    name = str(parsed.get("name", "")).strip()
-    number = str(parsed.get("number", "")).strip()
-    confidence = parsed.get("confidence", 0)
-
-    if not name or not number:
-        raise RuntimeError("Não foi possível extrair dados da carta.")
-
-    try:
-        confidence = float(confidence)
-    except (ValueError, TypeError):
-        confidence = 0.0
-
-    return {
-        "name": name,
-        "number": number,
-        "confidence": max(0.0, min(confidence, 1.0)),
-    }
-
+    raise RuntimeError("Não foi possível identificar nome e número da carta via OCR.")
 
 def _normalize_number(value: str) -> str:
     normalized = value.strip().upper().replace(" ", "")
@@ -176,18 +199,9 @@ def scan_card_view(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    content_type = image.content_type or "image/jpeg"
 
     try:
-        identified = _identify_card_with_vision(image.read(), content_type)
-    except requests.RequestException:
-        return Response(
-            {
-                "success": False,
-                "error": "Serviço de reconhecimento temporariamente indisponível.",
-            },
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
-        )
+        identified = _identify_card_with_ocr(image.read())
     except RuntimeError as exc:
         return Response(
             {

@@ -27,7 +27,7 @@ services:
       - key: DB_HOST
         sync: false
       - key: DB_PORT
-        value: "6453"
+        value: "6543"
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
