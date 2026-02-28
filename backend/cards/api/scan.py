@@ -4,6 +4,7 @@ from difflib import SequenceMatcher
 from decimal import Decimal
 from io import BytesIO
 
+import numpy as np
 from PIL import Image, ImageOps
 from rest_framework import status
 from rest_framework.decorators import api_view, parser_classes
@@ -14,12 +15,54 @@ from cards.models import Card
 
 
 try:
+    import cv2
+except ImportError:  # pragma: no cover - depends on deployment image
+    cv2 = None
+
+
+try:
     import pytesseract
 except ImportError:  # pragma: no cover - depends on deployment image
     pytesseract = None
 
 
 NUMBER_PATTERN = re.compile(r"\b([A-Z]{0,4}\d{1,3}\s*/\s*\d{2,3}|[A-Z]{0,4}\d{1,3})\b")
+
+def _extract_card_regions(image: Image.Image) -> list[Image.Image]:
+    if cv2 is None:
+        return []
+
+    image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    height, width, _ = image_cv.shape
+
+    name_region = image_cv[
+        int(height * 0.03):int(height * 0.14),
+        int(width * 0.12):int(width * 0.76),
+    ]
+    number_region = image_cv[
+        int(height * 0.92):int(height * 0.995),
+        int(width * 0.06):int(width * 0.36),
+    ]
+
+    extracted_regions = []
+    for region in (name_region, number_region):
+        if region.size == 0:
+            continue
+
+        gray = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
+        scaled = cv2.resize(gray, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+        denoised = cv2.GaussianBlur(scaled, (3, 3), 0)
+        binary = cv2.adaptiveThreshold(
+            denoised,
+            255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY,
+            31,
+            11,
+        )
+        extracted_regions.append(Image.fromarray(binary))
+
+    return extracted_regions
 
 def _normalize_text(value: str) -> str:
     no_accents = "".join(
@@ -69,15 +112,24 @@ def _extract_ocr_texts(image_bytes: bytes) -> tuple[str, list[str]]:
     image = Image.open(BytesIO(image_bytes)).convert("RGB")
     gray = ImageOps.grayscale(image)
     high_contrast = gray.point(lambda p: 255 if p > 150 else 0)
+    card_regions = _extract_card_regions(image)
 
 
     configs = ["--psm 6", "--psm 11"]
+    focused_configs = ["--psm 7", "--psm 8"]
     variants = [image, gray, high_contrast]
     snippets = []
 
     for variant in variants:
         for config in configs:
             text = pytesseract.image_to_string(variant, lang="eng", config=config)
+            cleaned = text.strip()
+            if cleaned:
+                snippets.append(cleaned)
+
+    for region in card_regions:
+        for config in focused_configs:
+            text = pytesseract.image_to_string(region, lang="eng", config=config)
             cleaned = text.strip()
             if cleaned:
                 snippets.append(cleaned)
@@ -241,26 +293,41 @@ def scan_card_view(request):
         )
 
 
+# Processamento do OCR
     try:
-        identified = _identify_card_with_ocr(image.read())
+        # Lê o conteúdo da imagem
+        image_content = image.read()
+        identified = _identify_card_with_ocr(image_content)
     except RuntimeError as exc:
+        # Erros controlados (ex: texto não encontrado na imagem)
         return _error_response(str(exc), status.HTTP_422_UNPROCESSABLE_ENTITY)
     except Exception as exc:
-        tesseract_not_found = (
-            pytesseract is not None
-            and isinstance(exc, getattr(pytesseract, "TesseractNotFoundError", tuple()))
-        )
-    except Exception:
-        if tesseract_not_found:
+        # Verifica se o erro é a falta do binário do Tesseract no sistema
+        tesseract_missing = False
+        if pytesseract:
+            tesseract_err = getattr(pytesseract, "TesseractNotFoundError", None)
+            if tesseract_err and isinstance(exc, tesseract_err):
+                tesseract_missing = True
+
+        if tesseract_missing:
             return _error_response(
                 "OCR indisponível no servidor: binário tesseract-ocr não encontrado.",
                 status.HTTP_503_SERVICE_UNAVAILABLE,
             )
+        
+        # Loga o erro real no terminal do servidor para você debugar
+        print(f"--- ERRO NO PROCESSAMENTO DE SCAN ---")
+        print(f"Tipo: {type(exc).__name__} | Detalhe: {exc}")
+        import traceback
+        traceback.print_exc()
 
         return _error_response(
             "Erro interno no processamento da imagem.",
             status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+    # A partir daqui, 'identified' existe com segurança
+    card = _find_card(name=identified["name"], number=identified["number"])
 
     card = _find_card(name=identified["name"], number=identified["number"])
 
