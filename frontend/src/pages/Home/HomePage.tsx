@@ -1,7 +1,7 @@
 // pages/Home/HomePage.tsx
 // pages/Home/HomePage.tsx
 import { Hero } from "./Hero";
-import { StatsBar } from "./StatsBar";
+//import { StatsBar } from "./StatsBar";
 //import {CardList} from "../../components/CardList";
 import "../../styles/global.css";
 //import "./home.css"
@@ -12,7 +12,6 @@ export default function HomePage() {
     return (
         <div className="home">
             <Hero />
-            <StatsBar />
 
             <section className="home-showcase" aria-label="Destaques da plataforma">
                 <div className="home-showcase-image" role="img" aria-label="Área reservada para imagem principal">
