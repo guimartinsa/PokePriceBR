@@ -51,7 +51,16 @@ export async function uploadScan(image: Blob) {
         }
 
         if (!res.ok) {
-            throw new Error("Erro ao enviar imagem");
+            let detail = "Erro ao enviar imagem";
+            try {
+                const errorPayload = await res.json();
+                if (typeof errorPayload?.detail === "string" && errorPayload.detail.trim().length > 0) {
+                    detail = errorPayload.detail;
+                }
+            } catch {
+                // resposta sem JSON
+            }
+            throw new Error(detail);
         }
 
         return res.json();

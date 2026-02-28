@@ -4,6 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from django.http import JsonResponse
+from cards.api.scan import scan_card_view
 
 
 def api_root(request):
@@ -15,6 +16,7 @@ urlpatterns = [
     #path('api/', include('cards.urls')),
     path("api/", include("cards.api.urls")),
     path("api/billing/", include("billing.urls")),
+    path("scan/", scan_card_view),
 
 ]
 
