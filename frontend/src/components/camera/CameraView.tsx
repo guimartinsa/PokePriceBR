@@ -46,19 +46,35 @@ function parseApiResult(payload: unknown): CardDetection | null {
     if (!payload || typeof payload !== "object") return null;
     const record = payload as Record<string, unknown>;
 
+    const nestedCard =
+        typeof record.card === "object" && record.card !== null
+            ? (record.card as Record<string, unknown>)
+            : null;
+
+    const toStringValue = (value: unknown): string | null => {
+        if (typeof value === "string") {
+            const trimmed = value.trim();
+            return trimmed.length > 0 ? trimmed : null;
+        }
+        if (typeof value === "number" && Number.isFinite(value)) {
+            return String(value);
+        }
+        return null;
+    };
+
     const name =
-        typeof record.name === "string"
-            ? record.name
-            : typeof record.card_name === "string"
-                ? record.card_name
-                : null;
+        toStringValue(record.name) ??
+        toStringValue(record.card_name) ??
+        toStringValue(nestedCard?.name) ??
+        toStringValue(nestedCard?.card_name);
 
     const number =
-        typeof record.number === "string"
-            ? record.number
-            : typeof record.card_number === "string"
-                ? record.card_number
-                : null;
+        toStringValue(record.number) ??
+        toStringValue(record.card_number) ??
+        toStringValue(record.localId) ??
+        toStringValue(nestedCard?.number) ??
+        toStringValue(nestedCard?.card_number) ??
+        toStringValue(nestedCard?.localId);
 
     const price =
         typeof record.price === "number"
@@ -154,16 +170,41 @@ export function CameraView() {
         setScanError(null);
 
         try {
+            const sourceWidth = videoRef.current.videoWidth;
+            const sourceHeight = videoRef.current.videoHeight;
+            const cardAspectRatio = 63 / 88;
+
+            let cropWidth = sourceWidth * 0.7;
+            let cropHeight = cropWidth / cardAspectRatio;
+
+            if (cropHeight > sourceHeight * 0.75) {
+                cropHeight = sourceHeight * 0.75;
+                cropWidth = cropHeight * cardAspectRatio;
+            }
+
+            const cropX = (sourceWidth - cropWidth) / 2;
+            const cropY = (sourceHeight - cropHeight) / 2;
+
             const canvas = document.createElement("canvas");
-            canvas.width = videoRef.current.videoWidth;
-            canvas.height = videoRef.current.videoHeight;
+            canvas.width = Math.round(cropWidth);
+            canvas.height = Math.round(cropHeight);
 
             const ctx = canvas.getContext("2d");
             if (!ctx) {
                 throw new Error("Não foi possível criar contexto 2D");
             }
 
-            ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(
+                videoRef.current,
+                cropX,
+                cropY,
+                cropWidth,
+                cropHeight,
+                0,
+                0,
+                canvas.width,
+                canvas.height,
+            );
 
             const blob = await new Promise<Blob>((resolve, reject) => {
                 canvas.toBlob(
