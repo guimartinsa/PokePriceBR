@@ -170,7 +170,7 @@
 ====================== */
 .capture-button {
     position: fixed;
-    bottom: 36px;
+    bottom: 32px;
     left: 50%;
     transform: translateX(-50%);
     width: 72px;

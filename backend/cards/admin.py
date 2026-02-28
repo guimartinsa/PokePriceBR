@@ -345,8 +345,8 @@ class SetAdmin(admin.ModelAdmin):
     total_cartas.short_description = "Qtd. Cartas"
 
     def has_delete_permission(self, request, obj=None):
-        if obj and obj.cartas.exists():
-            return False
+        #if obj and obj.cartas.exists():
+        #    return False
         return True
 
     #def get_readonly_fields(self, request, obj=None):
