@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ScanOverlay } from "./ScanOverlay";
 import { CaptureButton } from "./CaptureButton";
-import { fetchRandomRealCard, uploadScan } from "../../api/scan";
+import { uploadScan } from "../../api/scan";
 import { useAuth } from "../../hooks/useAuth";
 import { hasSubscriberPrivileges } from "../../utils/plan";
 import "./camera.css";
@@ -11,7 +11,7 @@ type CardDetection = {
     name: string;
     number: string;
     priceLabel: string;
-    source: "api" | "fallback";
+    source: "api";
 };
 
 const FREE_WEEKLY_SCAN_LIMIT = 30;
@@ -42,27 +42,6 @@ function readFreeUsage() {
     }
 }
 
-function buildFallbackFromCatalog(card: {
-    nome: string;
-    numero_completo?: string;
-    numero?: string;
-    preco_med?: string | null;
-}): CardDetection {
-    const rawPrice = card.preco_med;
-    const numericPrice = rawPrice ? Number(rawPrice) : NaN;
-    const formattedPrice = Number.isFinite(numericPrice)
-        ? `R$ ${numericPrice.toFixed(2).replace(".", ",")}`
-        : "Preço indisponível";
-
-    return {
-        id: crypto.randomUUID(),
-        name: card.nome,
-        number: card.numero_completo || card.numero || "N/A",
-        priceLabel: formattedPrice,
-        source: "fallback",
-    };
-}
-
 function parseApiResult(payload: unknown): CardDetection | null {
     if (!payload || typeof payload !== "object") return null;
     const record = payload as Record<string, unknown>;
@@ -71,22 +50,22 @@ function parseApiResult(payload: unknown): CardDetection | null {
         typeof record.name === "string"
             ? record.name
             : typeof record.card_name === "string"
-              ? record.card_name
-              : null;
+                ? record.card_name
+                : null;
 
     const number =
         typeof record.number === "string"
             ? record.number
             : typeof record.card_number === "string"
-              ? record.card_number
-              : null;
+                ? record.card_number
+                : null;
 
     const price =
         typeof record.price === "number"
             ? `R$ ${record.price.toFixed(2).replace(".", ",")}`
             : typeof record.price === "string"
-              ? record.price
-              : "Preço indisponível";
+                ? record.price
+                : "Preço indisponível";
 
     if (!name || !number) return null;
 
@@ -108,6 +87,7 @@ export function CameraView() {
     const [capturing, setCapturing] = useState(false);
     const [batchMode, setBatchMode] = useState(false);
     const [lastDetected, setLastDetected] = useState<CardDetection | null>(null);
+    const [scanError, setScanError] = useState<string | null>(null);
     const [tempBatch, setTempBatch] = useState<CardDetection[]>(() => {
         const raw = localStorage.getItem(TEMP_BATCH_COLLECTION_KEY);
         if (!raw) return [];
@@ -171,6 +151,7 @@ export function CameraView() {
         if (!videoRef.current || capturing || !canCapture) return;
 
         setCapturing(true);
+        setScanError(null);
 
         try {
             const canvas = document.createElement("canvas");
@@ -195,25 +176,12 @@ export function CameraView() {
                 );
             });
 
-            let detection: CardDetection | null = null;
-            try {
-                const response = await uploadScan(blob);
-                detection = parseApiResult(response);
-            } catch {
-                detection = null;
-            }
+
+            const response = await uploadScan(blob);
+            const detection = parseApiResult(response);
 
             if (!detection) {
-                await new Promise((resolve) => setTimeout(resolve, 450));
-                const randomCard = await fetchRandomRealCard();
-
-                if (randomCard) {
-                    detection = buildFallbackFromCatalog(randomCard);
-                }
-            }
-
-            if (!detection) {
-                throw new Error("Não foi possível identificar uma carta");
+                throw new Error("Não foi possível identificar a carta da imagem");
             }
 
             setLastDetected(detection);
@@ -227,7 +195,7 @@ export function CameraView() {
             }
         } catch (captureError) {
             console.error("Erro no scan:", captureError);
-            alert("Erro ao capturar a carta. Tente novamente.");
+            setScanError("Não foi possível identificar a carta. Tente novamente com melhor foco e iluminação.");
         } finally {
             setCapturing(false);
         }
@@ -296,13 +264,10 @@ export function CameraView() {
                     <p className="scan-result-name">{lastDetected.name}</p>
                     <p className="scan-result-number">Nº {lastDetected.number}</p>
                     <p className="scan-result-price">{lastDetected.priceLabel}</p>
-                    {lastDetected.source === "fallback" && (
-                        <small className="scan-result-hint">
-                            Simulação local: conecte a API para OCR real de nome e número.
-                        </small>
-                    )}
                 </section>
             )}
+
+            {scanError && <div className="scan-error-message">{scanError}</div>}
 
             {isPremium && tempBatch.length > 0 && (
                 <section className="temp-batch-panel">

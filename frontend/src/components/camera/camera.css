@@ -243,6 +243,22 @@
     font-size: 32px;
 }
 
+.scan-error-message {
+    position: fixed;
+    left: 50%;
+    bottom: 142px;
+    transform: translateX(-50%);
+    width: min(90vw, 320px);
+    background: rgba(120, 14, 14, 0.86);
+    border: 1px solid rgba(255, 189, 189, 0.8);
+    border-radius: 14px;
+    text-align: center;
+    color: #fff;
+    padding: 12px 14px;
+    z-index: 1002;
+    font-size: 14px;
+}
+
 .scan-result-hint {
     display: block;
     margin-top: 8px;
