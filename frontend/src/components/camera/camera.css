@@ -206,6 +206,24 @@
     backdrop-filter: blur(3px);
 }
 
+
+
+.camera-dev-message {
+    position: fixed;
+    top: 78px;
+    left: 20px;
+    z-index: 1002;
+    width: min(88vw, 430px);
+    background: rgba(123, 85, 0, 0.72);
+    border: 1px solid rgba(255, 217, 102, 0.72);
+    color: #fff7d6;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.4;
+    backdrop-filter: blur(3px);
+}
+
 .scan-result-card {
     position: fixed;
     left: 50%;

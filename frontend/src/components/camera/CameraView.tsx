@@ -301,6 +301,10 @@ export function CameraView() {
                 )}
             </div>
 
+            <div className="camera-dev-message">
+                🚧 Função de câmera ainda em desenvolvimento. Melhorias visuais e de leitura serão adicionadas em breve.
+            </div>
+
             <CaptureButton onCapture={handleCapture} disabled={capturing || !canCapture} />
 
             {isPremium && (
