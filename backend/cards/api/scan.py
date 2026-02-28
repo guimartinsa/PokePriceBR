@@ -91,15 +91,12 @@ def _extract_ocr_texts(image_bytes: bytes) -> tuple[str, list[str]]:
     return full_text, lines
 
 
-def _identify_card_with_ocr(image_bytes: bytes) -> dict:
-    full_text, lines = _extract_ocr_texts(image_bytes)
-    number_candidates = _extract_number_candidates(full_text)
-
+def _identify_by_number_and_name(lines: list[str], number_candidates: list[str]) -> dict | None:
     best_card = None
     best_score = 0.0
 
     for number in number_candidates:
-        cards = Card.objects.filter(ativa=True).filter(numero__iexact=number)[:30]
+        cards = Card.objects.filter(ativa=True, numero__iexact=number)[:40]
         for card in cards:
             score = _score_name_similarity(card.nome, lines)
             if score > best_score:
@@ -113,25 +110,62 @@ def _identify_card_with_ocr(image_bytes: bytes) -> dict:
             "confidence": round(best_score, 4),
         }
 
-    joined_text = " ".join(lines)
-    fallback_card = (
-        Card.objects.filter(ativa=True)
-        .filter(nome__icontains=joined_text[:60])
-        .order_by("id")
-        .first()
-    )
-    if fallback_card:
+    return None
+
+
+def _identify_by_name_candidates(lines: list[str]) -> dict | None:
+    tokens = []
+    for line in lines:
+        for token in re.findall(r"[A-Za-z][A-Za-z'\-]{2,}", line):
+            normalized = token.strip().lower()
+            if len(normalized) >= 4 and normalized not in tokens:
+                tokens.append(normalized)
+
+    if not tokens:
+        return None
+
+    # Limita tokens para evitar query muito ampla.
+    selected_tokens = tokens[:6]
+
+    candidate_qs = Card.objects.filter(ativa=True)
+    token_filtered = candidate_qs.none()
+    for token in selected_tokens:
+        token_filtered = token_filtered | candidate_qs.filter(nome__icontains=token)
+
+    best_card = None
+    best_score = 0.0
+    for card in token_filtered.distinct()[:300]:
+        score = _score_name_similarity(card.nome, lines)
+        if score > best_score:
+            best_score = score
+            best_card = card
+
+    if best_card and best_score >= 0.70:
         return {
-            "name": fallback_card.nome,
-            "number": fallback_card.numero,
-            "confidence": 0.35,
+            "name": best_card.nome,
+            "number": best_card.numero,
+            "confidence": round(best_score, 4),
         }
+
+    return None
+
+
+def _identify_card_with_ocr(image_bytes: bytes) -> dict:
+    full_text, lines = _extract_ocr_texts(image_bytes)
+    number_candidates = _extract_number_candidates(full_text)
+
+    number_match = _identify_by_number_and_name(lines, number_candidates)
+    if number_match:
+        return number_match
+
+    name_match = _identify_by_name_candidates(lines)
+    if name_match:
+        return name_match
 
     raise RuntimeError("Não foi possível identificar nome e número da carta via OCR.")
 
 def _normalize_number(value: str) -> str:
-    normalized = value.strip().upper().replace(" ", "")
-    return normalized
+    return value.strip().upper().replace(" ", "")
 
 
 def _find_card(name: str, number: str) -> Card | None:
@@ -151,13 +185,13 @@ def _find_card(name: str, number: str) -> Card | None:
     if contains_name:
         return contains_name
 
-    loose_by_name = (
+    return (
         Card.objects.filter(ativa=True)
         .filter(nome__icontains=name)
         .order_by("id")
         .first()
     )
-    return loose_by_name
+
 
 
 def _serialize_card(card: Card) -> dict:
@@ -175,6 +209,19 @@ def _serialize_card(card: Card) -> dict:
         "price": price_value,
     }
 
+def _error_response(message: str, code: int):
+    return Response(
+        {
+            "success": False,
+            "detail": message,
+            "error": message,
+        },
+        status=code,
+    )
+
+
+
+
 
 @api_view(["POST"])
 @parser_classes([MultiPartParser, FormParser])
@@ -182,41 +229,37 @@ def scan_card_view(request):
     image = request.FILES.get("image")
 
     if image is None:
-        return Response(
-            {
-                "success": False,
-                "error": "Arquivo de imagem é obrigatório no campo 'image'.",
-            },
-            status=status.HTTP_400_BAD_REQUEST,
+        return _error_response(
+            "Arquivo de imagem é obrigatório no campo 'image'.",
+            status.HTTP_400_BAD_REQUEST,
         )
 
     if image.size > 5 * 1024 * 1024:
-        return Response(
-            {
-                "success": False,
-                "error": "Imagem muito grande. Máximo permitido: 5MB.",
-            },
-            status=status.HTTP_400_BAD_REQUEST,
+        return _error_response(
+            "Imagem muito grande. Máximo permitido: 5MB.",
+            status.HTTP_400_BAD_REQUEST,
         )
 
 
     try:
         identified = _identify_card_with_ocr(image.read())
     except RuntimeError as exc:
-        return Response(
-            {
-                "success": False,
-                "error": str(exc),
-            },
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        return _error_response(str(exc), status.HTTP_422_UNPROCESSABLE_ENTITY)
+    except Exception as exc:
+        tesseract_not_found = (
+            pytesseract is not None
+            and isinstance(exc, getattr(pytesseract, "TesseractNotFoundError", tuple()))
         )
     except Exception:
-        return Response(
-            {
-                "success": False,
-                "error": "Erro interno no processamento da imagem.",
-            },
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        if tesseract_not_found:
+            return _error_response(
+                "OCR indisponível no servidor: binário tesseract-ocr não encontrado.",
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return _error_response(
+            "Erro interno no processamento da imagem.",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
     card = _find_card(name=identified["name"], number=identified["number"])
