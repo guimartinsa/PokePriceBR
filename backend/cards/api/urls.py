@@ -2,6 +2,7 @@ from django.urls import path
 
 from cards.api.collection import collection_view
 from cards.api.profile import avatars_view, profile_view
+from cards.api.scan import scan_card_view
 from .views import (
     CardListView,
     CardDetailView,
@@ -39,6 +40,7 @@ from .auth import (
 )
 
 urlpatterns = [
+    path("scan/", scan_card_view, name="scan-card"),
     path("cards/", CardListView.as_view(), name="card-list"),
     path("cards/<int:pk>/", CardDetailView.as_view(), name="card-detail"),
 
