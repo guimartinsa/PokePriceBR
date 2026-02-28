@@ -250,7 +250,7 @@ def scan_card_view(request):
             pytesseract is not None
             and isinstance(exc, getattr(pytesseract, "TesseractNotFoundError", tuple()))
         )
-    except Exception:
+
         if tesseract_not_found:
             return _error_response(
                 "OCR indisponível no servidor: binário tesseract-ocr não encontrado.",
