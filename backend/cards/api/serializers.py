@@ -62,9 +62,18 @@ class CardAdminLogSerializer(serializers.ModelSerializer):
 #users
 
 class AvatarSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Avatar
         fields = ["id", "name", "image_url"]
+    def get_image_url(self, obj):
+        if obj.image_upload:
+            request = self.context.get("request")
+            url = obj.image_upload.url
+            return request.build_absolute_uri(url) if request else url
+        return obj.image_url
+
 
 class ProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
@@ -99,8 +108,14 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def get_avatar_url(self, obj):
         if obj.avatar_upload:
-            return obj.avatar_upload.url
+            request = self.context.get("request")
+            url = obj.avatar_upload.url
+            return request.build_absolute_uri(url) if request else url
         if obj.avatar_option:
+            if obj.avatar_option.image_upload:
+                request = self.context.get("request")
+                url = obj.avatar_option.image_upload.url
+                return request.build_absolute_uri(url) if request else url
             return obj.avatar_option.image_url
         return obj.avatar
 
@@ -129,6 +144,20 @@ class ProfileSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"avatar": "Plano FREE permite apenas avatares predefinidos."}
             )
+
+        avatar_option = attrs.get("avatar_option")
+        if avatar_option is not None and not avatar_option.is_active:
+            raise serializers.ValidationError(
+                {"avatar_option": "Avatar selecionado está inativo."}
+            )
+
+        if attrs.get("avatar_upload"):
+            attrs["avatar"] = ""
+            attrs["avatar_option"] = None
+        elif avatar_option is not None:
+            attrs["avatar"] = ""
+            attrs["avatar_upload"] = None
+
         return attrs
 
     def update(self, instance, validated_data):
@@ -139,7 +168,6 @@ class ProfileSerializer(serializers.ModelSerializer):
             
         if not instance.can_access_pro_features and validated_data.get("avatar_option") is None:
             validated_data.pop("avatar", None)
-            
         return super().update(instance, validated_data)
 
 class UserCardSerializer(serializers.ModelSerializer):
@@ -199,6 +227,7 @@ class CollectionCardSerializer(serializers.ModelSerializer):
             "id",
             "nome",
             "imagem",
+            "imagem_grande"
             "numero_completo",
             "raridade",
             "set",

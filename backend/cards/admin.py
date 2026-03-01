@@ -377,7 +377,13 @@ class AvatarAdmin(admin.ModelAdmin):
     list_display = ("name", "is_active", "created_at")
     list_filter = ("is_active",)
     search_fields = ("name",)
+    readonly_fields = ("created_at",)
 
+    fieldsets = (
+        (None, {"fields": ("name", "is_active")}),
+        ("Imagem", {"fields": ("image_url", "image_upload")}),
+        ("Metadados", {"fields": ("created_at",)}),
+    )
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):

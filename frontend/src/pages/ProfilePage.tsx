@@ -7,7 +7,6 @@ import { activateTrial, createCheckoutSession } from "../services/billing";
 import { logout } from "../services/auth";
 import { hasSubscriberPrivileges } from "../utils/plan";
 
-
 export function ProfilePage() {
     const { user, loading, refreshUser } = useAuth();
     const navigate = useNavigate();
@@ -17,6 +16,9 @@ export function ProfilePage() {
     const [bio, setBio] = useState("");
     const [avatarOption, setAvatarOption] = useState<number | "">("");
     const [avatars, setAvatars] = useState<AvatarOption[]>([]);
+    const [avatarUpload, setAvatarUpload] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string>("");
+    const [serverAvatarUrl, setServerAvatarUrl] = useState<string>("");
     const [saving, setSaving] = useState(false);
     const [activatingTrial, setActivatingTrial] = useState(false);
     const [startingCheckout, setStartingCheckout] = useState(false);
@@ -30,6 +32,7 @@ export function ProfilePage() {
             setName(profileData.name || "");
             setBio(profileData.bio || "");
             setAvatarOption(profileData.avatar_option || "");
+            setServerAvatarUrl(profileData.avatar_url || "");
             setAvatars(avatarsData);
         }
         if (user) {
@@ -49,17 +52,37 @@ export function ProfilePage() {
     const userBadge = "badge" in user && typeof user.badge === "string" ? user.badge : "";
     const userHasSubscriberPrivileges = hasSubscriberPrivileges(user?.plan);
 
-
+    const canUploadCustomAvatar = userHasSubscriberPrivileges;
     async function handleSave() {
         setSaving(true);
         try {
-            await updateProfile({ name, bio, avatar_option: avatarOption === "" ? null : Number(avatarOption) });
+            await updateProfile({
+                name,
+                bio,
+                avatar_option: avatarOption === "" ? null : Number(avatarOption),
+                avatar_upload: avatarUpload,
+            });
             await refreshUser();
+            setAvatarUpload(null);
+            setAvatarPreview("");
             alert("Perfil atualizado!");
         } finally {
             setSaving(false);
         }
     }
+
+    function handleAvatarUploadChange(file: File | null) {
+        setAvatarUpload(file);
+        if (!file) {
+            setAvatarPreview("");
+            return;
+        }
+        setAvatarOption("");
+        const previewUrl = URL.createObjectURL(file);
+        setAvatarPreview(previewUrl);
+    }
+
+    const displayedAvatar = avatarPreview || selectedAvatar?.image_url || serverAvatarUrl;
 
     async function handleActivateTrial() {
         setActivatingTrial(true);
@@ -155,7 +178,11 @@ export function ProfilePage() {
                 Avatar
                 <select
                     value={avatarOption}
-                    onChange={(e) => setAvatarOption(e.target.value ? Number(e.target.value) : "")}
+                    onChange={(e) => {
+                        setAvatarOption(e.target.value ? Number(e.target.value) : "");
+                        setAvatarUpload(null);
+                        setAvatarPreview("");
+                    }}
                     style={{ width: "100%", marginTop: 6, padding: 10, borderRadius: 8 }}
                 >
                     <option value="">Sem avatar</option>
@@ -167,10 +194,23 @@ export function ProfilePage() {
                 </select>
             </label>
 
-            {selectedAvatar && (
+            {canUploadCustomAvatar && (
+                <label style={{ display: "block", marginTop: 16 }}>
+                    Avatar personalizado (PRO/Admin)
+                    <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        onChange={(e) => handleAvatarUploadChange(e.target.files?.[0] || null)}
+                        style={{ display: "block", marginTop: 6 }}
+                    />
+                    <small style={{ color: "#8f9bad" }}>JPG, PNG ou WEBP até 2MB.</small>
+                </label>
+            )}
+
+            {displayedAvatar && (
                 <img
-                    src={selectedAvatar.image_url}
-                    alt={selectedAvatar.name}
+                    src={displayedAvatar}
+                    alt="Avatar selecionado"
                     style={{ marginTop: 12, width: 96, height: 96, borderRadius: "50%", objectFit: "cover" }}
                 />
             )}

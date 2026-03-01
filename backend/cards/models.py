@@ -247,7 +247,8 @@ class Profile(models.Model):
     
 class Avatar(models.Model):
     name = models.CharField(max_length=80, unique=True)
-    image_url = models.URLField()
+    image_url = models.URLField(blank=True, null=True)
+    image_upload = models.ImageField(upload_to="avatar_options/", blank=True, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
