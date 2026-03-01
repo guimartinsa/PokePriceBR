@@ -15,6 +15,7 @@ export interface Card {
   preco_med: string | null;
   preco_max: string | null;
   imagem: string | null;
+  imagem_grande?: string | null;
   liga_url?: string | null;
   set: Set;
 }

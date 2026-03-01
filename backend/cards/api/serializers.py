@@ -42,6 +42,7 @@ class CardSerializer(serializers.ModelSerializer):
             "liga_num",
             "raridade",
             "imagem",
+            "imagem_grande",
             "preco_min",
             "preco_med",
             "preco_max",
@@ -165,6 +166,7 @@ class CollectionCardSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source="card.id")
     nome = serializers.CharField(source="card.nome")
     imagem = serializers.CharField(source="card.imagem")
+    imagem_grande = serializers.CharField(source="card.imagem_grande", allow_null=True)
     numero_completo = serializers.CharField(source="card.numero_completo")
     raridade = serializers.CharField(source="card.raridade", allow_null=True)
     liga_url = serializers.CharField(source="card.liga_url", allow_null=True)

@@ -21,6 +21,17 @@ function formatPrice(value: string | null | undefined): string {
     return `R$ ${numericValue.toFixed(2)}`;
 }
 
+function getHighResolutionImageUrl(card: Card | CollectionCard): string {
+    if (card.imagem_grande) return card.imagem_grande;
+
+    if (card.imagem) {
+        return card.imagem.replace(/\/low\.webp(\?.*)?$/, "/high.webp$1");
+    }
+
+    return "/placeholder.png";
+}
+
+
 export function CardQuickViewModal({
     card,
     open,
@@ -95,7 +106,7 @@ export function CardQuickViewModal({
 
                 <div className="card-quick-view-content">
                     <div className="card-quick-view-media">
-                        <img src={card.imagem || "/placeholder.png"} alt={card.nome} />
+                        <img src={getHighResolutionImageUrl(card)} alt={card.nome} loading="eager" />
                         <p>
                             Carta de <strong>{card.set?.nome}</strong>, número <strong>{card.numero_completo}</strong>, com raridade{" "}
                             <strong>{card.raridade || "não informada"}</strong>.
