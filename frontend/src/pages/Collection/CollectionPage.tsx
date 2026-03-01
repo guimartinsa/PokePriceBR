@@ -42,6 +42,7 @@ export default function CollectionPage() {
         over: null,
         preco_min: "",
         preco_max: "",
+        ordenar: "",
     });
 
     const filteredCollection = collection.filter((card) => {

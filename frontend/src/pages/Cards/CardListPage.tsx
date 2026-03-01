@@ -29,6 +29,7 @@ export default function CardListPage() {
             : null,
         preco_min: searchParams.get("preco_min") || "",
         preco_max: searchParams.get("preco_max") || "",
+        ordenar: searchParams.get("ordenar") || "",
     });
 
     const [loading, setLoading] = useState(false);
@@ -49,6 +50,7 @@ export default function CardListPage() {
         if (filters.over !== null) params.over = String(filters.over);
         if (filters.preco_min) params.preco_min = filters.preco_min;
         if (filters.preco_max) params.preco_max = filters.preco_max;
+        if (filters.ordenar) params.ordenar = filters.ordenar;
 
         setSearchParams(params);
     }, [filters, setSearchParams]);
@@ -81,6 +83,7 @@ export default function CardListPage() {
             over: debounceFilters.over !== null ? debounceFilters.over : undefined,
             preco_min: debounceFilters.preco_min || undefined,
             preco_max: debounceFilters.preco_max || undefined,
+            ordenar: debounceFilters.ordenar || undefined,
         })
             .then((data) => {
                 setCards((prev) =>

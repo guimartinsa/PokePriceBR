@@ -138,6 +138,17 @@ class CardListView(ListAPIView):
         if preco_max:
             qs = qs.filter(preco_med__lte=preco_max)
 
+        ordenar = self.request.query_params.get("ordenar")
+        ordering_map = {
+            "nome": ["nome", "id"],
+            "numero": ["total_set", "numero", "id"],
+            "preco": ["preco_med", "id"],
+            "lancamento": ["-set__release_date", "id"],
+        }
+
+        if ordenar in ordering_map:
+            return qs.order_by(*ordering_map[ordenar])
+
         return qs.order_by('id')  # Ordem consistente para paginação
 
 class CardDetailView(RetrieveAPIView):

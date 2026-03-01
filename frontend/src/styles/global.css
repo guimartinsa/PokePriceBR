@@ -642,6 +642,15 @@ input:focus {
         color: #2a3b59;
     }
 
+    .filters-select {
+        width: 100%;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #334766;
+        background: #111b2c;
+        color: #cdd7e5;
+    }
+
     .filters-active-info {
         margin-top: 12px;
         padding: 8px 12px;
