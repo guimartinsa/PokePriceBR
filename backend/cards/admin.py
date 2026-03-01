@@ -62,6 +62,7 @@ class CardAdmin(admin.ModelAdmin):
         "restaurar_cartas",
         "atualizar_precos_global",   
         "atualizar_detalhes_tcgdex",
+        "atualizar_numero_completo",
         "atualizar_links_liga",
     ]
 
@@ -183,6 +184,22 @@ class CardAdmin(admin.ModelAdmin):
         self.message_user(
             request,
             f"{total} carta(s) enviadas para atualização de detalhes.",
+            level=messages.SUCCESS,
+        )
+        
+    @admin.action(description='Atualizar "número completo" (numero/total_set) das cartas selecionadas')
+    def atualizar_numero_completo(self, request, queryset):
+        atualizadas = 0
+
+        for card in queryset:
+            card.numero_completo = f"{card.numero}/{card.total_set}"
+            card.liga_num = card.numero_completo
+            card.save(update_fields=["numero_completo", "liga_num"])
+            atualizadas += 1
+
+        self.message_user(
+            request,
+            f'"Número completo" atualizado para {atualizadas} carta(s) selecionada(s).',
             level=messages.SUCCESS,
         )
 
