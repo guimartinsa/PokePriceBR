@@ -49,6 +49,7 @@ export function ProfilePage() {
     if (!user) return <Navigate to="/" />;
 
     const userPlan = "plan" in user && typeof user.plan === "string" ? user.plan.toUpperCase() : "FREE";
+    const isAdminUser = ("is_admin" in user && Boolean(user.is_admin)) || userPlan === "ADMIN";
     const userBadge = "badge" in user && typeof user.badge === "string" ? user.badge : "";
     const userHasSubscriberPrivileges = hasSubscriberPrivileges(user?.plan);
 
@@ -125,7 +126,8 @@ export function ProfilePage() {
             <h1>Meu Perfil</h1>
             <p style={{ color: "#8f9bad" }}>{user.email}</p>
             <p style={{ color: "#8f9bad", marginTop: 4 }}>
-                Plano atual: <strong>{userPlan}</strong>
+                Usuário admin: <strong>{isAdminUser ? "SIM" : "NÃO"}</strong>
+                {!isAdminUser && <> | Plano atual: <strong>{userPlan}</strong></>}
                 {userBadge ? ` (${userBadge})` : ""}
             </p>
 

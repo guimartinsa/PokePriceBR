@@ -38,7 +38,8 @@ def _build_auth_response(user, avatar=""):
             "email": user.email,
             "name": user.first_name,
             "avatar": final_avatar,
-            "plan": profile.plan,
+            "plan": Profile.PlanChoices.ADMIN if profile.is_admin_plan else profile.plan,
+            "is_admin": profile.is_admin_plan,
             "badge": "PRO" if profile.can_access_pro_features else None,
         },
     }
@@ -130,6 +131,7 @@ def me(request):
         "email": user.email,
         "name": user.first_name,
         "avatar": avatar,
-        "plan": profile.plan,
+        "plan": Profile.PlanChoices.ADMIN if profile.is_admin_plan else profile.plan,
+        "is_admin": profile.is_admin_plan,
         "badge": "PRO" if profile.can_access_pro_features else None,
     })

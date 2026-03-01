@@ -5,6 +5,7 @@ export type AuthUser = {
     name: string;
     avatar?: string;
     plan?: "FREE" | "PRO" | "ADMIN";
+    is_admin?: boolean;
     badge?: "PRO" | null;
 };
 
