@@ -28,28 +28,29 @@ export function SetAutocomplete({ value, onChange }: Props) {
   return (
     <div style={{ position: "relative", width: "100%" }}>
       <input
-        placeholder="Set (ex: DRI)"
+        placeholder="Set (ex: DRI ou Destined Rivals)"
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
           setOpen(true);
         }}
+        onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
       />
 
       {open && sets.length > 0 && (
-          <ul className="autocomplete-list">
+        <ul className="autocomplete-list">
           {sets.map((set) => (
             <li
               key={set.id}
               onMouseDown={() => {
-                onChange(set.codigo);
+                onChange(set.nome);
                 setOpen(false);
               }}
             >
               <div>
-                <strong>{set.codigo}</strong>
-                <small>{set.nome}</small>
+                <strong>{set.nome}</strong>
+                <small>Código: {set.codigo}</small>
               </div>
             </li>
           ))}
