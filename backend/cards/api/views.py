@@ -69,7 +69,10 @@ class CardListView(ListAPIView):
         # Filtro por set
         set_code = self.request.query_params.get("set")
         if set_code:
-            qs = qs.filter(set__codigo_liga__iexact=set_code)
+            qs = qs.filter(
+                Q(set__codigo_liga__iexact=set_code)
+                | Q(set__nome__icontains=set_code)
+            )
 
         # Filtro por raridade
         raridade = self.request.query_params.get("raridade")
