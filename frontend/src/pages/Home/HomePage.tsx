@@ -21,8 +21,7 @@ export default function HomePage() {
                 <div className="home-showcase-content">
                     <h2>Organize sua coleção com mais clareza</h2>
                     <p>
-                        Acompanhe o valor das suas cartas, veja evolução de preço e monte sua
-                        estratégia de troca em um só lugar.
+                        Acompanhe o valor das suas cartas, veja evolução de preço.
                     </p>
                     <p>
                         Em breve você poderá visualizar artes e capas personalizadas nesta seção.

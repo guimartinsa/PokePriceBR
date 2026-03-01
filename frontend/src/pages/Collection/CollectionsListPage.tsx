@@ -12,6 +12,8 @@ import type { CardAutocomplete } from "../../types/CardAutocomplete";
 import "./collectionsList.css";
 import { hasSubscriberPrivileges } from "../../utils/plan";
 
+import icon from "../../assets/icons/colecaoicon.svg";
+
 const FREE_COLLECTION_LIMIT = 1;
 
 
@@ -94,7 +96,8 @@ export default function CollectionsListPage() {
         <div className="collections-page">
             <header className="collections-header">
                 <div>
-                    <h1>📁 Minhas Coleções</h1>
+                    <img src={icon} alt="" width={45} />
+                    <h1>Minhas Coleções</h1>
                     <p>{helperMessage}</p>
                 </div>
                 {!hasUnlimitedCollections && collections.length > 0 && (
