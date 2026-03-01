@@ -16,7 +16,7 @@ export function Hero() {
             </p>
 
             <div className="hero-actions">
-                <button className="cta">Add Your Cards</button>
+                <button className="cta">Criar minha coleção</button>
                 {!isAuthenticated && (
                     <Link to="/auth" className="cta cta-secondary">
                         Criar minha conta
