@@ -227,7 +227,7 @@ class CollectionCardSerializer(serializers.ModelSerializer):
             "id",
             "nome",
             "imagem",
-            "imagem_grande"
+            "imagem_grande",
             "numero_completo",
             "raridade",
             "set",
