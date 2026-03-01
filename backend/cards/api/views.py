@@ -1,3 +1,5 @@
+import re
+
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -48,6 +50,31 @@ from celery.result import AsyncResult
 class CardListView(ListAPIView):
     serializer_class = CardSerializer
 
+    CARD_SEARCH_WITH_NUMBER_PATTERN = re.compile(
+        r"^(?P<name>.+?)\s*\(\s*(?P<number>[^/]+)\s*/\s*(?P<total>\d+)\s*\)\s*$"
+    )
+
+    @classmethod
+    def _build_exact_card_query(cls, raw_search_term: str):
+        """
+        Permite busca no formato "Nome (001/159)" para filtrar exatamente a carta.
+        """
+        match = cls.CARD_SEARCH_WITH_NUMBER_PATTERN.match(raw_search_term.strip())
+        if not match:
+            return None
+
+        card_name = match.group("name").strip()
+        card_number = match.group("number").strip()
+        set_total = int(match.group("total"))
+        normalized_number = card_number.lstrip("0") or "0"
+
+        return Q(nome__iexact=card_name) & Q(total_set=set_total) & (
+            Q(numero=card_number)
+            | Q(numero=normalized_number)
+            | Q(numero_completo__iexact=f"{card_number}/{set_total}")
+            | Q(numero_completo__iexact=f"{normalized_number}/{set_total}")
+        )
+
     def get_queryset(self):
         qs = Card.objects.select_related("set").filter(ativa=True)
         
@@ -64,7 +91,12 @@ class CardListView(ListAPIView):
                     consume_external_api_usage(profile)
                 except PlanLimitError:
                     return Card.objects.none()
-            qs = qs.filter(nome__icontains=search_term)
+
+            exact_card_query = self._build_exact_card_query(search_term)
+            if exact_card_query is not None:
+                qs = qs.filter(exact_card_query)
+            else:
+                qs = qs.filter(nome__icontains=search_term)
 
         # Filtro por set
         set_code = self.request.query_params.get("set")
