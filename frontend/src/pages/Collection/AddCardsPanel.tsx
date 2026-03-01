@@ -27,6 +27,7 @@ export function AddCardsPanel({ collectionCardIds, onToggle }: Props) {
         over: null,
         preco_min: "",
         preco_max: "",
+        ordenar: "",
     });
 
     useEffect(() => {
@@ -49,6 +50,7 @@ export function AddCardsPanel({ collectionCardIds, onToggle }: Props) {
             over: filters.over ?? undefined, // 🔥 AQUI É A CORREÇÃO
             preco_min: filters.preco_min || undefined,
             preco_max: filters.preco_max || undefined,
+            ordenar: filters.ordenar || undefined,
         })
             .then((data) => {
                 setCards(data.results);

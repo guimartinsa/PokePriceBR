@@ -14,6 +14,7 @@ export interface SearchFiltersState {
     over: boolean | null;
     preco_min: string;
     preco_max: string;
+    ordenar: string;
 }
 
 type Props = {
@@ -37,6 +38,7 @@ export function SearchFilters({ filters, onChange }: Props) {
             over: null,
             preco_min: "",
             preco_max: "",
+            ordenar: "",
         });
     };
 
@@ -59,6 +61,22 @@ export function SearchFilters({ filters, onChange }: Props) {
                 <CardAutocomplete value={filters.nome} onSelect={(nome) => updateFilter("nome", nome)} />
 
                 <SetAutocomplete value={filters.set} onChange={(set) => updateFilter("set", set)} />
+
+                <div>
+                    <label htmlFor="ordenar" className="filters-label">Ordenar por</label>
+                    <select
+                        id="ordenar"
+                        value={filters.ordenar}
+                        onChange={(event) => updateFilter("ordenar", event.target.value)}
+                        className="filters-select"
+                    >
+                        <option value="">Padrão</option>
+                        <option value="nome">Nome (A-Z)</option>
+                        <option value="numero">Número (crescente)</option>
+                        <option value="preco">Preço (menor primeiro)</option>
+                        <option value="lancamento">Lançamento (mais novo)</option>
+                    </select>
+                </div>
 
                 {/* Toggle Filtros Avançados */}
                 <button
@@ -101,6 +119,7 @@ export function SearchFilters({ filters, onChange }: Props) {
                         filters.over === false && "Normais",
                         filters.preco_min && `Preço min: R$ ${filters.preco_min}`,
                         filters.preco_max && `Preço max: R$ ${filters.preco_max}`,
+                        filters.ordenar && `Ordenação: ${filters.ordenar}`,
                     ]
                         .filter(Boolean)
                         .join(" • ")}
