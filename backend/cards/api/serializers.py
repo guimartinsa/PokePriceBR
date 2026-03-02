@@ -231,6 +231,11 @@ class CollectionCardSerializer(serializers.ModelSerializer):
     possui_reverse_foil = serializers.BooleanField(source="card.possui_reverse_foil", read_only=True)
     possui_master_ball = serializers.BooleanField(source="card.possui_master_ball", read_only=True)
     possui_pokeball_foil = serializers.BooleanField(source="card.possui_pokeball_foil", read_only=True)
+    owned_normal = serializers.BooleanField(read_only=True)
+    owned_foil = serializers.BooleanField(read_only=True)
+    owned_reverse_foil = serializers.BooleanField(read_only=True)
+    owned_master_ball = serializers.BooleanField(read_only=True)
+    owned_pokeball_foil = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = CollectionCard
@@ -252,5 +257,10 @@ class CollectionCardSerializer(serializers.ModelSerializer):
             "possui_master_ball",
             "possui_pokeball_foil",
             "owned",
+            "owned_normal",
+            "owned_foil",
+            "owned_reverse_foil",
+            "owned_master_ball",
+            "owned_pokeball_foil",
             "custom_photo",
         ]

@@ -11,6 +11,7 @@ import {
     fetchCollectionCards,
     fetchCollections,
     toggleCollectionCard,
+    type CardVariation,
     type Collection,
 } from "../services/collection";
 import type { Card } from "../types/Card";
@@ -26,19 +27,29 @@ const createDefaultFilters = (setCode: string): SearchFiltersState => ({
     ordenar: "",
 });
 
+type OwnedVariationState = Pick<Card, "owned" | "owned_normal" | "owned_foil" | "owned_reverse_foil" | "owned_master_ball" | "owned_pokeball_foil">;
+
+const variationFieldMap: Record<CardVariation, keyof OwnedVariationState> = {
+    normal: "owned_normal",
+    foil: "owned_foil",
+    reverse_foil: "owned_reverse_foil",
+    master_ball: "owned_master_ball",
+    pokeball_foil: "owned_pokeball_foil",
+};
+
 export default function SetPage() {
     const { setCode = "" } = useParams<{ setCode: string }>();
     const navigate = useNavigate();
 
     const [filters, setFilters] = useState<SearchFiltersState>(createDefaultFilters(setCode));
-    const [cards, setCards] = useState<(Card & { owned?: boolean })[]>([]);
+    const [cards, setCards] = useState<Card[]>([]);
     const [loadingCards, setLoadingCards] = useState(false);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
 
     const [collections, setCollections] = useState<Collection[]>([]);
     const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
-    const [ownedCardIds, setOwnedCardIds] = useState<Set<number>>(new Set());
+    const [ownedByCardId, setOwnedByCardId] = useState<Record<number, OwnedVariationState>>({});
 
     const [setName, setSetName] = useState<string>(setCode);
     const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -76,23 +87,30 @@ export default function SetPage() {
 
     useEffect(() => {
         if (!selectedCollectionId) {
-            setOwnedCardIds(new Set());
+            setOwnedByCardId({});
             return;
         }
 
         fetchCollectionCards(selectedCollectionId)
             .then((collectionCards) => {
-                const nextOwned = new Set(
-                    collectionCards.filter((item) => item.owned).map((item) => item.id),
+                const nextOwned = Object.fromEntries(
+                    collectionCards.map((item) => [item.id, {
+                        owned: item.owned,
+                        owned_normal: item.owned_normal,
+                        owned_foil: item.owned_foil,
+                        owned_reverse_foil: item.owned_reverse_foil,
+                        owned_master_ball: item.owned_master_ball,
+                        owned_pokeball_foil: item.owned_pokeball_foil,
+                    }]),
                 );
-                setOwnedCardIds(nextOwned);
+                setOwnedByCardId(nextOwned);
             })
-            .catch(() => setOwnedCardIds(new Set()));
+            .catch(() => setOwnedByCardId({}));
     }, [selectedCollectionId]);
 
     useEffect(() => {
-        setCards((prev) => prev.map((card) => ({ ...card, owned: ownedCardIds.has(card.id) })));
-    }, [ownedCardIds]);
+        setCards((prev) => prev.map((card) => ({ ...card, ...(ownedByCardId[card.id] ?? {}) })));
+    }, [ownedByCardId]);
 
     useEffect(() => {
         setPage(1);
@@ -120,14 +138,14 @@ export default function SetPage() {
             .then((data) => {
                 const nextCards = data.results.map((card) => ({
                     ...card,
-                    owned: ownedCardIds.has(card.id),
+                    ...(ownedByCardId[card.id] ?? {}),
                 }));
 
                 setCards((prev) => (page === 1 ? nextCards : [...prev, ...nextCards]));
                 setHasMore(Boolean(data.next));
             })
             .finally(() => setLoadingCards(false));
-    }, [setCode, page, filters.nome, filters.raridade, filters.ilustrador, filters.over, filters.preco_min, filters.preco_max, filters.ordenar, ownedCardIds]);
+    }, [setCode, page, filters.nome, filters.raridade, filters.ilustrador, filters.over, filters.preco_min, filters.preco_max, filters.ordenar, ownedByCardId]);
 
     const safeFilters = useMemo(
         () => ({
@@ -137,22 +155,32 @@ export default function SetPage() {
         [filters, setCode],
     );
 
-    const handleToggleOwned = (cardId: number, owned: boolean) => {
+    const handleToggleOwned = (cardId: number, variation: CardVariation, owned: boolean) => {
         if (!selectedCollectionId) return;
 
-        setCards((prev) => prev.map((card) => (card.id === cardId ? { ...card, owned } : card)));
-        setOwnedCardIds((prev) => {
-            const next = new Set(prev);
-            if (owned) {
-                next.add(cardId);
-            } else {
-                next.delete(cardId);
-            }
-            return next;
+        const field = variationFieldMap[variation];
+        setCards((prev) => prev.map((card) => {
+            if (card.id !== cardId) return card;
+
+            const nextCard = { ...card, [field]: owned };
+            nextCard.owned = Boolean(nextCard.owned_normal || nextCard.owned_foil || nextCard.owned_reverse_foil || nextCard.owned_master_ball || nextCard.owned_pokeball_foil);
+            return nextCard;
+        }));
+
+        setOwnedByCardId((prev) => {
+            const current = prev[cardId] ?? {};
+            const next = { ...current, [field]: owned } as OwnedVariationState;
+            next.owned = Boolean(next.owned_normal || next.owned_foil || next.owned_reverse_foil || next.owned_master_ball || next.owned_pokeball_foil);
+            return { ...prev, [cardId]: next };
         });
 
-        toggleCollectionCard(selectedCollectionId, cardId, owned).catch(() => {
-            setCards((prev) => prev.map((card) => (card.id === cardId ? { ...card, owned: !owned } : card)));
+        toggleCollectionCard(selectedCollectionId, cardId, owned, variation).catch(() => {
+            setCards((prev) => prev.map((card) => {
+                if (card.id !== cardId) return card;
+                const revertedCard = { ...card, [field]: !owned };
+                revertedCard.owned = Boolean(revertedCard.owned_normal || revertedCard.owned_foil || revertedCard.owned_reverse_foil || revertedCard.owned_master_ball || revertedCard.owned_pokeball_foil);
+                return revertedCard;
+            }));
         });
     };
 
@@ -221,7 +249,7 @@ export default function SetPage() {
                                 key={card.id}
                                 card={card}
                                 onClick={() => setSelectedCard(card)}
-                                onToggleOwned={selectedCollectionId ? (owned) => handleToggleOwned(card.id, owned) : undefined}
+                                onToggleOwned={selectedCollectionId ? (variation, owned) => handleToggleOwned(card.id, variation, owned) : undefined}
                             />
                         ))}
                     </div>
@@ -238,9 +266,8 @@ export default function SetPage() {
                                 border: "1px solid #2c3440",
                                 background: "#151a21",
                                 color: "inherit",
-                                padding: "10px 16px",
+                                padding: "10px 14px",
                                 cursor: loadingCards ? "not-allowed" : "pointer",
-                                opacity: loadingCards ? 0.7 : 1,
                             }}
                         >
                             {loadingCards ? "Carregando..." : "Carregar mais"}
@@ -248,7 +275,7 @@ export default function SetPage() {
                     )}
                 </>
             )}
-            
+
             {selectedCard && (
                 <CardQuickViewModal
                     card={selectedCard}

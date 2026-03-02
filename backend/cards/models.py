@@ -330,6 +330,11 @@ class CollectionCard(models.Model):
     )
     custom_photo = models.ImageField(upload_to="collection-cards/", blank=True, null=True)
     owned = models.BooleanField(default=False)
+    owned_normal = models.BooleanField(default=False)
+    owned_foil = models.BooleanField(default=False)
+    owned_reverse_foil = models.BooleanField(default=False)
+    owned_master_ball = models.BooleanField(default=False)
+    owned_pokeball_foil = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ("collection", "card")

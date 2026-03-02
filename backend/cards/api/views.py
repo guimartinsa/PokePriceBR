@@ -557,7 +557,16 @@ def toggle_card_owned(request, collection_id):
     refresh_subscription_status(profile)
 
     card_id = request.data.get("card_id")
-    owned = request.data.get("owned", False)
+    owned = bool(request.data.get("owned", False))
+    variation = request.data.get("variation")
+
+    variation_to_field = {
+        "normal": "owned_normal",
+        "foil": "owned_foil",
+        "reverse_foil": "owned_reverse_foil",
+        "master_ball": "owned_master_ball",
+        "pokeball_foil": "owned_pokeball_foil",
+    }
 
     if not card_id:
         return Response(
@@ -578,11 +587,20 @@ def toggle_card_owned(request, collection_id):
         defaults={"owned": owned}
     )
 
-    if not created:
+    if variation in variation_to_field:
+        setattr(collection_card, variation_to_field[variation], owned)
+        collection_card.owned = any(
+            getattr(collection_card, field_name)
+            for field_name in variation_to_field.values()
+        )
+        collection_card.save(update_fields=[variation_to_field[variation], "owned"])
+    else:
         collection_card.owned = owned
-        collection_card.save()
+        for field_name in variation_to_field.values():
+            setattr(collection_card, field_name, owned)
+        collection_card.save(update_fields=["owned", *variation_to_field.values()])
 
-    return Response({"ok": True, "owned": owned})
+    return Response({"ok": True, "owned": collection_card.owned})
 
 api_view(["POST"])
 @permission_classes([IsAuthenticated])
