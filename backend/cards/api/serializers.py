@@ -48,6 +48,11 @@ class CardSerializer(serializers.ModelSerializer):
             "preco_max",
             "is_over_number",
             "liga_url",
+            "possui_normal",
+            "possui_foil",
+            "possui_reverse_foil",
+            "possui_master_ball",
+            "possui_pokeball_foil",
             "set",
         ]
 
@@ -221,6 +226,12 @@ class CollectionCardSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
 
+    possui_normal = serializers.BooleanField(source="card.possui_normal", read_only=True)
+    possui_foil = serializers.BooleanField(source="card.possui_foil", read_only=True)
+    possui_reverse_foil = serializers.BooleanField(source="card.possui_reverse_foil", read_only=True)
+    possui_master_ball = serializers.BooleanField(source="card.possui_master_ball", read_only=True)
+    possui_pokeball_foil = serializers.BooleanField(source="card.possui_pokeball_foil", read_only=True)
+
     class Meta:
         model = CollectionCard
         fields = [
@@ -235,6 +246,11 @@ class CollectionCardSerializer(serializers.ModelSerializer):
             "preco_min",
             "preco_med",
             "preco_max",
+            "possui_normal",
+            "possui_foil",
+            "possui_reverse_foil",
+            "possui_master_ball",
+            "possui_pokeball_foil",
             "owned",
             "custom_photo",
         ]

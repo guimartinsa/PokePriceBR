@@ -17,7 +17,11 @@ export interface Card {
   imagem: string | null;
   imagem_grande?: string | null;
   liga_url?: string | null;
+  possui_normal?: boolean;
+  possui_foil?: boolean;
+  possui_reverse_foil?: boolean;
+  possui_master_ball?: boolean;
+  possui_pokeball_foil?: boolean;
   set: Set;
 }
-
 
