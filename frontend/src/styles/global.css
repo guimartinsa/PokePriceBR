@@ -451,6 +451,47 @@ input:focus {
     font-size: 16px;
 }
 
+
+.owned-variations {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.owned-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4c5a72;
+}
+
+.owned-checkbox input {
+    margin: 0;
+}
+
+.variation-marker {
+    min-width: 28px;
+    height: 24px;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #ffffff;
+    background: rgba(25, 32, 46, 0.85);
+}
+
+.variation-normal { border-color: #f6c400; }
+.variation-foil { border-color: #2ea8ff; }
+.variation-reverse { border-color: #e53935; }
+.variation-master { border-color: #ab47bc; }
+.variation-pokeball { border-color: #43a047; }
+
 .card-item.compact {
     padding: 0;
     background: transparent;
