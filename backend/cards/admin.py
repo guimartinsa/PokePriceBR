@@ -8,6 +8,7 @@ from cards.tasks.update_set_cards_from_tcgdex import update_set_cards_from_tcgde
 from cards.tasks.atualizar_precos_set_task import atualizar_precos_set_task
 from cards.models import Card, CardAdminLog
 from django.contrib import messages
+import re
 from cards.services.admin_log import log_admin_action
 
 from cards.models import Set, Card, Avatar, Profile, Series
@@ -249,9 +250,33 @@ class SetAdmin(admin.ModelAdmin):
         "atualizar_precos_do_set",
         "atualizar_detalhes_do_set",
         "atualizar_links_liga_dos_sets",
+        "adicionar_variantes_master_ball_pokeball_foil",
     ]
 
     # -------- AÇÕES -------- #
+    
+    @staticmethod
+    def _extrair_numero_base(numero_raw):
+        if numero_raw is None:
+            return None
+
+        numero_str = str(numero_raw).strip()
+        if not numero_str:
+            return None
+
+        match = re.match(r"^(\d+)", numero_str)
+        if not match:
+            return None
+
+        return int(match.group(1))
+
+    @classmethod
+    def _eh_carta_ex(cls, card):
+        nome = (card.nome or "").lower()
+        raridade = (card.raridade or "").lower()
+
+        return " ex" in nome or nome.endswith("ex") or "double rare" in raridade
+
 
     @admin.action(description="Importar/atualizar sets selecionados da TCGdex")
     def importar_sets_tcgdex(self, request, queryset):
@@ -333,6 +358,42 @@ class SetAdmin(admin.ModelAdmin):
         self.message_user(
             request,
             f"Atualização de detalhes iniciada para {disparados} set(s).",
+            level=messages.SUCCESS,
+        )
+
+    @admin.action(description="Adicionar Master Ball e Pokeball Foil (cartas elegíveis)")
+    def adicionar_variantes_master_ball_pokeball_foil(self, request, queryset):
+        atualizadas = 0
+
+        for set_obj in queryset:
+            for card in set_obj.cartas.all():
+                numero_base = self._extrair_numero_base(card.numero)
+                if numero_base is None:
+                    continue
+
+                if numero_base >= card.total_set:
+                    continue
+
+                if self._eh_carta_ex(card):
+                    continue
+
+                changed = False
+
+                if not card.possui_master_ball:
+                    card.possui_master_ball = True
+                    changed = True
+
+                if not card.possui_pokeball_foil:
+                    card.possui_pokeball_foil = True
+                    changed = True
+
+                if changed:
+                    card.save(update_fields=["possui_master_ball", "possui_pokeball_foil"])
+                    atualizadas += 1
+
+        self.message_user(
+            request,
+            f"{atualizadas} carta(s) atualizada(s) com Master Ball e Pokeball Foil.",
             level=messages.SUCCESS,
         )
 

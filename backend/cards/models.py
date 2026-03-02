@@ -124,6 +124,11 @@ class Card(models.Model):
     )
 
     detalhes_atualizados = models.BooleanField(default=False)
+    possui_normal = models.BooleanField(default=True)
+    possui_foil = models.BooleanField(default=False)
+    possui_reverse_foil = models.BooleanField(default=False)
+    possui_master_ball = models.BooleanField(default=False)
+    possui_pokeball_foil = models.BooleanField(default=False)
 
     # -------- IMAGENS DERIVADAS -------- #
 
