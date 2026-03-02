@@ -225,12 +225,25 @@ export default function CollectionPage() {
                                 key={card.id}
                                 card={card}
                                 onClick={() => setSelectedCard(card)}
-                                onToggleOwned={(owned) => {
+                                onToggleOwned={(variation, owned) => {
                                     setCollection((prev) =>
-                                        prev.map((c) => (c.id === card.id ? { ...c, owned } : c))
+                                        prev.map((c) => {
+                                            if (c.id !== card.id) return c;
+                                            const fieldMap = {
+                                                normal: "owned_normal",
+                                                foil: "owned_foil",
+                                                reverse_foil: "owned_reverse_foil",
+                                                master_ball: "owned_master_ball",
+                                                pokeball_foil: "owned_pokeball_foil",
+                                            } as const;
+                                            const field = fieldMap[variation];
+                                            const nextCard = { ...c, [field]: owned };
+                                            nextCard.owned = Boolean(nextCard.owned_normal || nextCard.owned_foil || nextCard.owned_reverse_foil || nextCard.owned_master_ball || nextCard.owned_pokeball_foil);
+                                            return nextCard;
+                                        })
                                     );
 
-                                    toggleCollectionCard(collectionId, card.id, owned);
+                                    toggleCollectionCard(collectionId, card.id, owned, variation);
                                 }}
                             />
                         ))}

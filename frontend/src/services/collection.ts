@@ -62,14 +62,18 @@ export async function fetchCollectionCards(
 }
 
 /* 🔹 Marcar / desmarcar "Tenho" */
+export type CardVariation = "normal" | "foil" | "reverse_foil" | "master_ball" | "pokeball_foil";
+
 export async function toggleCollectionCard(
     collectionId: number,
     cardId: number,
-    owned: boolean
+    owned: boolean,
+    variation?: CardVariation
 ): Promise<void> {
     await api.post(`/collections/${collectionId}/toggle/`, {
         card_id: cardId,
         owned,
+        variation,
     });
 }
 

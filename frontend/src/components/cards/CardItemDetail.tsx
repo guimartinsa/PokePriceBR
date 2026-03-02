@@ -1,14 +1,15 @@
 import type { Card } from "../../types/Card";
+import type { CardVariation } from "../../services/collection";
 import "./style.css";
 
 type Props = {
-    card: Card & { owned?: boolean };
+    card: Card;
     compact?: boolean;
     showOwnedToggle?: boolean;
 
     /** usado na CollectionPage */
     onClick?: () => void;
-    onToggleOwned?: (value: boolean) => void;
+    onToggleOwned?: (variation: CardVariation, value: boolean) => void;
 };
 
 function getLowestPrice(card: Pick<Card, "preco_min" | "preco_med" | "preco_max">): string | null {
@@ -21,11 +22,11 @@ function getLowestPrice(card: Pick<Card, "preco_min" | "preco_med" | "preco_max"
 }
 
 const variationLabels = [
-    { key: "possui_normal", shortLabel: "N", label: "Normal", className: "variation-normal" },
-    { key: "possui_foil", shortLabel: "F", label: "Foil", className: "variation-foil" },
-    { key: "possui_reverse_foil", shortLabel: "RF", label: "Reverse Foil", className: "variation-reverse" },
-    { key: "possui_master_ball", shortLabel: "MB", label: "Master Ball", className: "variation-master" },
-    { key: "possui_pokeball_foil", shortLabel: "PB", label: "Poké Ball Foil", className: "variation-pokeball" },
+    { key: "possui_normal", ownedKey: "owned_normal", shortLabel: "N", label: "Normal", className: "variation-normal", variation: "normal" },
+    { key: "possui_foil", ownedKey: "owned_foil", shortLabel: "F", label: "Foil", className: "variation-foil", variation: "foil" },
+    { key: "possui_reverse_foil", ownedKey: "owned_reverse_foil", shortLabel: "RF", label: "Reverse Foil", className: "variation-reverse", variation: "reverse_foil" },
+    { key: "possui_master_ball", ownedKey: "owned_master_ball", shortLabel: "MB", label: "Master Ball", className: "variation-master", variation: "master_ball" },
+    { key: "possui_pokeball_foil", ownedKey: "owned_pokeball_foil", shortLabel: "PB", label: "Poké Ball Foil", className: "variation-pokeball", variation: "pokeball_foil" },
 ] as const;
 
 function isOverSetNumber(numeroCompleto: string): boolean {
@@ -90,8 +91,8 @@ export function CardItemDetail({
                             >
                                 <input
                                     type="checkbox"
-                                    checked={!!card.owned}
-                                    onChange={(e) => onToggleOwned?.(e.target.checked)}
+                                    checked={Boolean(card[variation.ownedKey])}
+                                    onChange={(e) => onToggleOwned?.(variation.variation, e.target.checked)}
                                 />
                                 <span className={`variation-marker ${variation.className}`}>
                                     {variation.shortLabel}
