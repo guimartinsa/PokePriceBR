@@ -452,6 +452,26 @@ input:focus {
 }
 
 
+.owned-variations {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.owned-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4c5a72;
+}
+
+.owned-checkbox input {
+    margin: 0;
+}
+
 .variations-markers {
     display: flex;
     gap: 6px;
@@ -460,8 +480,8 @@ input:focus {
 }
 
 .variation-marker {
-    min-width: 26px;
-    height: 22px;
+    min-width: 28px;
+    height: 24px;
     border-radius: 6px;
     border: 2px solid transparent;
     display: inline-flex;
@@ -470,7 +490,7 @@ input:focus {
     font-size: 10px;
     font-weight: 700;
     color: #ffffff;
-    background: rgba(25, 32, 46, 0.8);
+    background: rgba(25, 32, 46, 0.85);
 }
 
 .variation-normal { border-color: #f6c400; }
