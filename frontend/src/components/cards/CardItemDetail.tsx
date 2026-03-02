@@ -20,6 +20,14 @@ function getLowestPrice(card: Pick<Card, "preco_min" | "preco_med" | "preco_max"
     return Math.min(...values).toFixed(2);
 }
 
+const variationLabels = [
+    { key: "possui_normal", label: "N", className: "variation-normal" },
+    { key: "possui_foil", label: "F", className: "variation-foil" },
+    { key: "possui_reverse_foil", label: "RF", className: "variation-reverse" },
+    { key: "possui_master_ball", label: "MB", className: "variation-master" },
+    { key: "possui_pokeball_foil", label: "PB", className: "variation-pokeball" },
+] as const;
+
 export function CardItemDetail({
     card,
     compact = false,
@@ -28,6 +36,8 @@ export function CardItemDetail({
 
 }: Props) {
     const lowestPrice = getLowestPrice(card);
+    const availableVariations = variationLabels.filter((variation) => Boolean(card[variation.key]));
+
     return (
         <div
             className={`card-item ${compact ? "compact" : ""} ${onClick ? "is-clickable" : ""}`}
@@ -53,15 +63,30 @@ export function CardItemDetail({
                 {card.preco_min && <p className="price-min">Menor valor: R$ {card.preco_min}</p>}
 
                 {!compact && (
-                    //<label className="owned-checkbox">
-                    <label className="owned-checkbox" onClick={(e) => e.stopPropagation()}>
-                        <input
-                            type="checkbox"
-                            checked={!!card.owned}
-                            onChange={(e) => onToggleOwned?.(e.target.checked)}
-                        />
-                        <span>Normal</span>
-                    </label>
+                    <>
+                        {availableVariations.length > 0 && (
+                            <div className="variations-markers" aria-label="Variações disponíveis">
+                                {availableVariations.map((variation) => (
+                                    <span
+                                        key={variation.key}
+                                        className={`variation-marker ${variation.className}`}
+                                        title={variation.label}
+                                    >
+                                        {variation.label}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+
+                        <label className="owned-checkbox" onClick={(e) => e.stopPropagation()}>
+                            <input
+                                type="checkbox"
+                                checked={!!card.owned}
+                                onChange={(e) => onToggleOwned?.(e.target.checked)}
+                            />
+                            <span>Tenho</span>
+                        </label>
+                    </>
                 )}
             </div>
         </div>
