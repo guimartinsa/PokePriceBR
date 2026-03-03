@@ -24,8 +24,6 @@ export function ProfilePage() {
     const [startingCheckout, setStartingCheckout] = useState(false);
 
     const billingStatus = searchParams.get("billing");
-    const stripeMode = import.meta.env.VITE_STRIPE_MODE === "live" ? "live" : "test";
-    const stripeModeLabel = stripeMode === "live" ? "produção" : "testes";
     useEffect(() => {
         async function load() {
             const [profileData, avatarsData] = await Promise.all([fetchProfile(), fetchAvatars()]);
@@ -122,10 +120,10 @@ export function ProfilePage() {
     }
 
     return (
-        <div style={{ maxWidth: 640, margin: "0 auto", padding: 16 }}>
-            <h1>Meu Perfil</h1>
-            <p style={{ color: "#8f9bad" }}>{user.email}</p>
-            <p style={{ color: "#8f9bad", marginTop: 4 }}>
+        <div style={{ maxWidth: 760, margin: "0 auto", padding: 20 }}>
+            <h1 style={{ marginBottom: 8, color: "#e8f0ff" }}>Meu Perfil</h1>
+            <p style={{ color: "#9fb2cc", marginBottom: 2 }}>{user.email}</p>
+            <p style={{ color: "#9fb2cc", marginTop: 4 }}>
                 Usuário admin: <strong>{isAdminUser ? "SIM" : "NÃO"}</strong>
                 {!isAdminUser && <> | Plano atual: <strong>{userPlan}</strong></>}
                 {userBadge ? ` (${userBadge})` : ""}
@@ -142,41 +140,36 @@ export function ProfilePage() {
                 </p>
             )}
 
-            <div style={{ marginTop: 16, padding: 12, border: "1px solid #2f3845", borderRadius: 8 }}>
-                <h2 style={{ marginTop: 0 }}>Assinatura (Stripe - ambiente de {stripeModeLabel})</h2>
+            <div style={{ marginTop: 18, padding: 16, border: "1px solid #2f3845", borderRadius: 14, background: "linear-gradient(180deg, #162230 0%, #121820 100%)", boxShadow: "0 10px 20px rgba(0,0,0,0.2)" }}>
+                <h2 style={{ marginTop: 0, marginBottom: 12, color: "#dce9ff" }}>Assinatura Stripe</h2>
                 {userHasSubscriberPrivileges ? (
                     <p style={{ color: "#8f9bad" }}>
                         Sua conta já possui privilégios de assinante.
                     </p>
                 ) : (
                     <>
-                        <p style={{ color: "#8f9bad" }}>
-                            {stripeMode === "test"
-                                ? "Integração com Stripe em modo de teste. Use cartões de teste da Stripe no checkout."
-                                : "Integração com Stripe em modo de produção. Use um cartão real no checkout."}
-                        </p>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                             <button onClick={handleActivateTrial} disabled={activatingTrial}>
                                 {activatingTrial ? "Ativando..." : "Ativar período de testes"}
                             </button>
                             <button onClick={handleStartCheckout} disabled={startingCheckout}>
-                                {startingCheckout ? "Redirecionando..." : stripeMode === "test" ? "Assinar PRO (Stripe Test)" : "Assinar PRO"}
+                                {startingCheckout ? "Redirecionando..." : "Assinar PRO"}
                             </button>
                         </div>
                     </>
                 )}
             </div>
 
-            <label style={{ display: "block", marginTop: 16 }}>
+            <label style={{ display: "block", marginTop: 16, color: "#dce9ff" }}>
                 Nome de usuário
                 <input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    style={{ width: "100%", marginTop: 6, padding: 10, borderRadius: 8 }}
+                    style={{ width: "100%", marginTop: 6, padding: 10, borderRadius: 10, border: "1px solid #334155", background: "#0f1722", color: "#e8f0ff" }}
                 />
             </label>
 
-            <label style={{ display: "block", marginTop: 16 }}>
+            <label style={{ display: "block", marginTop: 16, color: "#dce9ff" }}>
                 Avatar
                 <select
                     value={avatarOption}
@@ -185,7 +178,7 @@ export function ProfilePage() {
                         setAvatarUpload(null);
                         setAvatarPreview("");
                     }}
-                    style={{ width: "100%", marginTop: 6, padding: 10, borderRadius: 8 }}
+                    style={{ width: "100%", marginTop: 6, padding: 10, borderRadius: 10, border: "1px solid #334155", background: "#0f1722", color: "#e8f0ff" }}
                 >
                     <option value="">Sem avatar</option>
                     {avatars.map((avatar) => (
@@ -197,7 +190,7 @@ export function ProfilePage() {
             </label>
 
             {canUploadCustomAvatar && (
-                <label style={{ display: "block", marginTop: 16 }}>
+                <label style={{ display: "block", marginTop: 16, color: "#dce9ff" }}>
                     Avatar personalizado (PRO/Admin)
                     <input
                         type="file"
@@ -213,27 +206,27 @@ export function ProfilePage() {
                 <img
                     src={displayedAvatar}
                     alt="Avatar selecionado"
-                    style={{ marginTop: 12, width: 96, height: 96, borderRadius: "50%", objectFit: "cover" }}
+                    style={{ marginTop: 12, width: 108, height: 108, borderRadius: "50%", objectFit: "cover", border: "3px solid #60a5fa", boxShadow: "0 8px 18px rgba(37, 99, 235, 0.35)" }}
                 />
             )}
 
-            <label style={{ display: "block", marginTop: 16 }}>
+            <label style={{ display: "block", marginTop: 16, color: "#dce9ff" }}>
                 Bio
                 <textarea
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    style={{ width: "100%", marginTop: 6, padding: 10, borderRadius: 8, minHeight: 96 }}
+                    style={{ width: "100%", marginTop: 6, padding: 10, borderRadius: 10, minHeight: 96, border: "1px solid #334155", background: "#0f1722", color: "#e8f0ff" }}
                 />
             </label>
 
-            <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
-                <button onClick={handleSave} disabled={saving}>
+            <div style={{ display: "flex", gap: 8, marginTop: 18, flexWrap: "wrap" }}>
+                <button onClick={handleSave} disabled={saving} style={{ background: "#2563eb", color: "#fff", border: "none", borderRadius: 10, padding: "10px 14px" }}>
                     {saving ? "Salvando..." : "Salvar perfil"}
                 </button>
-                <button onClick={handleDeleteAccount} style={{ backgroundColor: "#b3261e" }}>
+                <button onClick={handleDeleteAccount} style={{ backgroundColor: "#b3261e", color: "#fff", border: "none", borderRadius: 10, padding: "10px 14px" }}>
                     Excluir conta
                 </button>
-                <button onClick={logout}>Sair</button>
+                <button onClick={logout} style={{ background: "#1f2937", color: "#fff", border: "1px solid #374151", borderRadius: 10, padding: "10px 14px" }}>Sair</button>
             </div>
         </div>
     );
