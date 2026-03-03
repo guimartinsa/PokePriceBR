@@ -14,24 +14,24 @@ export default function BottomBar() {
 
     return (
         <nav className="bottom-bar">
-            <button onClick={() => navigate("/")}>
+            <button aria-label="Ir para a página inicial" onClick={() => navigate("/")}>
                 <img src={IconHome} alt="" width={45} height={45} />
             </button>
 
-            <button onClick={() => navigate("/cards")}>
+            <button aria-label="Buscar cartas" onClick={() => navigate("/cards")}>
                 <img src={IconeBusca} alt="Buscar" width={45} height={45} />
             </button>
 
             {/* Botão central da câmera */}
-            <button className="scan-button" onClick={() => navigate("/scan")}>
+            <button aria-label="Escanear carta" className="scan-button" onClick={() => navigate("/scan")}>
                 <img src={IconeCamera} alt="" width={45} height={45} />
             </button>
 
-            <button onClick={() => navigate("/series")}>
+            <button aria-label="Ver séries" onClick={() => navigate("/series")}>
                 <img src={WishlistIcon} alt="" width={45} height={45} />
             </button>
 
-            <button onClick={() => navigate("/collection")}>
+            <button aria-label="Ver séries" onClick={() => navigate("/series")}>
                 <img src={IconeColecao} alt="" width={35} height={35} />
             </button>
         </nav>

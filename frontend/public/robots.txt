@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pricedex.com.br/sitemap.xml

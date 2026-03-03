@@ -16,7 +16,17 @@ export default function HomePage() {
 
             <section className="home-showcase" aria-label="Destaques da plataforma">
                 <div className="home-showcase-image" role="img" aria-label="Área reservada para imagem principal">
-                    <img src={baner} alt="" />
+
+                    <img
+                        src={baner} 
+                        sizes="(max-width: 768px) 100vw, 690px"
+                        width={690}
+                        height={390}
+                        fetchPriority="high"
+                        loading="eager"
+                        decoding="async"
+                        alt="Banner PriceDexBR"
+                    />
                 </div>
 
                 <div className="home-showcase-content">

@@ -7,7 +7,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.svg", "robots.txt"],
+      injectRegister: "script-defer",
+      includeAssets: ["favicon.svg", "robots.txt", "sitemap.xml"],
       manifest: {
         name: "PokePriceBR",
         short_name: "PokePrice",
