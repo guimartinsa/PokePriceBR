@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-
 
 import { Loading } from "../../components/Loading";
 import { Section } from "../../components/ui/Section";
@@ -20,19 +19,12 @@ import { AddCardsPanel } from "./AddCardsPanel";
 import { CardQuickViewModal } from "../../components/cards/CardQuickViewModal";
 import "./collectionPage.css";
 
-/* 🔹 Tipo local: carta + owned */
-/*type CardWithOwned = Card & {owned: boolean;};*/
-
-
-
 export default function CollectionPage() {
     type BinderLayout = "3x3" | "4x3" | "2x2" | "4x4";
 
-    /* 🔹 Params */
     const { id } = useParams();
     const collectionId = id ? Number(id) : null;
 
-    /* 🔹 State */
     const [collection, setCollection] = useState<CollectionCard[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCard, setSelectedCard] = useState<CollectionCard | null>(null);
@@ -48,6 +40,15 @@ export default function CollectionPage() {
         ordenar: "",
     });
 
+    const [showAddCardsModal, setShowAddCardsModal] = useState(false);
+    const [viewMode, setViewMode] = useState<"grid" | "binder">("grid");
+    const [binderLayout, setBinderLayout] = useState<BinderLayout>("3x3");
+    const [isUpdatingPrices, setIsUpdatingPrices] = useState(false);
+    const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+    const [currentBinderPage, setCurrentBinderPage] = useState(0);
+
+    const toPriceNumber = (value: string | null) => Number.parseFloat(value ?? "0") || 0;
+
     const filteredCollection = collection.filter((card) => {
         if (filters.nome && !card.nome.toLowerCase().includes(filters.nome.toLowerCase())) return false;
         if (filters.set && card.set?.codigo_liga !== filters.set) return false;
@@ -58,11 +59,28 @@ export default function CollectionPage() {
         return true;
     });
 
-    const [showAddCardsModal, setShowAddCardsModal] = useState(false);
-    const [viewMode, setViewMode] = useState<"grid" | "binder">("grid");
-    const [binderLayout, setBinderLayout] = useState<BinderLayout>("3x3");
-    const [isUpdatingPrices, setIsUpdatingPrices] = useState(false);
-    const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+    const filteredAndSortedCollection = useMemo(() => {
+        const cards = [...filteredCollection];
+
+        switch (filters.ordenar) {
+            case "nome":
+                cards.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" }));
+                break;
+            case "numero":
+                cards.sort((a, b) => (a.numero ?? 0) - (b.numero ?? 0));
+                break;
+            case "preco":
+                cards.sort((a, b) => toPriceNumber(a.preco_med) - toPriceNumber(b.preco_med));
+                break;
+            case "lancamento":
+                cards.sort((a, b) => b.id - a.id);
+                break;
+            default:
+                break;
+        }
+
+        return cards;
+    }, [filteredCollection, filters.ordenar]);
 
     const binderLayoutConfig: Record<BinderLayout, { label: string; rows: number; cols: number }> = {
         "3x3": { label: "9 bolsos · 3x3", rows: 3, cols: 3 },
@@ -74,32 +92,47 @@ export default function CollectionPage() {
     const activeLayout = binderLayoutConfig[binderLayout];
     const slotsPerPage = activeLayout.rows * activeLayout.cols;
     const cardsPerSpread = slotsPerPage * 2;
-    const binderSpreads = [] as Array<{ left: Array<CollectionCard | null>; right: Array<CollectionCard | null> }>;
 
-    for (let start = 0; start < filteredCollection.length; start += cardsPerSpread) {
-        const spreadCards = filteredCollection.slice(start, start + cardsPerSpread);
-        const left: Array<CollectionCard | null> = spreadCards.slice(0, slotsPerPage);
-        const right: Array<CollectionCard | null> = spreadCards.slice(slotsPerPage, cardsPerSpread);
-        while (left.length < slotsPerPage) left.push(null);
-        while (right.length < slotsPerPage) right.push(null);
-        binderSpreads.push({ left, right });
-    }
+    const binderSpreads = useMemo(() => {
+        const spreads: Array<{ left: Array<CollectionCard | null>; right: Array<CollectionCard | null> }> = [];
 
-    if (binderSpreads.length === 0) {
-        const emptyPage = Array.from({ length: slotsPerPage }, () => null);
-        binderSpreads.push({ left: emptyPage, right: [...emptyPage] });
-    }
+        for (let start = 0; start < filteredAndSortedCollection.length; start += cardsPerSpread) {
+            const spreadCards = filteredAndSortedCollection.slice(start, start + cardsPerSpread);
+            const left: Array<CollectionCard | null> = spreadCards.slice(0, slotsPerPage);
+            const right: Array<CollectionCard | null> = spreadCards.slice(slotsPerPage, cardsPerSpread);
+            while (left.length < slotsPerPage) left.push(null);
+            while (right.length < slotsPerPage) right.push(null);
+            spreads.push({ left, right });
+        }
 
-    const toPriceNumber = (value: string | null) => Number.parseFloat(value ?? "0") || 0;
+        if (spreads.length === 0) {
+            const emptyPage = Array.from({ length: slotsPerPage }, () => null);
+            spreads.push({ left: emptyPage, right: [...emptyPage] });
+        }
 
-    //const uniqueCards = new Set(collection.map((card) => card.id)).size;
+        return spreads;
+    }, [filteredAndSortedCollection, cardsPerSpread, slotsPerPage]);
+
+    const totalBinderPages = binderSpreads.length;
+    const safeBinderPage = Math.min(currentBinderPage, totalBinderPages - 1);
+    const activeSpread = binderSpreads[safeBinderPage];
+
     const estimatedValue = collection.reduce((sum, card) => sum + toPriceNumber(card.preco_min), 0);
     const currentCollectionValue = collection.reduce(
         (sum, card) => sum + (card.owned ? toPriceNumber(card.preco_min) : 0),
         0,
     );
 
-    /* 🔹 Effect */
+    useEffect(() => {
+        setCurrentBinderPage(0);
+    }, [filters, binderLayout]);
+
+    useEffect(() => {
+        if (currentBinderPage > totalBinderPages - 1) {
+            setCurrentBinderPage(Math.max(totalBinderPages - 1, 0));
+        }
+    }, [currentBinderPage, totalBinderPages]);
+
     useEffect(() => {
         if (!collectionId) {
             setLoading(false);
@@ -110,7 +143,6 @@ export default function CollectionPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [collectionId]);
 
-    /* 🔹 Load */
     async function loadCollection(showPageLoader = false) {
         if (showPageLoader) {
             setLoading(true);
@@ -118,9 +150,7 @@ export default function CollectionPage() {
 
         try {
             const cards = await fetchCollectionCards(collectionId!);
-
             setCollection(cards);
-
         } catch (err) {
             console.error("Erro ao carregar coleção:", err);
         } finally {
@@ -130,8 +160,6 @@ export default function CollectionPage() {
         }
     }
 
-
-    /* 🔹 Early returns */
     if (loading) return <Loading />;
 
     if (!collectionId) {
@@ -142,12 +170,10 @@ export default function CollectionPage() {
         );
     }
 
-    /* 🔹 UI */
     return (
         <div style={{ padding: "20px" }}>
             <h1>Minha Coleção</h1>
 
-            {/* 📊 Estatísticas */}
             <div
                 style={{
                     display: "grid",
@@ -164,7 +190,6 @@ export default function CollectionPage() {
                 <StatBlock value={`R$ ${currentCollectionValue.toFixed(2)}`} label="Valor Atual da Coleção" />
             </div>
 
-            {/* 🃏 Lista */}
             <SearchFilters filters={filters} onChange={setFilters} />
 
             <div className="collection-view-switcher">
@@ -204,7 +229,8 @@ export default function CollectionPage() {
 
             <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
                 <button
-                    onClick={() => setShowAddCardsModal(true)} style={{
+                    onClick={() => setShowAddCardsModal(true)}
+                    style={{
                         padding: "8px 12px",
                         borderRadius: 8,
                         background: "#d61d1d",
@@ -280,73 +306,90 @@ export default function CollectionPage() {
                 </div>
             )}
 
-
             <Section title="Suas Cartas">
-                {filteredCollection.length === 0 ? (
+                {filteredAndSortedCollection.length === 0 ? (
                     <p style={{ color: "#999" }}>Nenhuma carta corresponde aos filtros.</p>
                 ) : viewMode === "binder" ? (
                     <div className="binder-view">
-                        {binderSpreads.map((spread, spreadIndex) => (
-                            <article key={spreadIndex} className="binder-spread">
-                                <div className="binder-spread__rings" aria-hidden="true" />
-                                <div
-                                    className="binder-page"
-                                    style={{
-                                        gridTemplateColumns: `repeat(${activeLayout.cols}, minmax(0, 1fr))`,
-                                        gridTemplateRows: `repeat(${activeLayout.rows}, minmax(0, 1fr))`,
-                                    }}
-                                >
-                                    {spread.left.map((card, index) => (
-                                        <button
-                                            key={`left-${spreadIndex}-${index}`}
-                                            type="button"
-                                            className={`binder-pocket ${card ? "has-card" : "is-empty"}`}
-                                            onClick={() => card && setSelectedCard(card)}
-                                            disabled={!card}
-                                        >
-                                            {card ? (
-                                                <>
-                                                    <img src={card.imagem || "/placeholder.png"} alt={card.nome} />
-                                                    <span>{card.nome}</span>
-                                                </>
-                                            ) : (
-                                                <span>Slot vazio</span>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div
-                                    className="binder-page"
-                                    style={{
-                                        gridTemplateColumns: `repeat(${activeLayout.cols}, minmax(0, 1fr))`,
-                                        gridTemplateRows: `repeat(${activeLayout.rows}, minmax(0, 1fr))`,
-                                    }}
-                                >
-                                    {spread.right.map((card, index) => (
-                                        <button
-                                            key={`right-${spreadIndex}-${index}`}
-                                            type="button"
-                                            className={`binder-pocket ${card ? "has-card" : "is-empty"}`}
-                                            onClick={() => card && setSelectedCard(card)}
-                                            disabled={!card}
-                                        >
-                                            {card ? (
-                                                <>
-                                                    <img src={card.imagem || "/placeholder.png"} alt={card.nome} />
-                                                    <span>{card.nome}</span>
-                                                </>
-                                            ) : (
-                                                <span>Slot vazio</span>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            </article>
-                        ))}
+                        <div className="binder-pagination">
+                            <button
+                                type="button"
+                                className="collection-view-switcher__button"
+                                onClick={() => setCurrentBinderPage((prev) => Math.max(prev - 1, 0))}
+                                disabled={safeBinderPage === 0}
+                            >
+                                |&lt;-anterior
+                            </button>
+                            <span className="binder-pagination__label">Página {safeBinderPage + 1}</span>
+                            <button
+                                type="button"
+                                className="collection-view-switcher__button"
+                                onClick={() => setCurrentBinderPage((prev) => Math.min(prev + 1, totalBinderPages - 1))}
+                                disabled={safeBinderPage >= totalBinderPages - 1}
+                            >
+                                próxima -&gt;|
+                            </button>
+                        </div>
+
+                        <article key={safeBinderPage} className="binder-spread">
+                            <div className="binder-spread__rings" aria-hidden="true" />
+                            <div
+                                className="binder-page"
+                                style={{
+                                    gridTemplateColumns: `repeat(${activeLayout.cols}, minmax(0, 1fr))`,
+                                    gridTemplateRows: `repeat(${activeLayout.rows}, minmax(0, 1fr))`,
+                                }}
+                            >
+                                {activeSpread.left.map((card, index) => (
+                                    <button
+                                        key={`left-${safeBinderPage}-${index}`}
+                                        type="button"
+                                        className={`binder-pocket ${card ? "has-card" : "is-empty"}`}
+                                        onClick={() => card && setSelectedCard(card)}
+                                        disabled={!card}
+                                    >
+                                        {card ? (
+                                            <>
+                                                <img src={card.imagem || "/placeholder.png"} alt={card.nome} />
+                                                <span>{card.nome}</span>
+                                            </>
+                                        ) : (
+                                            <span>Slot vazio</span>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                            <div
+                                className="binder-page"
+                                style={{
+                                    gridTemplateColumns: `repeat(${activeLayout.cols}, minmax(0, 1fr))`,
+                                    gridTemplateRows: `repeat(${activeLayout.rows}, minmax(0, 1fr))`,
+                                }}
+                            >
+                                {activeSpread.right.map((card, index) => (
+                                    <button
+                                        key={`right-${safeBinderPage}-${index}`}
+                                        type="button"
+                                        className={`binder-pocket ${card ? "has-card" : "is-empty"}`}
+                                        onClick={() => card && setSelectedCard(card)}
+                                        disabled={!card}
+                                    >
+                                        {card ? (
+                                            <>
+                                                <img src={card.imagem || "/placeholder.png"} alt={card.nome} />
+                                                <span>{card.nome}</span>
+                                            </>
+                                        ) : (
+                                            <span>Slot vazio</span>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        </article>
                     </div>
                 ) : (
                     <div className="card-grid">
-                        {filteredCollection.map((card) => (
+                        {filteredAndSortedCollection.map((card) => (
                             <CardItemDetail
                                 key={card.id}
                                 card={card}
@@ -364,9 +407,15 @@ export default function CollectionPage() {
                                             } as const;
                                             const field = fieldMap[variation];
                                             const nextCard = { ...c, [field]: owned };
-                                            nextCard.owned = Boolean(nextCard.owned_normal || nextCard.owned_foil || nextCard.owned_reverse_foil || nextCard.owned_master_ball || nextCard.owned_pokeball_foil);
+                                            nextCard.owned = Boolean(
+                                                nextCard.owned_normal ||
+                                                    nextCard.owned_foil ||
+                                                    nextCard.owned_reverse_foil ||
+                                                    nextCard.owned_master_ball ||
+                                                    nextCard.owned_pokeball_foil,
+                                            );
                                             return nextCard;
-                                        })
+                                        }),
                                     );
 
                                     toggleCollectionCard(collectionId, card.id, owned, variation);
