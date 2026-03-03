@@ -18,6 +18,7 @@ import { CardItemDetail } from "../../components/cards/CardItemDetail";
 import { AddCardsPanel } from "./AddCardsPanel";
 
 import { CardQuickViewModal } from "../../components/cards/CardQuickViewModal";
+import "./collectionPage.css";
 
 /* 🔹 Tipo local: carta + owned */
 /*type CardWithOwned = Card & {owned: boolean;};*/
@@ -25,6 +26,8 @@ import { CardQuickViewModal } from "../../components/cards/CardQuickViewModal";
 
 
 export default function CollectionPage() {
+    type BinderLayout = "3x3" | "4x3" | "2x2" | "4x4";
+
     /* 🔹 Params */
     const { id } = useParams();
     const collectionId = id ? Number(id) : null;
@@ -56,8 +59,36 @@ export default function CollectionPage() {
     });
 
     const [showAddCardsModal, setShowAddCardsModal] = useState(false);
+    const [viewMode, setViewMode] = useState<"grid" | "binder">("grid");
+    const [binderLayout, setBinderLayout] = useState<BinderLayout>("3x3");
     const [isUpdatingPrices, setIsUpdatingPrices] = useState(false);
     const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+
+    const binderLayoutConfig: Record<BinderLayout, { label: string; rows: number; cols: number }> = {
+        "3x3": { label: "9 bolsos · 3x3", rows: 3, cols: 3 },
+        "4x3": { label: "12 bolsos · 4x3", rows: 4, cols: 3 },
+        "2x2": { label: "4 bolsos · 2x2", rows: 2, cols: 2 },
+        "4x4": { label: "16 bolsos · 4x4", rows: 4, cols: 4 },
+    };
+
+    const activeLayout = binderLayoutConfig[binderLayout];
+    const slotsPerPage = activeLayout.rows * activeLayout.cols;
+    const cardsPerSpread = slotsPerPage * 2;
+    const binderSpreads = [] as Array<{ left: Array<CollectionCard | null>; right: Array<CollectionCard | null> }>;
+
+    for (let start = 0; start < filteredCollection.length; start += cardsPerSpread) {
+        const spreadCards = filteredCollection.slice(start, start + cardsPerSpread);
+        const left: Array<CollectionCard | null> = spreadCards.slice(0, slotsPerPage);
+        const right: Array<CollectionCard | null> = spreadCards.slice(slotsPerPage, cardsPerSpread);
+        while (left.length < slotsPerPage) left.push(null);
+        while (right.length < slotsPerPage) right.push(null);
+        binderSpreads.push({ left, right });
+    }
+
+    if (binderSpreads.length === 0) {
+        const emptyPage = Array.from({ length: slotsPerPage }, () => null);
+        binderSpreads.push({ left: emptyPage, right: [...emptyPage] });
+    }
 
     const toPriceNumber = (value: string | null) => Number.parseFloat(value ?? "0") || 0;
 
@@ -135,6 +166,41 @@ export default function CollectionPage() {
 
             {/* 🃏 Lista */}
             <SearchFilters filters={filters} onChange={setFilters} />
+
+            <div className="collection-view-switcher">
+                <span className="collection-view-switcher__title">Modo de visualização</span>
+                <div className="collection-view-switcher__modes">
+                    <button
+                        type="button"
+                        className={`collection-view-switcher__button ${viewMode === "grid" ? "is-active" : ""}`}
+                        onClick={() => setViewMode("grid")}
+                    >
+                        Grade
+                    </button>
+                    <button
+                        type="button"
+                        className={`collection-view-switcher__button ${viewMode === "binder" ? "is-active" : ""}`}
+                        onClick={() => setViewMode("binder")}
+                    >
+                        Fichário
+                    </button>
+                </div>
+
+                {viewMode === "binder" && (
+                    <div className="collection-view-switcher__layouts">
+                        {(Object.keys(binderLayoutConfig) as BinderLayout[]).map((layoutKey) => (
+                            <button
+                                key={layoutKey}
+                                type="button"
+                                className={`collection-view-switcher__button ${binderLayout === layoutKey ? "is-active" : ""}`}
+                                onClick={() => setBinderLayout(layoutKey)}
+                            >
+                                {binderLayoutConfig[layoutKey].label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
 
             <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
                 <button
@@ -218,6 +284,66 @@ export default function CollectionPage() {
             <Section title="Suas Cartas">
                 {filteredCollection.length === 0 ? (
                     <p style={{ color: "#999" }}>Nenhuma carta corresponde aos filtros.</p>
+                ) : viewMode === "binder" ? (
+                    <div className="binder-view">
+                        {binderSpreads.map((spread, spreadIndex) => (
+                            <article key={spreadIndex} className="binder-spread">
+                                <div className="binder-spread__rings" aria-hidden="true" />
+                                <div
+                                    className="binder-page"
+                                    style={{
+                                        gridTemplateColumns: `repeat(${activeLayout.cols}, minmax(0, 1fr))`,
+                                        gridTemplateRows: `repeat(${activeLayout.rows}, minmax(0, 1fr))`,
+                                    }}
+                                >
+                                    {spread.left.map((card, index) => (
+                                        <button
+                                            key={`left-${spreadIndex}-${index}`}
+                                            type="button"
+                                            className={`binder-pocket ${card ? "has-card" : "is-empty"}`}
+                                            onClick={() => card && setSelectedCard(card)}
+                                            disabled={!card}
+                                        >
+                                            {card ? (
+                                                <>
+                                                    <img src={card.imagem || "/placeholder.png"} alt={card.nome} />
+                                                    <span>{card.nome}</span>
+                                                </>
+                                            ) : (
+                                                <span>Slot vazio</span>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div
+                                    className="binder-page"
+                                    style={{
+                                        gridTemplateColumns: `repeat(${activeLayout.cols}, minmax(0, 1fr))`,
+                                        gridTemplateRows: `repeat(${activeLayout.rows}, minmax(0, 1fr))`,
+                                    }}
+                                >
+                                    {spread.right.map((card, index) => (
+                                        <button
+                                            key={`right-${spreadIndex}-${index}`}
+                                            type="button"
+                                            className={`binder-pocket ${card ? "has-card" : "is-empty"}`}
+                                            onClick={() => card && setSelectedCard(card)}
+                                            disabled={!card}
+                                        >
+                                            {card ? (
+                                                <>
+                                                    <img src={card.imagem || "/placeholder.png"} alt={card.nome} />
+                                                    <span>{card.nome}</span>
+                                                </>
+                                            ) : (
+                                                <span>Slot vazio</span>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </article>
+                        ))}
+                    </div>
                 ) : (
                     <div className="card-grid">
                         {filteredCollection.map((card) => (
