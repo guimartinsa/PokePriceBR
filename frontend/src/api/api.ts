@@ -17,9 +17,6 @@ const apiUrl = `${backendBaseUrl}/api`;
 export const api = axios.create({
   baseURL: apiUrl,
   timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // Interceptor de REQUEST: injeta Bearer token se existir
@@ -29,6 +26,11 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  
+  if (!(config.data instanceof FormData) && !config.headers["Content-Type"]) {
+    config.headers["Content-Type"] = "application/json";
+  }
+
   return config;
 });
 
