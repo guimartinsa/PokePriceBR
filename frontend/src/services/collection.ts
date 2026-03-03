@@ -77,6 +77,34 @@ export async function toggleCollectionCard(
     });
 }
 
+
+export type OwnedCardState = {
+    id: number;
+    owned: boolean;
+    owned_normal: boolean;
+    owned_foil: boolean;
+    owned_reverse_foil: boolean;
+    owned_master_ball: boolean;
+    owned_pokeball_foil: boolean;
+};
+
+export async function fetchOwnedCards(): Promise<OwnedCardState[]> {
+    const res = await api.get<OwnedCardState[]>("/owned-cards/");
+    return res.data;
+}
+
+export async function toggleOwnedCard(
+    cardId: number,
+    owned: boolean,
+    variation?: CardVariation,
+): Promise<void> {
+    await api.post("/owned-cards/toggle/", {
+        card_id: cardId,
+        owned,
+        variation,
+    });
+}
+
 export async function addCardToCollection(
     collectionId: number,
     cardId: number

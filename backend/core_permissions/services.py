@@ -6,7 +6,8 @@ from cards.models import Collection, CollectionCard
 
 
 FREE_COLLECTION_LIMIT = 1
-FREE_TOTAL_CARDS_LIMIT = 300
+FREE_COLLECTION_CARDS_LIMIT = 250
+PRO_COLLECTION_CARDS_LIMIT = 400
 FREE_API_DAILY_LIMIT = 100
 
 
@@ -23,14 +24,16 @@ def enforce_collection_creation_limit(profile):
         raise PlanLimitError("Plano FREE permite apenas 1 coleção.")
 
 
-def enforce_card_creation_limit(profile):
-    if profile.is_admin_plan or profile.can_access_pro_features:
+def enforce_card_creation_limit(profile, collection):
+    if profile.is_admin_plan:
         return
 
-    total_cards = CollectionCard.objects.filter(collection__user=profile.user, owned=True).count()
+    limit = PRO_COLLECTION_CARDS_LIMIT if profile.can_access_pro_features else FREE_COLLECTION_CARDS_LIMIT
+    total_cards = CollectionCard.objects.filter(collection=collection).count()
 
-    if total_cards >= FREE_TOTAL_CARDS_LIMIT:
-        raise PlanLimitError("Plano FREE atingiu o limite total de 300 cartas.")
+    if total_cards >= limit:
+        plan_name = "PREMIUM" if profile.can_access_pro_features else "FREE"
+        raise PlanLimitError(f"Plano {plan_name} atingiu o limite de {limit} cartas nesta coleção.")
 
 
 def enforce_public_collection_limit(profile, is_public):
