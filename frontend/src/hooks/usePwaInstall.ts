@@ -14,8 +14,13 @@ export function usePwaInstall() {
   const [isInstalled, setIsInstalled] = useState<boolean>(() => isStandaloneMode());
 
   useEffect(() => {
+    const refreshInstallState = () => {
+      setIsInstalled(isStandaloneMode());
+    };
+
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
+      refreshInstallState();
       setDeferredPrompt(event as BeforeInstallPromptEvent);
     };
 
@@ -24,12 +29,25 @@ export function usePwaInstall() {
       setDeferredPrompt(null);
     };
 
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshInstallState();
+      }
+    };
+
+
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
     window.addEventListener("appinstalled", onInstalled);
+    window.addEventListener("focus", refreshInstallState);
+    window.addEventListener("pageshow", refreshInstallState);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
       window.removeEventListener("appinstalled", onInstalled);
+      window.removeEventListener("focus", refreshInstallState);
+      window.removeEventListener("pageshow", refreshInstallState);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);
 
