@@ -25,6 +25,14 @@ type Props = {
 export function SearchFilters({ filters, onChange }: Props) {
     const [showAdvanced, setShowAdvanced] = useState(false);
 
+    const sortOptions = [
+        { value: "", label: "Padrão" },
+        { value: "nome", label: "Nome (A-Z)" },
+        { value: "numero", label: "Número (crescente)" },
+        { value: "preco", label: "Preço (menor primeiro)" },
+        { value: "lancamento", label: "Lançamento (mais novo)" },
+    ] as const;
+
     const updateFilter = (key: keyof SearchFiltersState, value: string | boolean | null) => {
         onChange({ ...filters, [key]: value });
     };
@@ -63,19 +71,24 @@ export function SearchFilters({ filters, onChange }: Props) {
                 <SetAutocomplete value={filters.set} onChange={(set) => updateFilter("set", set)} />
 
                 <div>
-                    <label htmlFor="ordenar" className="filters-label">Ordenar por</label>
-                    <select
-                        id="ordenar"
-                        value={filters.ordenar}
-                        onChange={(event) => updateFilter("ordenar", event.target.value)}
-                        className="filters-select"
-                    >
-                        <option value="">Padrão</option>
-                        <option value="nome">Nome (A-Z)</option>
-                        <option value="numero">Número (crescente)</option>
-                        <option value="preco">Preço (menor primeiro)</option>
-                        <option value="lancamento">Lançamento (mais novo)</option>
-                    </select>
+                    <span className="filters-label">Ordenar por</span>
+                    <div className="filters-sort-options" role="radiogroup" aria-label="Ordenar por">
+                        {sortOptions.map((option) => {
+                            const isActive = filters.ordenar === option.value;
+                            return (
+                                <button
+                                    key={option.value || "padrao"}
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={isActive}
+                                    onClick={() => updateFilter("ordenar", option.value)}
+                                    className={`filters-sort-option ${isActive ? "is-active" : ""}`}
+                                >
+                                    {option.label}
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
 
                 {/* Toggle Filtros Avançados */}

@@ -136,3 +136,17 @@
     display: none;
   }
 }
+
+
+.binder-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.binder-pagination__label {
+  font-size: 0.92rem;
+  color: #d6deea;
+  font-weight: 700;
+}
