@@ -54,6 +54,7 @@ export default function SetPage() {
     const [creatingDefaultCollection, setCreatingDefaultCollection] = useState(false);
 
     const [setName, setSetName] = useState<string>(setCode);
+    const [setId, setSetId] = useState<number | null>(null);
     const [selectedCard, setSelectedCard] = useState<Card | null>(null);
 
     const isInitialLoading = loadingCards && page === 1;
@@ -61,6 +62,7 @@ export default function SetPage() {
     useEffect(() => {
         setFilters(createDefaultFilters(setCode));
         setSetName(setCode);
+        setSetId(null);
         setPage(1);
         setHasMore(true);
         setCards([]);
@@ -72,6 +74,9 @@ export default function SetPage() {
 
             if (selectedSet?.nome) {
                 setSetName(selectedSet.nome);
+            }
+            if (selectedSet?.id) {
+                setSetId(selectedSet.id);
             }
         });
     }, [setCode]);
@@ -120,7 +125,7 @@ export default function SetPage() {
     }, [setCode, filters.nome, filters.raridade, filters.ilustrador, filters.over, filters.preco_min, filters.preco_max, filters.ordenar]);
 
     useEffect(() => {
-        if (!setCode) {
+        if (!setId) {
             setCards([]);
             return;
         }
@@ -128,7 +133,7 @@ export default function SetPage() {
         setLoadingCards(true);
         fetchCards({
             page,
-            set: setCode,
+            set_id: setId,
             nome: filters.nome || undefined,
             raridade: filters.raridade || undefined,
             ilustrador: filters.ilustrador || undefined,
@@ -147,7 +152,7 @@ export default function SetPage() {
                 setHasMore(Boolean(data.next));
             })
             .finally(() => setLoadingCards(false));
-    }, [setCode, page, filters.nome, filters.raridade, filters.ilustrador, filters.over, filters.preco_min, filters.preco_max, filters.ordenar, ownedByCardId]);
+    }, [setId, page, filters.nome, filters.raridade, filters.ilustrador, filters.over, filters.preco_min, filters.preco_max, filters.ordenar, ownedByCardId]);
 
     const safeFilters = useMemo(
         () => ({

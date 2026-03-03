@@ -98,7 +98,12 @@ class CardListView(ListAPIView):
             else:
                 qs = qs.filter(nome__icontains=search_term)
 
-        # Filtro por set
+        # Filtro por set (vinculo exato por ID quando informado)
+        set_id = self.request.query_params.get("set_id")
+        if set_id:
+            qs = qs.filter(set_id=set_id)
+
+        # Filtro por set (codigo/nome)
         set_code = self.request.query_params.get("set")
         if set_code:
             qs = qs.filter(

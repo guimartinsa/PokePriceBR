@@ -12,7 +12,7 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
     year: "numeric",
 });
 
-type ProgressBySetCode = Record<string, { owned: number; total: number }>;
+type ProgressBySetId = Record<number, { owned: number; total: number }>;
 
 function getLevel(percentage: number): number {
     if (percentage >= 75) return 3;
@@ -29,7 +29,7 @@ export default function SeriesDetailPage() {
     const [loadingSeries, setLoadingSeries] = useState(true);
 
     const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
-    const [progressBySetCode, setProgressBySetCode] = useState<ProgressBySetCode>({});
+    const [progressBySetId, setProgressBySetId] = useState<ProgressBySetId>({});
 
     useEffect(() => {
         fetchSeries()
@@ -65,47 +65,42 @@ export default function SeriesDetailPage() {
         if (!selectedSeries) return;
 
         const fetchProgress = async () => {
-            const ownedBySetCode: Record<string, number> = {};
+            const ownedBySetId: Record<number, number> = {};
 
             if (selectedCollectionId) {
                 const collectionCards = await fetchCollectionCards(selectedCollectionId);
                 collectionCards
                     .filter((item) => item.owned)
                     .forEach((item) => {
-                        const setCode = item.set?.codigo_liga;
-                        if (!setCode) return;
+                        const setId = item.set?.id;
+                        if (!setId) return;
 
-                        ownedBySetCode[setCode] = (ownedBySetCode[setCode] ?? 0) + 1;
+                        ownedBySetId[setId] = (ownedBySetId[setId] ?? 0) + 1;
                     });
             }
 
             const entries = await Promise.all(
                 selectedSeries.sets.map(async (setItem) => {
-                    const setCode = setItem.codigo_liga;
-                    if (!setCode) {
-                        return ["", { owned: 0, total: 0 }] as const;
-                    }
+                    const setId = setItem.id;
 
                     try {
-                        const response = await fetchCards({ set: setCode, page: 1 });
-                        return [setCode, { owned: ownedBySetCode[setCode] ?? 0, total: response.count }] as const;
+                        const response = await fetchCards({ set_id: setId, page: 1 });
+                        return [setId, { owned: ownedBySetId[setId] ?? 0, total: response.count }] as const;
                     } catch {
-                        return [setCode, { owned: ownedBySetCode[setCode] ?? 0, total: 0 }] as const;
+                        return [setId, { owned: ownedBySetId[setId] ?? 0, total: 0 }] as const;
                     }
                 }),
             );
 
-            const nextProgress: ProgressBySetCode = {};
-            entries.forEach(([setCode, value]) => {
-                if (setCode) {
-                    nextProgress[setCode] = value;
-                }
+            const nextProgress: ProgressBySetId = {};
+            entries.forEach(([setId, value]) => {
+                nextProgress[setId] = value;
             });
 
-            setProgressBySetCode(nextProgress);
+            setProgressBySetId(nextProgress);
         };
 
-        fetchProgress().catch(() => setProgressBySetCode({}));
+        fetchProgress().catch(() => setProgressBySetId({}));
     }, [selectedCollectionId, selectedSeries]);
 
     if (loadingSeries) return <p style={{ padding: 16 }}>Carregando serie...</p>;
@@ -133,7 +128,7 @@ export default function SeriesDetailPage() {
 
             <section className="series-set-list">
                 {orderedSets.map((setItem) => (
-                    <SeriesSetCard key={setItem.id} setItem={setItem} progress={progressBySetCode[setItem.codigo_liga ?? ""]} onOpenSet={() => setItem.codigo_liga && navigate(`/series/sets/${encodeURIComponent(setItem.codigo_liga)}`)} />
+                    <SeriesSetCard key={setItem.id} setItem={setItem} progress={progressBySetId[setItem.id]} onOpenSet={() => setItem.codigo_liga && navigate(`/series/sets/${encodeURIComponent(setItem.codigo_liga)}`)} />
                 ))}
             </section>
         </main>
