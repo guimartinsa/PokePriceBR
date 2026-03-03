@@ -8,10 +8,10 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "script-defer",
-      includeAssets: ["favicon.svg", "robots.txt", "sitemap.xml"],
+      includeAssets: ["favicon.svg", "robots.txt", "sitemaps.xml"],
       manifest: {
-        name: "PokePriceBR",
-        short_name: "PokePrice",
+        name: "PriceDexBR",
+        short_name: "PriceDexBR",
         description: "Scanner e catálogo de cartas Pokémon",
         theme_color: "#0f172a",
         background_color: "#0f172a",
@@ -28,6 +28,12 @@ export default defineConfig({
             src: "/icon-512.png",
             sizes: "512x512",
             type: "image/png",
+          },
+          {
+            src: "/icon-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any maskable",
           },
         ],
       },
