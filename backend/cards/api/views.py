@@ -25,7 +25,7 @@ from django.db import models
 
 from cards.models import Card, CardAdminLog
 from cards.models import Series, Set
-from cards.models import Collection, CollectionCard
+from cards.models import Collection, CollectionCard, UserCard
 
 from cards.services.liga_scraper import atualizar_preco_carta
 from cards.services.admin_log import log_admin_action
@@ -549,9 +549,8 @@ def atualizar_colecao_view(request, collection_id):
 @permission_classes([IsAuthenticated])
 def toggle_card_owned(request, collection_id):
     """
-    POST: Marca/desmarca uma carta como "tenho"
+    POST: Marca/desmarca uma carta em uma coleção personalizada.
     """
-    # Verifica se a coleção pertence ao usuário
     collection = get_object_or_404(
         Collection,
         id=collection_id,
@@ -579,14 +578,14 @@ def toggle_card_owned(request, collection_id):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    if owned:
+    collection_card = CollectionCard.objects.filter(collection=collection, card_id=card_id).first()
+    if not collection_card and owned:
         try:
-            enforce_card_creation_limit(profile)
+            enforce_card_creation_limit(profile, collection)
         except PlanLimitError as exc:
             return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
 
-    # Cria ou atualiza o registro
-    collection_card, created = CollectionCard.objects.get_or_create(
+    collection_card, _ = CollectionCard.objects.get_or_create(
         collection=collection,
         card_id=card_id,
         defaults={"owned": owned}
@@ -606,6 +605,74 @@ def toggle_card_owned(request, collection_id):
         collection_card.save(update_fields=["owned", *variation_to_field.values()])
 
     return Response({"ok": True, "owned": collection_card.owned})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def owned_cards_view(request):
+    cards = UserCard.objects.filter(user=request.user)
+    variation_map = {
+        "normal": "owned_normal",
+        "foil": "owned_foil",
+        "reverse_foil": "owned_reverse_foil",
+        "master_ball": "owned_master_ball",
+        "pokeball_foil": "owned_pokeball_foil",
+    }
+
+    owned_by_card_id = {}
+    for item in cards:
+        card_id = item.card_id
+        state = owned_by_card_id.setdefault(
+            card_id,
+            {
+                "id": card_id,
+                "owned": False,
+                "owned_normal": False,
+                "owned_foil": False,
+                "owned_reverse_foil": False,
+                "owned_master_ball": False,
+                "owned_pokeball_foil": False,
+            },
+        )
+
+        field_name = variation_map.get((item.foil_type or "").lower() or "normal")
+        if field_name:
+            state[field_name] = True
+            state["owned"] = True
+
+    return Response(list(owned_by_card_id.values()))
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def toggle_owned_card_view(request):
+    card_id = request.data.get("card_id")
+    owned = bool(request.data.get("owned", False))
+    variation = (request.data.get("variation") or "normal").lower()
+
+    if not card_id:
+        return Response({"error": "card_id é obrigatório"}, status=status.HTTP_400_BAD_REQUEST)
+
+    valid_variations = {"normal", "foil", "reverse_foil", "master_ball", "pokeball_foil"}
+    if variation not in valid_variations:
+        return Response({"error": "variation inválida"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if owned:
+        UserCard.objects.get_or_create(
+            user=request.user,
+            card_id=card_id,
+            foil_type=variation,
+            defaults={"quantity": 1},
+        )
+    else:
+        UserCard.objects.filter(
+            user=request.user,
+            card_id=card_id,
+            foil_type=variation,
+        ).delete()
+
+    has_any = UserCard.objects.filter(user=request.user, card_id=card_id).exists()
+    return Response({"ok": True, "owned": has_any})
 
 api_view(["POST"])
 @permission_classes([IsAuthenticated])
