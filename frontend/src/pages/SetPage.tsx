@@ -8,6 +8,7 @@ import { SearchFilters, type SearchFiltersState } from "../components/filters/Se
 import { CardQuickViewModal } from "../components/cards/CardQuickViewModal";
 import { Loading } from "../components/Loading";
 import {
+    createCollection,
     fetchCollectionCards,
     fetchCollections,
     toggleCollectionCard,
@@ -50,6 +51,7 @@ export default function SetPage() {
     const [collections, setCollections] = useState<Collection[]>([]);
     const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
     const [ownedByCardId, setOwnedByCardId] = useState<Record<number, OwnedVariationState>>({});
+    const [creatingDefaultCollection, setCreatingDefaultCollection] = useState(false);
 
     const [setName, setSetName] = useState<string>(setCode);
     const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -155,8 +157,32 @@ export default function SetPage() {
         [filters, setCode],
     );
 
-    const handleToggleOwned = (cardId: number, variation: CardVariation, owned: boolean) => {
-        if (!selectedCollectionId) return;
+    const getOrCreateCollectionId = async () => {
+        if (selectedCollectionId) {
+            return selectedCollectionId;
+        }
+
+        if (creatingDefaultCollection) {
+            return null;
+        }
+
+        setCreatingDefaultCollection(true);
+        try {
+            const newCollection = await createCollection("Minha coleção");
+            setCollections((prev) => [...prev, newCollection]);
+            setSelectedCollectionId(newCollection.id);
+            return newCollection.id;
+        } catch {
+            alert("Não foi possível criar sua coleção automaticamente.");
+            return null;
+        } finally {
+            setCreatingDefaultCollection(false);
+        }
+    };
+
+    const handleToggleOwned = async (cardId: number, variation: CardVariation, owned: boolean) => {
+        const collectionId = await getOrCreateCollectionId();
+        if (!collectionId) return;
 
         const field = variationFieldMap[variation];
         setCards((prev) => prev.map((card) => {
@@ -174,7 +200,7 @@ export default function SetPage() {
             return { ...prev, [cardId]: next };
         });
 
-        toggleCollectionCard(selectedCollectionId, cardId, owned, variation).catch(() => {
+        toggleCollectionCard(collectionId, cardId, owned, variation).catch(() => {
             setCards((prev) => prev.map((card) => {
                 if (card.id !== cardId) return card;
                 const revertedCard = { ...card, [field]: !owned };
@@ -223,7 +249,7 @@ export default function SetPage() {
                 </label>
             ) : (
                 <p style={{ color: "#f4c26b", marginBottom: 16 }}>
-                    Crie uma colecao para poder marcar se voce tem ou nao cada carta.
+                    Você pode marcar cartas como "tenho" normalmente. Vamos criar sua primeira coleção automaticamente.
                 </p>
             )}
 
@@ -249,7 +275,9 @@ export default function SetPage() {
                                 key={card.id}
                                 card={card}
                                 onClick={() => setSelectedCard(card)}
-                                onToggleOwned={selectedCollectionId ? (variation, owned) => handleToggleOwned(card.id, variation, owned) : undefined}
+                                onToggleOwned={(variation, owned) => {
+                                    void handleToggleOwned(card.id, variation, owned);
+                                }}
                             />
                         ))}
                     </div>
