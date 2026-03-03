@@ -31,7 +31,7 @@ export default function BottomBar() {
                 <img src={WishlistIcon} alt="" width={45} height={45} />
             </button>
 
-            <button aria-label="Ver séries" onClick={() => navigate("/series")}>
+            <button aria-label="Abrir coleção" onClick={() => navigate("/collection")}>
                 <img src={IconeColecao} alt="" width={35} height={35} />
             </button>
         </nav>
