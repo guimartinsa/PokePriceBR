@@ -1,22 +1,23 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
 export function Hero() {
+    const navigate = useNavigate()
     const { isAuthenticated } = useAuth();
     return (
         <section className="hero">
             <h1>
-                The <span className="highlight">Best</span><br />
-                Pokémon Card<br />
-                Tracker
+                O <span className="highlight">Melhor</span><br />
+                Gerenciador de coleções<br />
+                Para colecionadores <span className="highlight">brasileiros</span> de Pokemon
             </h1>
 
             <p>
-                Track your Pokémon card collection, prices and build your decks.
+                Gerencie sua coleção de cartas Pokémon e monitore os valores de mercado em tempo real.
             </p>
 
             <div className="hero-actions">
-                <button className="cta">Criar minha coleção</button>
+                <button className="cta" onClick={() => navigate("/collection")} >Criar minha coleção</button>
                 {!isAuthenticated && (
                     <Link to="/auth" className="cta cta-secondary">
                         Criar minha conta
