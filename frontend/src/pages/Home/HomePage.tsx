@@ -88,7 +88,7 @@ export default function HomePage() {
             },
             {
                 element: "#tour-bottom-series",
-                intro: "Séries: navegue pelas séries disponíveis.",
+                intro: "Séries: navegue pelos blocos e por todas as coleções ja lançadas.",
                 title: "Séries",
                 position: "top"
             },
