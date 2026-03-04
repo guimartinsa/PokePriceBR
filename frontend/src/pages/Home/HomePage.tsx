@@ -10,6 +10,7 @@ type IntroStep = {
     element: string;
     intro: string;
     title: string;
+    position?: "top" | "right" | "left" | "bottom";
 };
 
 type IntroInstance = {
@@ -42,31 +43,81 @@ export default function HomePage() {
         const tourAlreadySeen = window.sessionStorage.getItem("home-tour-seen") === "true";
         if (tourAlreadySeen) return;
 
-        // Inicializa o tour com 3 passos principais da home e classes de tema customizadas.
+        // Inicializa o tour com os passos principais da home e um guia detalhado da bottom bar.
         const intro = introFactory();
+
+        const steps: IntroStep[] = [
+            {
+                element: "#tour-hero-title",
+                intro: "Este bloco apresenta a proposta principal do PriceDexBR.",
+                title: "Boas-vindas"
+            },
+            {
+                element: "#tour-create-collection",
+                intro: "Comece sua jornada clicando aqui para montar sua coleção.",
+                title: "Ação principal"
+            },
+            {
+                element: "#tour-home-showcase",
+                intro: "Aqui você acompanha os destaques visuais e novidades da plataforma.",
+                title: "Destaques"
+            },
+            {
+                element: "#tour-bottom-bar",
+                intro: "Esta é a button bar: aqui ficam os atalhos principais do app.",
+                title: "Button bar",
+                position: "top"
+            },
+            {
+                element: "#tour-bottom-home",
+                intro: "Home: volta para a tela inicial.",
+                title: "Início",
+                position: "top"
+            },
+            {
+                element: "#tour-bottom-search",
+                intro: "Busca: abre a pesquisa de cartas.",
+                title: "Buscar cartas",
+                position: "top"
+            },
+            {
+                element: "#tour-bottom-scan",
+                intro: "Scanner: abre a câmera para escanear cartas.",
+                title: "Escanear",
+                position: "top"
+            },
+            {
+                element: "#tour-bottom-series",
+                intro: "Séries: navegue pelas séries disponíveis.",
+                title: "Séries",
+                position: "top"
+            },
+            {
+                element: "#tour-bottom-collection",
+                intro: "Coleções: acesse e organize suas coleções.",
+                title: "Coleções",
+                position: "top"
+            }
+        ];
+
+        if (document.querySelector("#tour-install-pwa")) {
+            steps.push({
+                element: "#tour-install-pwa",
+                intro: "Aqui fica o instalador do app (PWA). Toque em Instalar para adicionar no seu dispositivo.",
+                title: "Instalar app",
+                position: "top"
+            });
+        } else {
+            steps.push({
+                element: "#tour-bottom-bar",
+                intro: "O botão Instalar aparece no canto direito da button bar quando o navegador permite instalar o PWA.",
+                title: "Onde fica o instalador",
+                position: "top"
+            });
+        }
+
         intro.setOptions({
-            steps: [
-                {
-                    element: "#tour-hero-title",
-                    intro: "Este bloco apresenta a proposta principal do PriceDexBR.",
-                    title: "Boas-vindas"
-                },
-                {
-                    element: "#tour-create-collection",
-                    intro: "Comece sua jornada clicando aqui para montar sua coleção.",
-                    title: "Ação principal"
-                },
-                {
-                    element: "#tour-home-showcase",
-                    intro: "Aqui você acompanha os destaques visuais e novidades da plataforma.",
-                    title: "Destaques"
-                },
-                {
-                    element: "#tour-bottom-bar",
-                    intro: "A barra inferior reúne a navegação principal do app, incluindo o ponto para instalar o PWA quando disponível.",
-                    title: "Button bar"
-                }
-            ],
+            steps,
             showProgress: true,
             showBullets: true,
             exitOnOverlayClick: true,
