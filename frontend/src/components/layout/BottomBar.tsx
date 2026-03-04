@@ -4,6 +4,7 @@ import IconeCamera from "../../assets/icons/camera-pokemon.svg";
 import IconeColecao from "../../assets/icons/colecaoicon.svg";
 import IconHome from "../../assets/icons/home-icon.svg";
 import WishlistIcon from "../../assets/icons/wishlist-icon.svg";
+import { usePwaInstall } from "../../hooks/usePwaInstall";
 
 
 import "../../styles/global.css";
@@ -11,9 +12,10 @@ import "../../styles/global.css";
 
 export default function BottomBar() {
     const navigate = useNavigate();
+    const { canInstall, install } = usePwaInstall();
 
     return (
-        <nav className="bottom-bar">
+        <nav id="tour-bottom-bar" className="bottom-bar">
             <button aria-label="Ir para a página inicial" onClick={() => navigate("/")}>
                 <img src={IconHome} alt="" width={45} height={45} />
             </button>
@@ -34,7 +36,18 @@ export default function BottomBar() {
             <button aria-label="Abrir coleções" onClick={() => navigate("/collection")}>
                 <img src={IconeColecao} alt="" width={35} height={35} />
             </button>
+
+            {canInstall && (
+                <button
+                    aria-label="Instalar aplicativo"
+                    id="tour-install-pwa" className="install-app-button"
+                    onClick={() => void install()}
+                    title="Instalar PWA"
+                >
+                    <span aria-hidden="true">⬇️</span>
+                    <small>Instalar</small>
+                </button>
+            )}
         </nav>
     );
 }
-

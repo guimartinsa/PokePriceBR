@@ -1088,3 +1088,16 @@ input:focus {
     border-radius: 10px !important;
     box-shadow: 0 0 0 3px rgba(246, 196, 0, 0.5) !important;
 }
+.install-app-button {
+    margin-left: auto;
+    min-width: 72px;
+    color: #f6c400 !important;
+    border: 1px solid rgba(246, 196, 0, 0.45) !important;
+    border-radius: 12px !important;
+    padding: 6px 8px !important;
+    line-height: 1.1;
+}
+
+.install-app-button small {
+    font-size: 0.7rem;
+}

@@ -60,6 +60,11 @@ export default function HomePage() {
                     element: "#tour-home-showcase",
                     intro: "Aqui você acompanha os destaques visuais e novidades da plataforma.",
                     title: "Destaques"
+                },
+                {
+                    element: "#tour-bottom-bar",
+                    intro: "A barra inferior reúne a navegação principal do app, incluindo o ponto para instalar o PWA quando disponível.",
+                    title: "Button bar"
                 }
             ],
             showProgress: true,

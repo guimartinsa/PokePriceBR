@@ -1,14 +1,12 @@
 //import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { usePwaInstall } from "../../hooks/usePwaInstall";
 //import LoginButton from "../login/LoginButton";
 
 const fallbackAvatar = "https://ui-avatars.com/api/?name=User&background=222b38&color=fff";
 
 export default function TopBar() {
     const { user, loading, isAuthenticated, logout } = useAuth();
-    const { canInstall, install } = usePwaInstall();
     // Força re-render após login bem-sucedido
     //const [, setTick] = useState(0);
 
@@ -27,23 +25,6 @@ export default function TopBar() {
                 minHeight: 48,
             }}
         >
-            {canInstall && (
-                <button
-                    onClick={() => void install()}
-                    style={{
-                        background: "#2563eb",
-                        border: "none",
-                        color: "#fff",
-                        borderRadius: 6,
-                        padding: "6px 12px",
-                        fontSize: 13,
-                        cursor: "pointer",
-                    }}
-                >
-                    Instalar app
-                </button>
-            )}
-
             {isAuthenticated && user ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <Link to="/perfil" style={{ display: "flex", alignItems: "center", gap: 8, color: "#b9c2cf", textDecoration: "none" }}>
