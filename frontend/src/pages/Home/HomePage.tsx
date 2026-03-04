@@ -1,5 +1,6 @@
 // pages/Home/HomePage.tsx
 // pages/Home/HomePage.tsx
+import { useEffect } from "react";
 import { Hero } from "./Hero";
 //import { StatsBar } from "./StatsBar";
 //import {CardList} from "../../components/CardList";
@@ -10,11 +11,54 @@ import "../../styles/global.css";
 import baner from "../../assets/baner-herois-Dqf_ERhK.webp"
 
 export default function HomePage() {
+    useEffect(() => {
+        // Intro.js é carregado via CDN no index.html e fica disponível no escopo global.
+        const introFactory = (window as Window & { introJs?: () => any }).introJs;
+
+        if (!introFactory) return;
+
+        // Inicializa o tour com 3 passos principais da home.
+        const intro = introFactory();
+        intro.setOptions({
+            steps: [
+                {
+                    element: "#tour-hero-title",
+                    intro: "Este bloco apresenta a proposta principal do PriceDexBR.",
+                    title: "Boas-vindas"
+                },
+                {
+                    element: "#tour-create-collection",
+                    intro: "Comece sua jornada clicando aqui para montar sua coleção.",
+                    title: "Ação principal"
+                },
+                {
+                    element: "#tour-home-showcase",
+                    intro: "Aqui você acompanha os destaques visuais e novidades da plataforma.",
+                    title: "Destaques"
+                }
+            ],
+            showProgress: true,
+            showBullets: true,
+            nextLabel: "Próximo",
+            prevLabel: "Voltar",
+            doneLabel: "Concluir",
+            skipLabel: "Pular"
+        });
+
+        intro.start();
+    }, []);
+
     return (
         <div className="home">
             <Hero />
 
-            <section className="home-showcase" aria-label="Destaques da plataforma">
+            <section
+                id="tour-home-showcase"
+                className="home-showcase"
+                aria-label="Destaques da plataforma"
+                data-step="3"
+                data-intro="Esta seção reúne os destaques principais da interface inicial."
+            >
                 <div className="home-showcase-image" role="img" aria-label="Área reservada para imagem principal">
 
                     <img
