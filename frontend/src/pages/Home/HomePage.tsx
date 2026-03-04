@@ -1,23 +1,48 @@
-// pages/Home/HomePage.tsx
-// pages/Home/HomePage.tsx
 import { useEffect } from "react";
 import { Hero } from "./Hero";
-//import { StatsBar } from "./StatsBar";
-//import {CardList} from "../../components/CardList";
 import "../../styles/global.css";
 //import "./home.css"
 
 //import baner from "../../assets/baner-herois.jpg";
 import baner from "../../assets/baner-herois-Dqf_ERhK.webp"
 
+type IntroStep = {
+    element: string;
+    intro: string;
+    title: string;
+};
+
+type IntroInstance = {
+    setOptions: (options: {
+        steps: IntroStep[];
+        showProgress: boolean;
+        showBullets: boolean;
+        exitOnOverlayClick: boolean;
+        nextLabel: string;
+        prevLabel: string;
+        doneLabel: string;
+        skipLabel: string;
+        tooltipClass: string;
+        highlightClass: string;
+        overlayOpacity: number;
+    }) => void;
+    start: () => void;
+};
+
+type IntroFactory = () => IntroInstance;
+
 export default function HomePage() {
     useEffect(() => {
-        // Intro.js é carregado via CDN no index.html e fica disponível no escopo global.
-        const introFactory = (window as Window & { introJs?: () => any }).introJs;
+        // Intro.js é carregado via CDN no index.html e fica disponível no objeto global.
+        const introFactory = (window as Window & { introJs?: IntroFactory }).introJs;
 
         if (!introFactory) return;
 
-        // Inicializa o tour com 3 passos principais da home.
+        // Evita abrir o tour automaticamente toda vez que o usuário voltar para a Home.
+        const tourAlreadySeen = window.sessionStorage.getItem("home-tour-seen") === "true";
+        if (tourAlreadySeen) return;
+
+        // Inicializa o tour com 3 passos principais da home e classes de tema customizadas.
         const intro = introFactory();
         intro.setOptions({
             steps: [
@@ -39,13 +64,18 @@ export default function HomePage() {
             ],
             showProgress: true,
             showBullets: true,
+            exitOnOverlayClick: true,
             nextLabel: "Próximo",
             prevLabel: "Voltar",
             doneLabel: "Concluir",
-            skipLabel: "Pular"
+            skipLabel: "Pular",
+            tooltipClass: "pricedex-tour-tooltip",
+            highlightClass: "pricedex-tour-highlight",
+            overlayOpacity: 0.72
         });
 
         intro.start();
+        window.sessionStorage.setItem("home-tour-seen", "true");
     }, []);
 
     return (
@@ -75,9 +105,7 @@ export default function HomePage() {
 
                 <div className="home-showcase-content">
                     <h2>Organize sua coleção com mais clareza</h2>
-                    <p>
-                        Acompanhe o valor das suas cartas, veja evolução de preço.
-                    </p>
+                    <p>Acompanhe o valor das suas cartas, veja evolução de preço.</p>
                     <p>
                         Em breve você poderá visualizar artes e capas personalizadas nesta seção.
                         Já deixamos o espaço pronto para adicionar suas imagens depois.

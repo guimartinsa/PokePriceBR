@@ -1038,3 +1038,53 @@ input:focus {
     border: 1px solid rgba(255, 255, 255, 0.2);
     color: #fff;
 }
+
+/* INTRO.JS - TOUR GUIADO */
+.pricedex-tour-tooltip {
+    background: #101a28 !important;
+    color: #e7edf6 !important;
+    border: 1px solid rgba(246, 196, 0, 0.35) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45) !important;
+    max-width: 360px !important;
+}
+
+.pricedex-tour-tooltip .introjs-tooltip-title {
+    color: #f6c400 !important;
+    font-size: 1rem !important;
+    margin-bottom: 8px !important;
+}
+
+.pricedex-tour-tooltip .introjs-tooltiptext {
+    color: #d6deea !important;
+    font-size: 0.95rem !important;
+    line-height: 1.5 !important;
+}
+
+.pricedex-tour-tooltip .introjs-progressbar {
+    background: #f6c400 !important;
+}
+
+.pricedex-tour-tooltip .introjs-button {
+    background: #f6c400 !important;
+    color: #111 !important;
+    border: none !important;
+    border-radius: 8px !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+}
+
+.pricedex-tour-tooltip .introjs-button:hover {
+    background: #ffd84d !important;
+}
+
+.pricedex-tour-tooltip .introjs-disabled,
+.pricedex-tour-tooltip .introjs-disabled:hover {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+}
+
+.pricedex-tour-highlight {
+    border-radius: 10px !important;
+    box-shadow: 0 0 0 3px rgba(246, 196, 0, 0.5) !important;
+}
