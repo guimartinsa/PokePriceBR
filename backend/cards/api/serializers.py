@@ -128,6 +128,9 @@ class ProfileSerializer(serializers.ModelSerializer):
         return "PRO" if obj.can_access_pro_features else None
 
     def validate_avatar_upload(self, avatar_upload):
+        if avatar_upload is None:
+            return avatar_upload
+        
         profile = self.instance
         if profile and not profile.can_access_pro_features and not profile.is_admin_plan:
             raise serializers.ValidationError("Upload de avatar personalizado exige plano PRO.")
