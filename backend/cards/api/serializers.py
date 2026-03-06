@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db.models import Count, Q
 from cards.models import Avatar, Card, CardAdminLog, Collection, CollectionCard, Profile, Series, Set, UserCard
 
 
@@ -9,9 +10,11 @@ class SetSerializer(serializers.ModelSerializer):
         fields = ["id", "nome", "codigo_liga", "logo", "release_date", "serie_id", "serie_nome", "tcgdex_id"]
 
 class SeriesSetSerializer(serializers.ModelSerializer):
+    cards_total = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Set
-        fields = ["id", "nome", "codigo_liga", "logo", "release_date", "serie_id", "serie_nome", "tcgdex_id"]
+        fields = ["id", "nome", "codigo_liga", "logo", "release_date", "serie_id", "serie_nome", "tcgdex_id", "cards_total"]
 
 
 class SeriesSerializer(serializers.ModelSerializer):
@@ -20,9 +23,17 @@ class SeriesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Series
         fields = ["id", "tcgdex_id", "nome", "logo", "sets"]
-
     def get_sets(self, obj):
-        queryset = Set.objects.filter(serie_id=obj.tcgdex_id).order_by("nome")
+        sets_by_series = self.context.get("sets_by_series")
+        if sets_by_series is not None:
+            queryset = sets_by_series.get(obj.tcgdex_id, [])
+        else:
+            queryset = (
+                Set.objects
+                .filter(serie_id=obj.tcgdex_id)
+                .annotate(cards_total=Count("cartas", filter=Q(cartas__ativa=True)))
+                .order_by("nome")
+            )
         return SeriesSetSerializer(queryset, many=True).data
 
 
@@ -267,3 +278,4 @@ class CollectionCardSerializer(serializers.ModelSerializer):
             "owned_pokeball_foil",
             "custom_photo",
         ]
+

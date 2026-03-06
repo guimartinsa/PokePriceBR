@@ -61,6 +61,20 @@ export async function fetchCollectionCards(
     return res.data;
 }
 
+export type CollectionSetProgress = {
+    set_id: number;
+    owned: number;
+};
+
+export async function fetchCollectionSetProgress(
+    collectionId: number,
+): Promise<CollectionSetProgress[]> {
+    const res = await api.get<CollectionSetProgress[]>(
+        `/collections/${collectionId}/progress-by-set/`,
+    );
+    return res.data;
+}
+
 /* 🔹 Marcar / desmarcar "Tenho" */
 export type CardVariation = "normal" | "foil" | "reverse_foil" | "master_ball" | "pokeball_foil";
 
@@ -128,3 +142,4 @@ export async function atualizarPrecosColecao(collectionId: number): Promise<{ st
     );
     return res.data;
 }
+

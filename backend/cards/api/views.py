@@ -1,5 +1,5 @@
 import re
-
+from collections import defaultdict
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -29,8 +29,6 @@ from cards.models import Collection, CollectionCard, UserCard
 
 from cards.services.liga_scraper import atualizar_preco_carta
 from cards.services.admin_log import log_admin_action
-from .serializers import SetSerializer
-
 from cards.tasks.atualizar_todas_cartas import atualizar_todas_cartas
 from cards.tasks.atualizar_preco_carta import atualizar_preco_carta_task
 from cards.tasks.import_sets import import_series_from_tcgdex_task, import_sets_from_tcgdex_task
@@ -315,6 +313,33 @@ class SeriesListView(ListAPIView):
 
         return qs
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        series_items = list(page) if page is not None else list(queryset)
+
+        sets_by_series = defaultdict(list)
+        series_ids = [item.tcgdex_id for item in series_items if item.tcgdex_id]
+        if series_ids:
+            set_queryset = (
+                Set.objects
+                .filter(serie_id__in=series_ids)
+                .annotate(cards_total=Count("cartas", filter=Q(cartas__ativa=True)))
+                .order_by("nome")
+            )
+            for set_item in set_queryset:
+                sets_by_series[set_item.serie_id].append(set_item)
+
+        serializer = self.get_serializer(
+            series_items,
+            many=True,
+            context={**self.get_serializer_context(), "sets_by_series": sets_by_series},
+        )
+
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+
 
 class ImportSeriesFromTCGDexView(APIView):
     permission_classes = [IsAdminUser]
@@ -336,6 +361,10 @@ class SetListView(ListAPIView):
 
     def get_queryset(self):
         qs = Set.objects.all().order_by("nome")
+
+        codigo = self.request.query_params.get("codigo")
+        if codigo:
+            qs = qs.filter(codigo_liga__iexact=codigo)
 
         search = self.request.query_params.get("search")
         if search:
@@ -508,11 +537,36 @@ def collection_cards_view(request, collection_id):
     cards = (
         CollectionCard.objects
         .filter(collection=collection)
-        .select_related("card")  # 🔥 ESSENCIAL
+        .select_related("card__set")  # Evita N+1 no serializer de card.set
     )
-
     serializer = CollectionCardSerializer(cards, many=True)
     return Response(serializer.data)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def collection_progress_by_set_view(request, collection_id):
+    collection = get_object_or_404(
+        Collection,
+        id=collection_id,
+        user=request.user,
+    )
+
+    rows = (
+        CollectionCard.objects
+        .filter(collection=collection, owned=True, card__set_id__isnull=False)
+        .values("card__set_id")
+        .annotate(owned=Count("id"))
+    )
+
+    payload = [
+        {
+            "set_id": row["card__set_id"],
+            "owned": row["owned"],
+        }
+        for row in rows
+    ]
+
+    return Response(payload)
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
@@ -732,3 +786,4 @@ def export_collection_view(request, collection_id):
         return Response({"format": "csv", "content": output.getvalue()})
 
     return Response({"format": "json", "content": payload})
+

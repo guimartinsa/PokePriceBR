@@ -2,9 +2,8 @@ import "./series.css";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { fetchCards } from "../api/cards";
 import { fetchSeries, type SeriesItem, type SeriesSet } from "../api/series";
-import { fetchCollectionCards, fetchCollections } from "../services/collection";
+import { fetchCollectionSetProgress, fetchCollections } from "../services/collection";
 
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
@@ -68,33 +67,20 @@ export default function SeriesDetailPage() {
             const ownedBySetId: Record<number, number> = {};
 
             if (selectedCollectionId) {
-                const collectionCards = await fetchCollectionCards(selectedCollectionId);
-                collectionCards
-                    .filter((item) => item.owned)
-                    .forEach((item) => {
-                        const setId = item.set?.id;
-                        if (!setId) return;
-
-                        ownedBySetId[setId] = (ownedBySetId[setId] ?? 0) + 1;
-                    });
+                const rows = await fetchCollectionSetProgress(selectedCollectionId);
+                rows.forEach((row) => {
+                    if (row.set_id) {
+                        ownedBySetId[row.set_id] = row.owned;
+                    }
+                });
             }
 
-            const entries = await Promise.all(
-                selectedSeries.sets.map(async (setItem) => {
-                    const setId = setItem.id;
-
-                    try {
-                        const response = await fetchCards({ set_id: setId, page: 1 });
-                        return [setId, { owned: ownedBySetId[setId] ?? 0, total: response.count }] as const;
-                    } catch {
-                        return [setId, { owned: ownedBySetId[setId] ?? 0, total: 0 }] as const;
-                    }
-                }),
-            );
-
             const nextProgress: ProgressBySetId = {};
-            entries.forEach(([setId, value]) => {
-                nextProgress[setId] = value;
+            selectedSeries.sets.forEach((setItem) => {
+                nextProgress[setItem.id] = {
+                    owned: ownedBySetId[setItem.id] ?? 0,
+                    total: setItem.cards_total ?? 0,
+                };
             });
 
             setProgressBySetId(nextProgress);
@@ -109,7 +95,7 @@ export default function SeriesDetailPage() {
         return (
             <main style={{ padding: 16 }}>
                 <button type="button" className="series-back" onClick={() => navigate("/series")}>
-                    ← Voltar para series
+                    Voltar para series
                 </button>
                 <p>Serie nao encontrada.</p>
             </main>
@@ -118,17 +104,20 @@ export default function SeriesDetailPage() {
 
     return (
         <main className="series-detail-page">
-            <button type="button" className="series-back" onClick={() => navigate("/series")}>← All Series</button>
+            <button type="button" className="series-back" onClick={() => navigate("/series")}>All Series</button>
 
             <section className="series-detail-hero">
                 {selectedSeries.logo ? <img src={selectedSeries.logo} alt={selectedSeries.nome} className="series-detail-hero__logo" /> : null}
             </section>
 
-
-
             <section className="series-set-list">
                 {orderedSets.map((setItem) => (
-                    <SeriesSetCard key={setItem.id} setItem={setItem} progress={progressBySetId[setItem.id]} onOpenSet={() => setItem.codigo_liga && navigate(`/series/sets/${encodeURIComponent(setItem.codigo_liga)}`)} />
+                    <SeriesSetCard
+                        key={setItem.id}
+                        setItem={setItem}
+                        progress={progressBySetId[setItem.id]}
+                        onOpenSet={() => setItem.codigo_liga && navigate(`/series/sets/${encodeURIComponent(setItem.codigo_liga)}`)}
+                    />
                 ))}
             </section>
         </main>
@@ -179,3 +168,5 @@ function SeriesSetCard({
         </button>
     );
 }
+
+
