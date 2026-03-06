@@ -26,4 +26,4 @@ dist-ssr
 
 *.sqlite3
 
-packpage-lock.json
+package-lock.json
