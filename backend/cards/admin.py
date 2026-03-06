@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import path, reverse
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from celery.result import AsyncResult
 from cards.tasks.update_card_from_tcgdex import update_card_from_tcgdex_task
 from cards.tasks.update_set_cards_from_tcgdex import update_set_cards_from_tcgdex_task
@@ -20,9 +20,11 @@ from cards.services.liga_url import gerar_liga_url
 
 @admin.register(Series)
 class SeriesAdmin(admin.ModelAdmin):
-    list_display = ("nome", "tcgdex_id")
+    list_display = ("nome", "tcgdex_id", "total_sets_relacionados")
     search_fields = ("nome", "tcgdex_id")
     ordering = ("nome",)
+    readonly_fields = ("sets_relacionados",)
+    fields = ("nome", "tcgdex_id", "logo", "sets_relacionados")
 
     actions = ["importar_series_tcgdex"]
 
@@ -35,6 +37,23 @@ class SeriesAdmin(admin.ModelAdmin):
             f"Importação/atualização de séries iniciada (task {task.id}).",
             level=messages.SUCCESS,
         )
+
+    @admin.display(description="Total de sets")
+    def total_sets_relacionados(self, obj):
+        return Set.objects.filter(serie_id=obj.tcgdex_id).count()
+
+    @admin.display(description="Sets relacionados")
+    def sets_relacionados(self, obj):
+        sets = Set.objects.filter(serie_id=obj.tcgdex_id).order_by("release_date", "nome")
+        if not sets.exists():
+            return "Nenhum set relacionado."
+
+        itens = format_html_join(
+            "",
+            "<li>{} ({})</li>",
+            ((set_obj.nome, set_obj.codigo_liga or "sem código") for set_obj in sets),
+        )
+        return format_html("<ul>{}</ul>", itens)
 
 
 
