@@ -50,3 +50,17 @@ class CardListViewSearchByFullNumberTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["count"], 2)
+
+
+
+
+class ScanCardEmbeddingViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_scan_card_requires_image_file(self):
+        response = self.client.post("/api/scan-card/", data={}, format="multipart")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["success"], False)
+        self.assertIn("error", response.data)

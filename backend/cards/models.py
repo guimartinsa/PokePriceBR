@@ -2,6 +2,7 @@ from django.db import models
 from cards.services.liga_url import gerar_liga_url
 from django.conf import settings
 from django.utils import timezone
+from pgvector.django import VectorField
 
 
 class Set(models.Model):
@@ -55,6 +56,7 @@ class Card(models.Model):
     raridade = models.CharField(max_length=50, blank=True, null=True)
     imagem = models.URLField(blank=True, null=True)
     imagem_grande = models.URLField(blank=True, null=True)
+    embedding = VectorField(dimensions=512, null=True, blank=True)
 
     # URL oficial da Liga Pokémon (gerada automaticamente)
     liga_url = models.URLField(blank=True, null=True)
