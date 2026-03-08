@@ -30,25 +30,17 @@ function getScanUrls(): string[] {
         ).replace(/\/+$/, "");
 
         const normalizedWithoutTrailingSlash = normalized.replace(/\/+$/, "");
-        if (
-            normalizedWithoutTrailingSlash.endsWith("/scan")
-            || normalizedWithoutTrailingSlash.endsWith("/scan-card")
-        ) {
+        if (normalizedWithoutTrailingSlash.endsWith("/scan-card")) {
             return [`${normalizedWithoutTrailingSlash}/`];
         }
 
-        return [
-            `${normalizedWithoutTrailingSlash}/scan-card/`,
-            `${normalizedWithoutTrailingSlash}/scan/`,
-        ];
+        return [`${normalizedWithoutTrailingSlash}/scan-card/`];
     }
 
     const baseUrl = normalizeBaseUrl(import.meta.env.VITE_API_URL);
 
     return [
         `${baseUrl}/api/scan-card/`,
-        `${baseUrl}/api/scan/`,
-        `${baseUrl}/scan/`,
     ];
 }
 

@@ -60,12 +60,12 @@ class ScanCardEmbeddingViewTests(TestCase):
         self.client = APIClient()
         self.user_model = get_user_model()
 
-    def test_scan_card_unavailable_for_non_admin_user(self):
+    def test_scan_card_requires_image_file_for_anonymous_user(self):
         response = self.client.post("/api/scan-card/", data={}, format="multipart")
 
-        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["success"], False)
-        self.assertIn("indisponível", response.data["error"].lower())
+        self.assertIn("image", response.data["error"].lower())
 
     def test_scan_card_requires_image_file_for_admin(self):
         admin = self.user_model.objects.create_user(
