@@ -29,62 +29,100 @@ function getScanUrls(): string[] {
             : `https://${explicitScanUrl}`
         ).replace(/\/+$/, "");
 
-        const normalizedWithoutTrailingSlash = normalized.replace(/\/+$/, "");
-        if (normalizedWithoutTrailingSlash.endsWith("/scan-card")) {
-            return [`${normalizedWithoutTrailingSlash}/`];
-        }
-
-        return [`${normalizedWithoutTrailingSlash}/scan-card/`];
+        return normalized.endsWith("/scan-card")
+            ? [`${normalized}/`]
+            : [`${normalized}/scan-card/`];
     }
 
     const baseUrl = normalizeBaseUrl(import.meta.env.VITE_API_URL);
-
-    return [
-        `${baseUrl}/api/scan-card/`,
-    ];
+    return [`${baseUrl}/api/scan-card/`];
 }
 
 function buildAuthHeaders(): HeadersInit {
     const token = localStorage.getItem("access");
+
+    // ⚠️ NUNCA inclua Content-Type aqui quando usar FormData.
+    // O fetch define automaticamente "multipart/form-data; boundary=..." ao detectar FormData.
+    // Definir manualmente quebra o boundary e o Django não consegue ler request.FILES.
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export async function uploadScan(image: Blob) {
+/**
+ * Cria um FormData fresco a cada chamada.
+ * Necessário para evitar reuso de stream já consumido pelo fetch em tentativas anteriores.
+ */
+function buildFormData(image: Blob): FormData {
     const formData = new FormData();
+
+    // O terceiro argumento define o filename — necessário para que o Django
+    // reconheça o campo como um arquivo válido em request.FILES["image"].
     formData.append("image", image, "scan.jpg");
 
+    return formData;
+}
+
+export async function uploadScan(image: Blob): Promise<unknown> {
     const scanUrls = getScanUrls();
     let lastError: Error | null = null;
 
+    console.log("[uploadScan] Iniciando envio. URLs candidatas:", scanUrls);
+    console.log("[uploadScan] Tamanho da imagem (bytes):", image.size, "| Tipo:", image.type);
+
     for (const url of scanUrls) {
-        const res = await fetch(url, {
-            method: "POST",
-            body: formData,
-            headers: buildAuthHeaders(),
-        });
+        console.log(`[uploadScan] Tentando: ${url}`);
+
+        // ✅ FormData recriado a cada iteração — evita reuso de stream consumido
+        const formData = buildFormData(image);
+
+        let res: Response;
+
+        try {
+            res = await fetch(url, {
+                method: "POST",
+                body: formData,
+
+                // ✅ Apenas Authorization — fetch cuida do Content-Type + boundary
+                headers: buildAuthHeaders(),
+            });
+        } catch (networkError) {
+            console.warn(`[uploadScan] Erro de rede em ${url}:`, networkError);
+            lastError = networkError instanceof Error
+                ? networkError
+                : new Error(String(networkError));
+            continue;
+        }
+
+        console.log(`[uploadScan] Resposta de ${url}: status ${res.status}`);
 
         if (res.status === 404) {
             lastError = new Error(`Endpoint de scan não encontrado: ${url}`);
+            console.warn(`[uploadScan] 404 em ${url}, tentando próxima URL...`);
             continue;
         }
 
         if (!res.ok) {
             let detail = "Erro ao enviar imagem";
+
             try {
                 const errorPayload = await res.json();
-                if (typeof errorPayload?.detail === "string" && errorPayload.detail.trim().length > 0) {
+                console.error("[uploadScan] Payload de erro do backend:", errorPayload);
+
+                if (typeof errorPayload?.detail === "string" && errorPayload.detail.trim()) {
                     detail = errorPayload.detail;
-                } else if (typeof errorPayload?.error === "string" && errorPayload.error.trim().length > 0) {
+                } else if (typeof errorPayload?.error === "string" && errorPayload.error.trim()) {
                     detail = errorPayload.error;
                 }
             } catch {
-                // resposta sem JSON
+                console.warn("[uploadScan] Resposta de erro sem JSON válido.");
             }
+
             throw new ScanApiError(detail, res.status);
         }
 
-        return res.json();
+        const data = await res.json();
+        console.log("[uploadScan] Sucesso! Resposta:", data);
+        return data;
     }
 
-    throw lastError ?? new Error("Erro ao enviar imagem");
+    throw lastError ?? new Error("Todas as URLs de scan falharam.");
 }
