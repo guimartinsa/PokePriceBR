@@ -375,7 +375,7 @@ def scan_card_embedding_view(request):
                 "success": False,
                 "error": str(exc),
             },
-            status=status.HTTP_400_BAD_REQUEST,
+            status=getattr(exc, "status_code", status.HTTP_400_BAD_REQUEST),
         )
     except Exception:
         return Response(
