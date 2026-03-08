@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
 from cards.models import Card, Set
@@ -57,8 +58,24 @@ class CardListViewSearchByFullNumberTests(TestCase):
 class ScanCardEmbeddingViewTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user_model = get_user_model()
 
-    def test_scan_card_requires_image_file(self):
+    def test_scan_card_unavailable_for_non_admin_user(self):
+        response = self.client.post("/api/scan-card/", data={}, format="multipart")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.data["success"], False)
+        self.assertIn("indisponível", response.data["error"].lower())
+
+    def test_scan_card_requires_image_file_for_admin(self):
+        admin = self.user_model.objects.create_user(
+            username="admin",
+            email="admin@example.com",
+            password="123456",
+            is_staff=True,
+        )
+        self.client.force_authenticate(user=admin)
+
         response = self.client.post("/api/scan-card/", data={}, format="multipart")
 
         self.assertEqual(response.status_code, 400)
