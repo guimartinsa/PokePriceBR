@@ -12,7 +12,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from cards.models import Card
-from cards.services.embedding_service import EmbeddingServiceError, generate_embedding, load_image_from_upload
+from cards.services.embedding_service import EmbeddingServiceError, generate_embedding, load_image_from_bytes
 from cards.serializers import ScanCardResponseSerializer
 
 try:
@@ -273,6 +273,29 @@ def _error_response(message: str, code: int):
     )
 
 
+def _resolve_identified_card_response(identified: dict):
+    card = _find_card(name=identified["name"], number=identified["number"])
+
+    if not card:
+        return Response(
+            {
+                "success": False,
+                "error": "Carta não encontrada no catálogo.",
+                "detected": identified,
+            },
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    return Response(
+        {
+            "success": True,
+            "card": _serialize_card(card),
+            "detected": identified,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
 
 
 
@@ -328,26 +351,7 @@ def scan_card_view(request):
             status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
-    card = _find_card(name=identified["name"], number=identified["number"])
-
-    if not card:
-        return Response(
-            {
-                "success": False,
-                "error": "Carta não encontrada no catálogo.",
-                "detected": identified,
-            },
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    return Response(
-        {
-            "success": True,
-            "card": _serialize_card(card),
-            "detected": identified,
-        },
-        status=status.HTTP_200_OK,
-    )
+    return _resolve_identified_card_response(identified)
 
 
 
@@ -366,8 +370,19 @@ def scan_card_embedding_view(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    if image_file.size > 5 * 1024 * 1024:
+        return Response(
+            {
+                "success": False,
+                "error": "Imagem muito grande. Máximo permitido: 5MB.",
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    image_bytes = image_file.read()
+
     try:
-        image = load_image_from_upload(image_file)
+        image = load_image_from_bytes(image_bytes)
         embedding = generate_embedding(image)
     except EmbeddingServiceError as exc:
         return Response(
