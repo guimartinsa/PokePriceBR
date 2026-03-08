@@ -21,8 +21,8 @@ const SAVED_BATCH_COLLECTIONS_KEY = "scan:saved-batch-collections";
 
 function buildScanErrorMessage(error: unknown): string {
     if (error instanceof ScanApiError) {
-        if (error.status === 503 && /tesseract-ocr/i.test(error.message)) {
-            return "O OCR do servidor está temporariamente indisponível (Tesseract não instalado). Tente novamente mais tarde.";
+        if (error.status === 503) {
+            return "O serviço de leitura está instável no momento. Tente novamente em alguns instantes.";
         }
 
         if (error.message.trim().length > 0) {
