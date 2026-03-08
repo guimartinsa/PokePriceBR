@@ -21,13 +21,24 @@ if not SECRET_KEY:
 
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    "pricedex.com.br",
-    "www.pricedex.com.br",
-    "api.pricedex.com.br",
-]
+
+def _split_env_list(raw_value: str | None, default: list[str]) -> list[str]:
+    if not raw_value:
+        return default
+
+    values = [item.strip() for item in raw_value.split(",") if item.strip()]
+    return values or default
+
+ALLOWED_HOSTS = _split_env_list(
+    os.getenv("ALLOWED_HOSTS"),
+    [
+        'localhost',
+        '127.0.0.1',
+        "pricedex.com.br",
+        "www.pricedex.com.br",
+        "api.pricedex.com.br",
+    ],
+)
 
 
 # =========================
@@ -171,19 +182,25 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://pricedex.com.br",
-    "https://www.pricedex.com.br",
-]
+CORS_ALLOWED_ORIGINS = _split_env_list(
+    os.getenv("CORS_ALLOWED_ORIGINS"),
+    [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://pricedex.com.br",
+        "https://www.pricedex.com.br",
+    ],
+)
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://pricedex.com.br",
-    "https://www.pricedex.com.br",
-]
+CSRF_TRUSTED_ORIGINS = _split_env_list(
+    os.getenv("CSRF_TRUSTED_ORIGINS"),
+    [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://pricedex.com.br",
+        "https://www.pricedex.com.br",
+    ],
+)
 
 
 REST_FRAMEWORK = {
