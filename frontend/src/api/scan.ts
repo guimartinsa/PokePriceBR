@@ -11,7 +11,7 @@ export class ScanApiError extends Error {
 function normalizeBaseUrl(rawUrl?: string): string {
     if (!rawUrl) {
         return import.meta.env.PROD
-            ? "https://pokepricebr.onrender.com"
+            ? "http://api.pricedex.com.br/"
             : "http://127.0.0.1:8000";
     }
 
