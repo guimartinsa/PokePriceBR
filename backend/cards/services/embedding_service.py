@@ -56,7 +56,7 @@ def _load_clip_model():
 
         try:
             import open_clip
-            import torch
+            import torch  # noqa: F401 — valida disponibilidade do torch
         except ImportError as exc:
             _MODEL_INIT_ERROR = EmbeddingServiceError(
                 "Dependências de embedding indisponíveis. Instale open-clip-torch e torch."
