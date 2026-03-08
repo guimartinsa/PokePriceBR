@@ -29,17 +29,32 @@ function getScanUrls(): string[] {
             : `https://${explicitScanUrl}`
         ).replace(/\/+$/, "");
 
-        return [normalized.endsWith("/scan") || normalized.endsWith("/scan/")
-            ? normalized.replace(/\/+$/, "") + "/"
-            : `${normalized}/scan/`];
+        const normalizedWithoutTrailingSlash = normalized.replace(/\/+$/, "");
+        if (
+            normalizedWithoutTrailingSlash.endsWith("/scan")
+            || normalizedWithoutTrailingSlash.endsWith("/scan-card")
+        ) {
+            return [`${normalizedWithoutTrailingSlash}/`];
+        }
+
+        return [
+            `${normalizedWithoutTrailingSlash}/scan-card/`,
+            `${normalizedWithoutTrailingSlash}/scan/`,
+        ];
     }
 
     const baseUrl = normalizeBaseUrl(import.meta.env.VITE_API_URL);
 
     return [
+        `${baseUrl}/api/scan-card/`,
         `${baseUrl}/api/scan/`,
         `${baseUrl}/scan/`,
     ];
+}
+
+function buildAuthHeaders(): HeadersInit {
+    const token = localStorage.getItem("access");
+    return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export async function uploadScan(image: Blob) {
@@ -53,6 +68,7 @@ export async function uploadScan(image: Blob) {
         const res = await fetch(url, {
             method: "POST",
             body: formData,
+            headers: buildAuthHeaders(),
         });
 
         if (res.status === 404) {
@@ -66,11 +82,13 @@ export async function uploadScan(image: Blob) {
                 const errorPayload = await res.json();
                 if (typeof errorPayload?.detail === "string" && errorPayload.detail.trim().length > 0) {
                     detail = errorPayload.detail;
+                } else if (typeof errorPayload?.error === "string" && errorPayload.error.trim().length > 0) {
+                    detail = errorPayload.error;
                 }
             } catch {
                 // resposta sem JSON
             }
-            throw new ScanApiError(detail, res.status);;
+            throw new ScanApiError(detail, res.status);
         }
 
         return res.json();

@@ -355,6 +355,15 @@ def scan_card_view(request):
 @api_view(["POST"])
 @parser_classes([MultiPartParser, FormParser])
 def scan_card_embedding_view(request):
+    if not (request.user and request.user.is_authenticated and request.user.is_staff):
+        return Response(
+            {
+                "success": False,
+                "error": "Scan por embedding indisponível no momento.",
+            },
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
     image_file = request.FILES.get("image")
 
     if image_file is None:
