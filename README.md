@@ -16,6 +16,10 @@ Em produção (Linux), o pool padrão pode ser utilizado.
 
 O scan de cartas está integrado com serviço de visão e identificação no catálogo local.
 
+O endpoint aceita dois formatos de entrada:
+- `multipart/form-data` com arquivo no campo `image` (OCR no backend).
+- `application/json` com `{ "name": "...", "number": "..." }` (OCR já feito no cliente).
+
 Variáveis necessárias em produção:
 
 - `SCAN_VISION_API_KEY`: chave do provedor de visão.

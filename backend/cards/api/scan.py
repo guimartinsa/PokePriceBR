@@ -11,7 +11,6 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from cards.models import Card
-from cards.serializers import ScanCardResponseSerializer
 
 _CV2_MODULE = None
 _CV2_IMPORT_ATTEMPTED = False
@@ -326,6 +325,26 @@ def _resolve_identified_card_response(identified: dict):
     )
 
 
+def _resolve_payload_identification(request) -> dict | None:
+    name = request.data.get("name")
+    number = request.data.get("number")
+
+    if not isinstance(name, str) or not isinstance(number, str):
+        return None
+
+    normalized_name = name.strip()
+    normalized_number = _normalize_number(number)
+
+    if not normalized_name or not normalized_number:
+        return None
+
+    return {
+        "name": normalized_name,
+        "number": normalized_number,
+        "confidence": 1.0,
+    }
+
+
 
 
 
@@ -335,8 +354,12 @@ def scan_card_view(request):
     image = request.FILES.get("image")
 
     if image is None:
+        identified_from_payload = _resolve_payload_identification(request)
+        if identified_from_payload is not None:
+            return _resolve_identified_card_response(identified_from_payload)
+
         return _error_response(
-            "Arquivo de imagem é obrigatório no campo 'image'.",
+            "Envie uma imagem no campo 'image' ou informe 'name' e 'number' no corpo da requisição.",
             status.HTTP_400_BAD_REQUEST,
         )
 
