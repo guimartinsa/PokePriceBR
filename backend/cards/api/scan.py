@@ -4,7 +4,6 @@ from difflib import SequenceMatcher
 from decimal import Decimal
 from io import BytesIO
 
-import numpy as np
 from PIL import Image, ImageOps
 from rest_framework import status
 from rest_framework.decorators import api_view, parser_classes
@@ -14,23 +13,54 @@ from rest_framework.response import Response
 from cards.models import Card
 from cards.serializers import ScanCardResponseSerializer
 
-try:
-    import cv2
-except ImportError:  # pragma: no cover - depends on deployment image
-    cv2 = None
+_CV2_MODULE = None
+_CV2_IMPORT_ATTEMPTED = False
+_PYTESSERACT_MODULE = None
+_PYTESSERACT_IMPORT_ATTEMPTED = False
 
 
-try:
-    import pytesseract
-except ImportError:  # pragma: no cover - depends on deployment image
-    pytesseract = None
+def _get_cv2_module():
+    global _CV2_MODULE, _CV2_IMPORT_ATTEMPTED
+
+    if _CV2_IMPORT_ATTEMPTED:
+        return _CV2_MODULE
+
+    _CV2_IMPORT_ATTEMPTED = True
+    try:
+        import cv2
+    except ImportError:  # pragma: no cover - depends on deployment image
+        _CV2_MODULE = None
+    else:
+        _CV2_MODULE = cv2
+
+    return _CV2_MODULE
+
+
+def _get_pytesseract_module():
+    global _PYTESSERACT_MODULE, _PYTESSERACT_IMPORT_ATTEMPTED
+
+    if _PYTESSERACT_IMPORT_ATTEMPTED:
+        return _PYTESSERACT_MODULE
+
+    _PYTESSERACT_IMPORT_ATTEMPTED = True
+    try:
+        import pytesseract
+    except ImportError:  # pragma: no cover - depends on deployment image
+        _PYTESSERACT_MODULE = None
+    else:
+        _PYTESSERACT_MODULE = pytesseract
+
+    return _PYTESSERACT_MODULE
 
 
 NUMBER_PATTERN = re.compile(r"\b([A-Z]{0,4}\d{1,3}\s*/\s*\d{2,3}|[A-Z]{0,4}\d{1,3})\b")
 
 def _extract_card_regions(image: Image.Image) -> list[Image.Image]:
+    cv2 = _get_cv2_module()
     if cv2 is None:
         return []
+
+    import numpy as np
 
     image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
     height, width, _ = image_cv.shape
@@ -104,6 +134,7 @@ def _score_name_similarity(candidate_name: str, ocr_lines: list[str]) -> float:
     return best_score
 
 def _extract_ocr_texts(image_bytes: bytes) -> tuple[str, list[str]]:
+    pytesseract = _get_pytesseract_module()
     if pytesseract is None:
         raise RuntimeError(
             "OCR indisponível: instale a dependência pytesseract no backend."
