@@ -36,6 +36,19 @@ def _scan_log_context(request, *, mode: str) -> dict[str, object]:
     }
 
 
+def _scan_log_context(request, *, mode: str) -> dict[str, object]:
+    user = getattr(request, "user", None)
+    user_id = getattr(user, "id", None) if user and getattr(user, "is_authenticated", False) else None
+
+    return {
+        "mode": mode,
+        "path": request.path,
+        "method": request.method,
+        "content_type": request.content_type,
+        "user_id": user_id,
+    }
+
+
 def _get_cv2_module():
     global _CV2_MODULE, _CV2_IMPORT_ATTEMPTED
 
