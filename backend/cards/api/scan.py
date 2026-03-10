@@ -1,3 +1,4 @@
+import logging
 import re
 import unicodedata
 from difflib import SequenceMatcher
@@ -12,10 +13,25 @@ from rest_framework.response import Response
 
 from cards.models import Card
 
+logger = logging.getLogger(__name__)
+
 _CV2_MODULE = None
 _CV2_IMPORT_ATTEMPTED = False
 _PYTESSERACT_MODULE = None
 _PYTESSERACT_IMPORT_ATTEMPTED = False
+
+
+def _scan_log_context(request, *, mode: str) -> dict[str, object]:
+    user = getattr(request, "user", None)
+    user_id = getattr(user, "id", None) if user and getattr(user, "is_authenticated", False) else None
+
+    return {
+        "mode": mode,
+        "path": request.path,
+        "method": request.method,
+        "content_type": request.content_type,
+        "user_id": user_id,
+    }
 
 
 def _get_cv2_module():
@@ -354,32 +370,50 @@ def scan_card_view(request):
     image = request.FILES.get("image")
 
     if image is None:
+        context = _scan_log_context(request, mode="payload")
         identified_from_payload = _resolve_payload_identification(request)
         if identified_from_payload is not None:
+            logger.info(
+                "Scan payload recebido com sucesso",
+                extra={
+                    **context,
+                    "detected_number": identified_from_payload["number"],
+                },
+            )
             return _resolve_identified_card_response(identified_from_payload)
 
+        logger.warning("Scan payload inválido: name/number ausentes", extra=context)
         return _error_response(
             "Envie uma imagem no campo 'image' ou informe 'name' e 'number' no corpo da requisição.",
             status.HTTP_400_BAD_REQUEST,
         )
 
+    context = _scan_log_context(request, mode="image")
+
     if image.size > 5 * 1024 * 1024:
+        logger.warning("Scan rejeitado por tamanho de imagem", extra={**context, "image_size": image.size})
         return _error_response(
             "Imagem muito grande. Máximo permitido: 5MB.",
             status.HTTP_400_BAD_REQUEST,
         )
 
-
-# Processamento do OCR
     try:
-        # Lê os bytes da imagem uma única vez
         image_content = image.read()
+        logger.info("Iniciando OCR do scan", extra={**context, "image_size": len(image_content)})
         identified = _identify_card_with_ocr(image_content)
+        logger.info(
+            "OCR concluído com sucesso",
+            extra={
+                **context,
+                "detected_name": identified.get("name"),
+                "detected_number": identified.get("number"),
+                "confidence": identified.get("confidence"),
+            },
+        )
     except RuntimeError as exc:
-        # Erros esperados (imagem ruim, texto não encontrado)
+        logger.warning("Falha de OCR em scan", extra=context, exc_info=True)
         return _error_response(str(exc), status.HTTP_422_UNPROCESSABLE_ENTITY)
     except Exception as exc:
-        # Verifica se o erro é especificamente a falta do executável do Tesseract no SO
         is_tesseract_missing = False
         pytesseract = _get_pytesseract_module()
         if pytesseract:
@@ -388,18 +422,13 @@ def scan_card_view(request):
                 is_tesseract_missing = True
 
         if is_tesseract_missing:
+            logger.exception("Tesseract não encontrado no ambiente de execução", extra=context)
             return _error_response(
                 "OCR indisponível no servidor: binário tesseract-ocr não encontrado.",
                 status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
-        # Log do erro real no console para você conseguir debugar
-        print("--- ERRO CRÍTICO NO SCAN ---")
-        print(f"Tipo do erro: {type(exc).__name__}")
-        print(f"Mensagem: {str(exc)}")
-        import traceback
-        traceback.print_exc()
-
+        logger.exception("Erro interno inesperado no scan", extra=context)
         return _error_response(
             "Erro interno no processamento da imagem.",
             status.HTTP_500_INTERNAL_SERVER_ERROR,
