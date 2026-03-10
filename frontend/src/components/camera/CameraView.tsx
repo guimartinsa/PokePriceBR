@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ScanOverlay } from "./ScanOverlay";
 import { CaptureButton } from "./CaptureButton";
-import { ScanApiError, submitScanCard } from "../../api/scan";
+import { ScanApiError, submitScanCard, submitScanImage } from "../../api/scan";
 import { useAuth } from "../../hooks/useAuth";
 import { hasSubscriberPrivileges } from "../../utils/plan";
 import { extractCardDataFromImage, OcrProcessingError } from "../../services/ocrService";
@@ -121,6 +121,7 @@ function parseApiResult(
 export function CameraView() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
+    const uploadInputRef = useRef<HTMLInputElement>(null);
     const { user } = useAuth();
 
     const [error, setError] = useState<string | null>(null);
@@ -140,6 +141,7 @@ export function CameraView() {
     const [freeUsage, setFreeUsage] = useState(readFreeUsage);
 
     const isPremium = hasSubscriberPrivileges(user?.plan);
+    const isAdmin = user?.is_admin === true || user?.plan === "ADMIN";
     const scansRemaining = FREE_WEEKLY_SCAN_LIMIT - freeUsage.count;
 
     useEffect(() => {
@@ -186,6 +188,43 @@ export function CameraView() {
         if (isPremium) return true;
         return scansRemaining > 0;
     }, [isPremium, scansRemaining]);
+
+    const handleAdminUploadClick = () => {
+        uploadInputRef.current?.click();
+    };
+
+    const handleAdminUploadChange = async (event: ChangeEvent<HTMLInputElement>) => {
+        const image = event.target.files?.[0];
+
+        if (!image || capturing) return;
+
+        setCapturing(true);
+        setScanError(null);
+
+        try {
+            const response = await submitScanImage(image);
+            const detection = parseApiResult(response, {
+                name: "Carta detectada",
+                number: "N/A",
+            });
+
+            setLastDetected(detection);
+
+            if (batchMode && isPremium) {
+                setTempBatch((previous) => [detection, ...previous]);
+            }
+
+            if (!isPremium) {
+                setFreeUsage((previous) => ({ ...previous, count: previous.count + 1 }));
+            }
+        } catch (uploadError) {
+            console.error("Erro no upload da imagem:", uploadError);
+            setScanError(buildScanErrorMessage(uploadError));
+        } finally {
+            event.target.value = "";
+            setCapturing(false);
+        }
+    };
 
     const handleCapture = async () => {
         if (!videoRef.current || capturing || !canCapture) return;
@@ -323,6 +362,26 @@ export function CameraView() {
             </div>
 
             <CaptureButton onCapture={handleCapture} disabled={capturing || !canCapture} />
+
+            {isAdmin && (
+                <>
+                    <input
+                        ref={uploadInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="scan-upload-input"
+                        onChange={handleAdminUploadChange}
+                    />
+                    <button
+                        type="button"
+                        className="scan-upload-button"
+                        onClick={handleAdminUploadClick}
+                        disabled={capturing}
+                    >
+                        Upload imagem
+                    </button>
+                </>
+            )}
 
             {isPremium && (
                 <button

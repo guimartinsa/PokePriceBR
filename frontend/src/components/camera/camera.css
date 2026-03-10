@@ -305,6 +305,30 @@
     background: rgba(255, 245, 204, 0.95);
 }
 
+.scan-upload-input {
+    display: none;
+}
+
+.scan-upload-button {
+    position: fixed;
+    right: 20px;
+    top: 20px;
+    z-index: 1003;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #111;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.scan-upload-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .temp-batch-panel {
     position: fixed;
     left: 20px;

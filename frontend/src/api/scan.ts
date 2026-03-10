@@ -65,6 +65,18 @@ function buildAuthHeaders(): HeadersInit {
     return headers;
 }
 
+function buildMultipartAuthHeaders(): HeadersInit {
+    const token = localStorage.getItem("access");
+
+    if (!token) {
+        return {};
+    }
+
+    return {
+        Authorization: `Bearer ${token}`,
+    };
+}
+
 function normalizePayload(payload: ScanCardPayload): ScanCardPayload {
     return {
         name: payload.name.trim(),
@@ -112,6 +124,63 @@ export async function submitScanCard(payload: ScanCardPayload): Promise<unknown>
 
         if (!response.ok) {
             let detail = "Erro ao enviar dados da carta";
+
+            try {
+                const errorPayload = await response.json() as Record<string, unknown>;
+
+                if (
+                    typeof errorPayload.detail === "string" &&
+                    errorPayload.detail.trim().length > 0
+                ) {
+                    detail = errorPayload.detail;
+                } else if (
+                    typeof errorPayload.error === "string" &&
+                    errorPayload.error.trim().length > 0
+                ) {
+                    detail = errorPayload.error;
+                }
+            } catch {
+                // resposta sem payload JSON válido
+            }
+
+            throw new ScanApiError(detail, response.status);
+        }
+
+        return response.json();
+    }
+
+    throw lastError ?? new Error("Todas as URLs de scan falharam.");
+}
+
+export async function submitScanImage(image: File): Promise<unknown> {
+    const scanUrls = getScanUrls();
+    let lastError: Error | null = null;
+    const formData = new FormData();
+    formData.append("image", image);
+
+    for (const url of scanUrls) {
+        let response: Response;
+
+        try {
+            response = await fetch(url, {
+                method: "POST",
+                headers: buildMultipartAuthHeaders(),
+                body: formData,
+            });
+        } catch (networkError) {
+            lastError = networkError instanceof Error
+                ? networkError
+                : new Error(String(networkError));
+            continue;
+        }
+
+        if (response.status === 404) {
+            lastError = new Error(`Endpoint de scan não encontrado: ${url}`);
+            continue;
+        }
+
+        if (!response.ok) {
+            let detail = "Erro ao processar imagem";
 
             try {
                 const errorPayload = await response.json() as Record<string, unknown>;
