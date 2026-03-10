@@ -12,7 +12,6 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from cards.models import Card
-from cards.services.embedding_service import EmbeddingServiceError, generate_embedding, load_image_from_bytes
 from cards.serializers import ScanCardResponseSerializer
 
 try:
@@ -328,6 +327,7 @@ def scan_card_view(request):
     except Exception as exc:
         # Verifica se o erro é especificamente a falta do executável do Tesseract no SO
         is_tesseract_missing = False
+        pytesseract = _get_pytesseract_module()
         if pytesseract:
             tesseract_error_cls = getattr(pytesseract, "TesseractNotFoundError", None)
             if tesseract_error_cls and isinstance(exc, tesseract_error_cls):
@@ -352,82 +352,3 @@ def scan_card_view(request):
         )
 
     return _resolve_identified_card_response(identified)
-
-
-
-
-@api_view(["POST"])
-@parser_classes([MultiPartParser, FormParser])
-def scan_card_embedding_view(request):
-    image_file = request.FILES.get("image")
-
-    if image_file is None:
-        return Response(
-            {
-                "success": False,
-                "error": "Arquivo de imagem é obrigatório no campo 'image'.",
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if image_file.size > 5 * 1024 * 1024:
-        return Response(
-            {
-                "success": False,
-                "error": "Imagem muito grande. Máximo permitido: 5MB.",
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    image_bytes = image_file.read()
-
-    try:
-        image = load_image_from_bytes(image_bytes)
-        embedding = generate_embedding(image)
-    except EmbeddingServiceError as exc:
-        return Response(
-            {
-                "success": False,
-                "error": str(exc),
-            },
-            status=getattr(exc, "status_code", status.HTTP_400_BAD_REQUEST),
-        )
-    except Exception:
-        return Response(
-            {
-                "success": False,
-                "error": "Erro interno no processamento da imagem.",
-            },
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
-
-    from pgvector.django import CosineDistance
-
-    card = (
-        Card.objects
-        .filter(ativa=True, embedding__isnull=False)
-        .order_by(CosineDistance("embedding", embedding))
-        .select_related("set")
-        .first()
-    )
-
-    if card is None:
-        return Response(
-            {
-                "success": False,
-                "error": "Nenhuma carta com embedding disponível para comparação.",
-            },
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    payload = {
-        "success": True,
-        "card": {
-            "name": card.nome,
-            "number": card.numero,
-            "set": card.set.nome if card.set else None,
-            "image": card.imagem_grande or card.imagem,
-        },
-    }
-    serializer = ScanCardResponseSerializer(payload)
-    return Response(serializer.data, status=status.HTTP_200_OK)
