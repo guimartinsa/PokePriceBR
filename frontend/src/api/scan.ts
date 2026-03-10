@@ -27,15 +27,6 @@ function normalizeBaseUrl(rawUrl?: string): string {
 
 function getScanUrls(): string[] {
     const explicitScanUrl = import.meta.env.VITE_SCAN_API_URL as string | undefined;
-    const candidates: string[] = [];
-
-    const addCandidate = (value: string) => {
-        const normalized = value.replace(/\/+$/, "") + "/";
-
-        if (!candidates.includes(normalized)) {
-            candidates.push(normalized);
-        }
-    };
 
     if (explicitScanUrl) {
         const normalized = (/^https?:\/\//i.test(explicitScanUrl)
@@ -43,31 +34,19 @@ function getScanUrls(): string[] {
             : `https://${explicitScanUrl}`
         ).replace(/\/+$/, "");
 
-        if (/\/(scan|scan-card)$/i.test(normalized)) {
-            addCandidate(normalized);
-
-            if (normalized.endsWith("/scan-card")) {
-                addCandidate(normalized.replace(/\/scan-card$/i, "/scan"));
-            }
-
-            if (normalized.endsWith("/scan")) {
-                addCandidate(normalized.replace(/\/scan$/i, "/scan-card"));
-            }
-
-            return candidates;
+        if (normalized.endsWith("/scan-card")) {
+            return [normalized.replace(/\/scan-card$/i, "/scan") + "/"];
         }
 
-        addCandidate(`${normalized}/scan`);
-        addCandidate(`${normalized}/scan-card`);
+        if (normalized.endsWith("/scan")) {
+            return [normalized + "/"];
+        }
 
-        return candidates;
+        return [`${normalized}/scan/`];
     }
 
     const baseUrl = normalizeBaseUrl(import.meta.env.VITE_API_URL);
-    addCandidate(`${baseUrl}/api/scan`);
-    addCandidate(`${baseUrl}/api/scan-card`);
-
-    return candidates;
+    return [`${baseUrl}/api/scan/`];
 }
 
 function buildAuthHeaders(): HeadersInit {
