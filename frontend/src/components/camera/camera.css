@@ -279,6 +279,44 @@
     font-size: 14px;
 }
 
+.scan-debug-preview {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(92vw, 360px);
+    background: rgba(8, 8, 8, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 12px;
+    padding: 10px;
+    z-index: 1004;
+    color: #fff;
+    text-align: center;
+}
+
+.scan-debug-preview p {
+    margin: 0 0 8px;
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.scan-debug-preview img {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    margin-bottom: 8px;
+}
+
+.scan-debug-preview button {
+    border: none;
+    border-radius: 8px;
+    background: #f6c400;
+    color: #111;
+    padding: 7px 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
 .scan-result-hint {
     display: block;
     margin-top: 8px;

@@ -4,7 +4,11 @@ import { CaptureButton } from "./CaptureButton";
 import { ScanApiError, submitScanCard } from "../../api/scan";
 import { useAuth } from "../../hooks/useAuth";
 import { hasSubscriberPrivileges } from "../../utils/plan";
-import { extractCardDataFromImage, OcrProcessingError } from "../../services/ocrService";
+import {
+    createOcrDebugPreview,
+    extractCardDataFromImage,
+    OcrProcessingError,
+} from "../../services/ocrService";
 import "./camera.css";
 
 type CardDetection = {
@@ -129,6 +133,7 @@ export function CameraView() {
     const [batchMode, setBatchMode] = useState(false);
     const [lastDetected, setLastDetected] = useState<CardDetection | null>(null);
     const [scanError, setScanError] = useState<string | null>(null);
+    const [ocrDebugPreview, setOcrDebugPreview] = useState<string | null>(null);
     const [tempBatch, setTempBatch] = useState<CardDetection[]>(() => {
         const raw = localStorage.getItem(TEMP_BATCH_COLLECTION_KEY);
         if (!raw) return [];
@@ -202,6 +207,9 @@ export function CameraView() {
         setScanError(null);
 
         try {
+            const debugPreview = await createOcrDebugPreview(image);
+            setOcrDebugPreview(debugPreview);
+
             const ocrResult = await extractCardDataFromImage(image);
             const response = await submitScanCard({
                 name: ocrResult.name,
@@ -288,6 +296,9 @@ export function CameraView() {
                 );
             });
 
+            const debugPreview = await createOcrDebugPreview(blob);
+            setOcrDebugPreview(debugPreview);
+
             const ocrResult = await extractCardDataFromImage(blob);
             const response = await submitScanCard({
                 name: ocrResult.name,
@@ -352,13 +363,13 @@ export function CameraView() {
             <video ref={videoRef} autoPlay playsInline muted className="camera-video" />
             <ScanOverlay />
 
-            <div className="scan-plan-pill">
+                <div className="scan-plan-pill">
                 {isPremium ? (
                     <span>Plano Premium • scans ilimitados + lote</span>
                 ) : (
                     <span>Plano Free • {scansRemaining} scans restantes nesta semana</span>
                 )}
-            </div>
+                </div>
 
             <div className="camera-dev-message">
                 Funcao de camera em desenvolvimento. Melhorias de leitura serao adicionadas em
@@ -408,6 +419,16 @@ export function CameraView() {
             )}
 
             {scanError && <div className="scan-error-message">{scanError}</div>}
+
+            {ocrDebugPreview && (
+                <section className="scan-debug-preview">
+                    <p>Preview das regioes usadas no OCR</p>
+                    <img src={ocrDebugPreview} alt="Preview das regioes OCR" />
+                    <button type="button" onClick={() => setOcrDebugPreview(null)}>
+                        Fechar preview
+                    </button>
+                </section>
+            )}
 
             {isPremium && tempBatch.length > 0 && (
                 <section className="temp-batch-panel">

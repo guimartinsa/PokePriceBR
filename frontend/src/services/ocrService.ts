@@ -21,6 +21,11 @@ export type OcrCardData = {
     rawText: string;
 };
 
+export type OcrDebugRegions = {
+    nameRegion: CanvasRegion;
+    numberRegion: CanvasRegion;
+};
+
 export class OcrProcessingError extends Error {
     constructor(message: string) {
         super(message);
@@ -111,6 +116,13 @@ type CanvasRegion = {
     width: number;
     height: number;
 };
+
+function getOcrRegions(canvas: HTMLCanvasElement): OcrDebugRegions {
+    return {
+        nameRegion: getNameRegion(canvas),
+        numberRegion: getNumberRegion(canvas),
+    };
+}
 
 function cropRegion(source: HTMLCanvasElement, region: CanvasRegion): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
@@ -208,6 +220,49 @@ async function recognizeText(
 ) {
     const result = await workerInstance.recognize(image);
     return result.data.text ?? "";
+}
+
+export async function createOcrDebugPreview(image: Blob): Promise<string> {
+    validateImage(image);
+
+    const preprocessedCanvas = await preprocessImage(image);
+    const regions = getOcrRegions(preprocessedCanvas);
+    const debugCanvas = document.createElement("canvas");
+    debugCanvas.width = preprocessedCanvas.width;
+    debugCanvas.height = preprocessedCanvas.height;
+
+    const context = debugCanvas.getContext("2d");
+    if (!context) {
+        throw new OcrProcessingError("Não foi possível criar preview de depuração do OCR.");
+    }
+
+    context.drawImage(preprocessedCanvas, 0, 0);
+
+    context.strokeStyle = "#00f57a";
+    context.lineWidth = Math.max(2, Math.round(debugCanvas.width * 0.006));
+    context.strokeRect(
+        regions.nameRegion.x,
+        regions.nameRegion.y,
+        regions.nameRegion.width,
+        regions.nameRegion.height,
+    );
+
+    context.strokeStyle = "#ff4d6d";
+    context.strokeRect(
+        regions.numberRegion.x,
+        regions.numberRegion.y,
+        regions.numberRegion.width,
+        regions.numberRegion.height,
+    );
+
+    context.fillStyle = "rgba(0, 0, 0, 0.58)";
+    context.fillRect(12, 12, 190, 56);
+    context.fillStyle = "#fff";
+    context.font = "bold 14px sans-serif";
+    context.fillText("Verde: area do nome", 20, 34);
+    context.fillText("Rosa: area do numero", 20, 56);
+
+    return debugCanvas.toDataURL("image/png");
 }
 
 function getNameRegion(canvas: HTMLCanvasElement): CanvasRegion {
