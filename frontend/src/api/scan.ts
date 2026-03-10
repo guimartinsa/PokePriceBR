@@ -34,13 +34,19 @@ function getScanUrls(): string[] {
             : `https://${explicitScanUrl}`
         ).replace(/\/+$/, "");
 
-        return normalized.endsWith("/scan-card")
-            ? [`${normalized}/`]
-            : [`${normalized}/scan-card/`];
+        if (normalized.endsWith("/scan-card")) {
+            return [normalized.replace(/\/scan-card$/i, "/scan") + "/"];
+        }
+
+        if (normalized.endsWith("/scan")) {
+            return [normalized + "/"];
+        }
+
+        return [`${normalized}/scan/`];
     }
 
     const baseUrl = normalizeBaseUrl(import.meta.env.VITE_API_URL);
-    return [`${baseUrl}/api/scan-card/`];
+    return [`${baseUrl}/api/scan/`];
 }
 
 function buildAuthHeaders(): HeadersInit {
