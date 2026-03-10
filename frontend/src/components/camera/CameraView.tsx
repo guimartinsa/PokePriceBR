@@ -1,7 +1,7 @@
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ScanOverlay } from "./ScanOverlay";
 import { CaptureButton } from "./CaptureButton";
-import { ScanApiError, submitScanCard, submitScanImage } from "../../api/scan";
+import { ScanApiError, submitScanCard } from "../../api/scan";
 import { useAuth } from "../../hooks/useAuth";
 import { hasSubscriberPrivileges } from "../../utils/plan";
 import { extractCardDataFromImage, OcrProcessingError } from "../../services/ocrService";
@@ -202,10 +202,14 @@ export function CameraView() {
         setScanError(null);
 
         try {
-            const response = await submitScanImage(image);
+            const ocrResult = await extractCardDataFromImage(image);
+            const response = await submitScanCard({
+                name: ocrResult.name,
+                number: ocrResult.number,
+            });
             const detection = parseApiResult(response, {
-                name: "Carta detectada",
-                number: "N/A",
+                name: ocrResult.name,
+                number: ocrResult.number,
             });
 
             setLastDetected(detection);

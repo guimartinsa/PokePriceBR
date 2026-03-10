@@ -1,3 +1,4 @@
+import logging
 import re
 import unicodedata
 from difflib import SequenceMatcher
@@ -7,15 +8,32 @@ from io import BytesIO
 from PIL import Image, ImageOps
 from rest_framework import status
 from rest_framework.decorators import api_view, parser_classes
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from cards.models import Card
+
+logger = logging.getLogger(__name__)
 
 _CV2_MODULE = None
 _CV2_IMPORT_ATTEMPTED = False
 _PYTESSERACT_MODULE = None
 _PYTESSERACT_IMPORT_ATTEMPTED = False
+_TESSERACT_BINARY_AVAILABLE: bool | None = None
+_TESSERACT_CHECK_ERROR: str | None = None
+
+
+def _scan_log_context(request, *, mode: str) -> dict[str, object]:
+    user = getattr(request, "user", None)
+    user_id = getattr(user, "id", None) if user and getattr(user, "is_authenticated", False) else None
+
+    return {
+        "mode": mode,
+        "path": request.path,
+        "method": request.method,
+        "content_type": request.content_type,
+        "user_id": user_id,
+    }
 
 
 def _get_cv2_module():
@@ -131,6 +149,37 @@ def _score_name_similarity(candidate_name: str, ocr_lines: list[str]) -> float:
         best_score = max(best_score, score)
 
     return best_score
+
+
+
+def _is_tesseract_binary_available() -> tuple[bool, str | None]:
+    global _TESSERACT_BINARY_AVAILABLE, _TESSERACT_CHECK_ERROR
+
+    if _TESSERACT_BINARY_AVAILABLE is not None:
+        return _TESSERACT_BINARY_AVAILABLE, _TESSERACT_CHECK_ERROR
+
+    pytesseract = _get_pytesseract_module()
+    if pytesseract is None:
+        _TESSERACT_BINARY_AVAILABLE = False
+        _TESSERACT_CHECK_ERROR = "Dependência pytesseract não está instalada."
+        return _TESSERACT_BINARY_AVAILABLE, _TESSERACT_CHECK_ERROR
+
+    try:
+        pytesseract.get_tesseract_version()
+    except Exception as exc:  # pragma: no cover - depende do ambiente de execução
+        tesseract_error_cls = getattr(pytesseract, "TesseractNotFoundError", None)
+        if tesseract_error_cls and isinstance(exc, tesseract_error_cls):
+            _TESSERACT_BINARY_AVAILABLE = False
+            _TESSERACT_CHECK_ERROR = "Binário tesseract-ocr não encontrado no PATH."
+            return _TESSERACT_BINARY_AVAILABLE, _TESSERACT_CHECK_ERROR
+
+        _TESSERACT_BINARY_AVAILABLE = False
+        _TESSERACT_CHECK_ERROR = f"Falha ao validar tesseract: {type(exc).__name__}"
+        return _TESSERACT_BINARY_AVAILABLE, _TESSERACT_CHECK_ERROR
+
+    _TESSERACT_BINARY_AVAILABLE = True
+    _TESSERACT_CHECK_ERROR = None
+    return _TESSERACT_BINARY_AVAILABLE, _TESSERACT_CHECK_ERROR
 
 def _extract_ocr_texts(image_bytes: bytes) -> tuple[str, list[str]]:
     pytesseract = _get_pytesseract_module()
@@ -349,37 +398,66 @@ def _resolve_payload_identification(request) -> dict | None:
 
 
 @api_view(["POST"])
-@parser_classes([MultiPartParser, FormParser])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
 def scan_card_view(request):
     image = request.FILES.get("image")
 
     if image is None:
+        context = _scan_log_context(request, mode="payload")
         identified_from_payload = _resolve_payload_identification(request)
         if identified_from_payload is not None:
+            logger.info(
+                "Scan payload recebido com sucesso",
+                extra={
+                    **context,
+                    "detected_number": identified_from_payload["number"],
+                },
+            )
             return _resolve_identified_card_response(identified_from_payload)
 
+        logger.warning("Scan payload inválido: name/number ausentes", extra=context)
         return _error_response(
             "Envie uma imagem no campo 'image' ou informe 'name' e 'number' no corpo da requisição.",
             status.HTTP_400_BAD_REQUEST,
         )
 
+    context = _scan_log_context(request, mode="image")
+
+    tesseract_available, tesseract_error = _is_tesseract_binary_available()
+    if not tesseract_available:
+        logger.warning(
+            "OCR indisponível por dependência de ambiente",
+            extra={**context, "tesseract_error": tesseract_error},
+        )
+        return _error_response(
+            "OCR indisponível no servidor: binário tesseract-ocr não encontrado.",
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
     if image.size > 5 * 1024 * 1024:
+        logger.warning("Scan rejeitado por tamanho de imagem", extra={**context, "image_size": image.size})
         return _error_response(
             "Imagem muito grande. Máximo permitido: 5MB.",
             status.HTTP_400_BAD_REQUEST,
         )
 
-
-# Processamento do OCR
     try:
-        # Lê os bytes da imagem uma única vez
         image_content = image.read()
+        logger.info("Iniciando OCR do scan", extra={**context, "image_size": len(image_content)})
         identified = _identify_card_with_ocr(image_content)
+        logger.info(
+            "OCR concluído com sucesso",
+            extra={
+                **context,
+                "detected_name": identified.get("name"),
+                "detected_number": identified.get("number"),
+                "confidence": identified.get("confidence"),
+            },
+        )
     except RuntimeError as exc:
-        # Erros esperados (imagem ruim, texto não encontrado)
+        logger.warning("Falha de OCR em scan", extra=context, exc_info=True)
         return _error_response(str(exc), status.HTTP_422_UNPROCESSABLE_ENTITY)
     except Exception as exc:
-        # Verifica se o erro é especificamente a falta do executável do Tesseract no SO
         is_tesseract_missing = False
         pytesseract = _get_pytesseract_module()
         if pytesseract:
@@ -388,18 +466,13 @@ def scan_card_view(request):
                 is_tesseract_missing = True
 
         if is_tesseract_missing:
+            logger.warning("Tesseract não encontrado no ambiente de execução", extra=context)
             return _error_response(
                 "OCR indisponível no servidor: binário tesseract-ocr não encontrado.",
                 status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
-        # Log do erro real no console para você conseguir debugar
-        print("--- ERRO CRÍTICO NO SCAN ---")
-        print(f"Tipo do erro: {type(exc).__name__}")
-        print(f"Mensagem: {str(exc)}")
-        import traceback
-        traceback.print_exc()
-
+        logger.exception("Erro interno inesperado no scan", extra=context)
         return _error_response(
             "Erro interno no processamento da imagem.",
             status.HTTP_500_INTERNAL_SERVER_ERROR,
