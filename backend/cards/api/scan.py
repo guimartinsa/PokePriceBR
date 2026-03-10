@@ -7,7 +7,7 @@ from io import BytesIO
 from PIL import Image, ImageOps
 from rest_framework import status
 from rest_framework.decorators import api_view, parser_classes
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from cards.models import Card
@@ -349,7 +349,7 @@ def _resolve_payload_identification(request) -> dict | None:
 
 
 @api_view(["POST"])
-@parser_classes([MultiPartParser, FormParser])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
 def scan_card_view(request):
     image = request.FILES.get("image")
 
