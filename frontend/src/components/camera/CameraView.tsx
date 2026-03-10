@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ScanOverlay } from "./ScanOverlay";
 import { CaptureButton } from "./CaptureButton";
-import { ScanApiError, uploadScan } from "../../api/scan";
+import { ScanApiError, submitScanCard } from "../../api/scan";
 import { useAuth } from "../../hooks/useAuth";
 import { hasSubscriberPrivileges } from "../../utils/plan";
+import { extractCardDataFromImage, OcrProcessingError } from "../../services/ocrService";
 import "./camera.css";
 
 type CardDetection = {
@@ -20,9 +21,13 @@ const TEMP_BATCH_COLLECTION_KEY = "scan:temp-batch-collection";
 const SAVED_BATCH_COLLECTIONS_KEY = "scan:saved-batch-collections";
 
 function buildScanErrorMessage(error: unknown): string {
+    if (error instanceof OcrProcessingError) {
+        return error.message;
+    }
+
     if (error instanceof ScanApiError) {
         if (error.status === 503) {
-            return "O serviço de leitura está instável no momento. Tente novamente em alguns instantes.";
+            return "Servico de leitura indisponivel no momento. Tente novamente em instantes.";
         }
 
         if (error.message.trim().length > 0) {
@@ -30,9 +35,8 @@ function buildScanErrorMessage(error: unknown): string {
         }
     }
 
-    return "Não foi possível identificar a carta. Tente novamente com melhor foco e iluminação.";
+    return "Nao foi possivel identificar a carta. Tente novamente com melhor foco e iluminacao.";
 }
-
 
 function getWeekId() {
     const now = new Date();
@@ -57,12 +61,15 @@ function readFreeUsage() {
     }
 }
 
-function parseApiResult(payload: unknown): CardDetection | null {
-    if (!payload || typeof payload !== "object") return null;
-    const record = payload as Record<string, unknown>;
+function parseApiResult(
+    payload: unknown,
+    fallback: Pick<CardDetection, "name" | "number">,
+): CardDetection {
+    const record =
+        payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
 
     const nestedCard =
-        typeof record.card === "object" && record.card !== null
+        record && typeof record.card === "object" && record.card !== null
             ? (record.card as Record<string, unknown>)
             : null;
 
@@ -71,34 +78,36 @@ function parseApiResult(payload: unknown): CardDetection | null {
             const trimmed = value.trim();
             return trimmed.length > 0 ? trimmed : null;
         }
+
         if (typeof value === "number" && Number.isFinite(value)) {
             return String(value);
         }
+
         return null;
     };
 
     const name =
-        toStringValue(record.name) ??
-        toStringValue(record.card_name) ??
+        (record ? toStringValue(record.name) : null) ??
+        (record ? toStringValue(record.card_name) : null) ??
         toStringValue(nestedCard?.name) ??
-        toStringValue(nestedCard?.card_name);
+        toStringValue(nestedCard?.card_name) ??
+        fallback.name;
 
     const number =
-        toStringValue(record.number) ??
-        toStringValue(record.card_number) ??
-        toStringValue(record.localId) ??
+        (record ? toStringValue(record.number) : null) ??
+        (record ? toStringValue(record.card_number) : null) ??
+        (record ? toStringValue(record.localId) : null) ??
         toStringValue(nestedCard?.number) ??
         toStringValue(nestedCard?.card_number) ??
-        toStringValue(nestedCard?.localId);
+        toStringValue(nestedCard?.localId) ??
+        fallback.number;
 
     const price =
-        typeof record.price === "number"
+        record && typeof record.price === "number"
             ? `R$ ${record.price.toFixed(2).replace(".", ",")}`
-            : typeof record.price === "string"
+            : record && typeof record.price === "string"
                 ? record.price
-                : "Preço indisponível";
-
-    if (!name || !number) return null;
+                : "Preco indisponivel";
 
     return {
         id: crypto.randomUUID(),
@@ -158,9 +167,9 @@ export function CameraView() {
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
                 }
-            } catch (err) {
-                console.error("Erro ao acessar câmera:", err);
-                setError("Não foi possível acessar a câmera. Verifique as permissões.");
+            } catch (cameraError) {
+                console.error("Erro ao acessar camera:", cameraError);
+                setError("Nao foi possivel acessar a camera. Verifique as permissoes.");
             }
         }
 
@@ -204,12 +213,12 @@ export function CameraView() {
             canvas.width = Math.round(cropWidth);
             canvas.height = Math.round(cropHeight);
 
-            const ctx = canvas.getContext("2d");
-            if (!ctx) {
-                throw new Error("Não foi possível criar contexto 2D");
+            const context = canvas.getContext("2d");
+            if (!context) {
+                throw new Error("Nao foi possivel criar contexto 2D");
             }
 
-            ctx.drawImage(
+            context.drawImage(
                 videoRef.current,
                 cropX,
                 cropY,
@@ -224,21 +233,28 @@ export function CameraView() {
             const blob = await new Promise<Blob>((resolve, reject) => {
                 canvas.toBlob(
                     (outputBlob) => {
-                        if (outputBlob) resolve(outputBlob);
-                        else reject(new Error("Erro ao criar blob"));
+                        if (outputBlob) {
+                            resolve(outputBlob);
+                            return;
+                        }
+
+                        reject(new Error("Erro ao criar blob da captura"));
                     },
                     "image/jpeg",
                     0.9,
                 );
             });
 
+            const ocrResult = await extractCardDataFromImage(blob);
+            const response = await submitScanCard({
+                name: ocrResult.name,
+                number: ocrResult.number,
+            });
 
-            const response = await uploadScan(blob);
-            const detection = parseApiResult(response);
-
-            if (!detection) {
-                throw new Error("Não foi possível identificar a carta da imagem");
-            }
+            const detection = parseApiResult(response, {
+                name: ocrResult.name,
+                number: ocrResult.number,
+            });
 
             setLastDetected(detection);
 
@@ -259,7 +275,7 @@ export function CameraView() {
 
     const persistBatchCollection = () => {
         if (tempBatch.length === 0) {
-            alert("Você ainda não adicionou cartas no lote temporário.");
+            alert("Voce ainda nao adicionou cartas no lote temporario.");
             return;
         }
 
@@ -270,18 +286,18 @@ export function CameraView() {
 
         setTempBatch([]);
         setBatchMode(false);
-        alert("Coleção salva com sucesso na coleção permanente.");
+        alert("Colecao salva com sucesso na colecao permanente.");
     };
 
     if (error) {
         return (
             <div className="camera-error">
                 <div className="error-content">
-                    <h2>⚠️ Erro ao acessar câmera</h2>
+                    <h2>Erro ao acessar camera</h2>
                     <p>{error}</p>
                     <p className="error-hint">
-                        Verifique se você deu permissão para usar a câmera nas configurações
-                        do navegador.
+                        Verifique se voce deu permissao para usar a camera nas configuracoes do
+                        navegador.
                     </p>
                 </div>
             </div>
@@ -302,7 +318,8 @@ export function CameraView() {
             </div>
 
             <div className="camera-dev-message">
-                🚧 Função de câmera ainda em desenvolvimento. Melhorias visuais e de leitura serão adicionadas em breve.
+                Funcao de camera em desenvolvimento. Melhorias de leitura serao adicionadas em
+                breve.
             </div>
 
             <CaptureButton onCapture={handleCapture} disabled={capturing || !canCapture} />
@@ -332,16 +349,16 @@ export function CameraView() {
             {isPremium && tempBatch.length > 0 && (
                 <section className="temp-batch-panel">
                     <div>
-                        <strong>Lote temporário</strong>
-                        <p>{tempBatch.length} carta(s) aguardando confirmação.</p>
+                        <strong>Lote temporario</strong>
+                        <p>{tempBatch.length} carta(s) aguardando confirmacao.</p>
                     </div>
                     <button type="button" onClick={persistBatchCollection}>
-                        Manter coleção
+                        Manter colecao
                     </button>
                 </section>
             )}
 
-            {capturing && <div className="capturing-indicator">Lendo nome e número...</div>}
+            {capturing && <div className="capturing-indicator">Lendo nome e numero...</div>}
         </div>
     );
 }
