@@ -1,14 +1,10 @@
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ScanOverlay } from "./ScanOverlay";
 import { CaptureButton } from "./CaptureButton";
-import { ScanApiError, submitScanCard } from "../../api/scan";
+import { ScanApiError, submitScanEmbedding } from "../../api/scan";
 import { useAuth } from "../../hooks/useAuth";
 import { hasSubscriberPrivileges } from "../../utils/plan";
-import {
-    createOcrDebugPreview,
-    extractCardDataFromImage,
-    OcrProcessingError,
-} from "../../services/ocrService";
+import { EmbeddingProcessingError, extractImageEmbedding } from "../../services/embeddingService";
 import "./camera.css";
 
 type CardDetection = {
@@ -25,7 +21,7 @@ const TEMP_BATCH_COLLECTION_KEY = "scan:temp-batch-collection";
 const SAVED_BATCH_COLLECTIONS_KEY = "scan:saved-batch-collections";
 
 function buildScanErrorMessage(error: unknown): string {
-    if (error instanceof OcrProcessingError) {
+    if (error instanceof EmbeddingProcessingError) {
         return error.message;
     }
 
@@ -65,10 +61,7 @@ function readFreeUsage() {
     }
 }
 
-function parseApiResult(
-    payload: unknown,
-    fallback: Pick<CardDetection, "name" | "number">,
-): CardDetection {
+function parseApiResult(payload: unknown): CardDetection {
     const record =
         payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
 
@@ -95,7 +88,7 @@ function parseApiResult(
         (record ? toStringValue(record.card_name) : null) ??
         toStringValue(nestedCard?.name) ??
         toStringValue(nestedCard?.card_name) ??
-        fallback.name;
+        "Carta desconhecida";
 
     const number =
         (record ? toStringValue(record.number) : null) ??
@@ -104,7 +97,7 @@ function parseApiResult(
         toStringValue(nestedCard?.number) ??
         toStringValue(nestedCard?.card_number) ??
         toStringValue(nestedCard?.localId) ??
-        fallback.number;
+"-";
 
     const price =
         record && typeof record.price === "number"
@@ -133,7 +126,6 @@ export function CameraView() {
     const [batchMode, setBatchMode] = useState(false);
     const [lastDetected, setLastDetected] = useState<CardDetection | null>(null);
     const [scanError, setScanError] = useState<string | null>(null);
-    const [ocrDebugPreview, setOcrDebugPreview] = useState<string | null>(null);
     const [tempBatch, setTempBatch] = useState<CardDetection[]>(() => {
         const raw = localStorage.getItem(TEMP_BATCH_COLLECTION_KEY);
         if (!raw) return [];
@@ -207,18 +199,9 @@ export function CameraView() {
         setScanError(null);
 
         try {
-            const debugPreview = await createOcrDebugPreview(image);
-            setOcrDebugPreview(debugPreview);
-
-            const ocrResult = await extractCardDataFromImage(image);
-            const response = await submitScanCard({
-                name: ocrResult.name,
-                number: ocrResult.number,
-            });
-            const detection = parseApiResult(response, {
-                name: ocrResult.name,
-                number: ocrResult.number,
-            });
+            const embedding = await extractImageEmbedding(image);
+            const response = await submitScanEmbedding({ embedding });
+            const detection = parseApiResult(response);
 
             setLastDetected(detection);
 
@@ -296,19 +279,10 @@ export function CameraView() {
                 );
             });
 
-            const debugPreview = await createOcrDebugPreview(blob);
-            setOcrDebugPreview(debugPreview);
+            const embedding = await extractImageEmbedding(blob);
+            const response = await submitScanEmbedding({ embedding });
 
-            const ocrResult = await extractCardDataFromImage(blob);
-            const response = await submitScanCard({
-                name: ocrResult.name,
-                number: ocrResult.number,
-            });
-
-            const detection = parseApiResult(response, {
-                name: ocrResult.name,
-                number: ocrResult.number,
-            });
+            const detection = parseApiResult(response);
 
             setLastDetected(detection);
 
@@ -420,16 +394,6 @@ export function CameraView() {
 
             {scanError && <div className="scan-error-message">{scanError}</div>}
 
-            {ocrDebugPreview && (
-                <section className="scan-debug-preview">
-                    <p>Preview das regioes usadas no OCR</p>
-                    <img src={ocrDebugPreview} alt="Preview das regioes OCR" />
-                    <button type="button" onClick={() => setOcrDebugPreview(null)}>
-                        Fechar preview
-                    </button>
-                </section>
-            )}
-
             {isPremium && tempBatch.length > 0 && (
                 <section className="temp-batch-panel">
                     <div>
@@ -442,7 +406,7 @@ export function CameraView() {
                 </section>
             )}
 
-            {capturing && <div className="capturing-indicator">Lendo nome e numero...</div>}
+            {capturing && <div className="capturing-indicator">Gerando embedding da imagem...</div>}
         </div>
     );
 }
