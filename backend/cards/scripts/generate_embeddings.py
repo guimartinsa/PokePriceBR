@@ -8,7 +8,6 @@ from PIL import Image
 from cards.models import Card
 from cards.services.embedding_service import generate_embedding
 
-
 REQUEST_TIMEOUT_SECONDS = 20
 
 
@@ -16,10 +15,17 @@ def _resolve_image_url(card: Card) -> str | None:
     return card.imagem_grande or card.imagem
 
 
-def run():
-    cards = Card.objects.filter(embedding__isnull=True)
+def run(*, clear_existing: bool = False, only_missing: bool = True, process_all: bool = False) -> None:
+    if clear_existing:
+        updated = Card.objects.exclude(embedding__isnull=True).update(embedding=None)
+        print(f"embeddings removidos: {updated}")
 
-    for card in cards.iterator():
+    queryset = Card.objects.all()
+    should_filter_missing = clear_existing or (only_missing and not process_all)
+    if should_filter_missing:
+        queryset = queryset.filter(embedding__isnull=True)
+
+    for card in queryset.iterator():
         image_url = _resolve_image_url(card)
         if not image_url:
             print(f"sem imagem para card id={card.id} nome={card.nome}")
