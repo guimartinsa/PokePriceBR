@@ -3,6 +3,7 @@ from unittest import TestCase
 from PIL import Image
 
 from cards.services.embedding_service import (
+    EPSILON,
     TARGET_DIMENSION,
     TARGET_HEIGHT,
     TARGET_WIDTH,
@@ -28,7 +29,29 @@ class EmbeddingServiceTests(TestCase):
     def _frontend_reference_embedding(self, image: Image.Image) -> np.ndarray:
         resized = image.convert("RGB").resize((TARGET_WIDTH, TARGET_HEIGHT), resample=Image.BILINEAR)
         pixels = np.asarray(resized, dtype=np.float32) / 255.0
-        values = pixels.reshape(-1)
+
+        total_pixels = TARGET_WIDTH * TARGET_HEIGHT
+        red = pixels[:, :, 0].reshape(total_pixels)
+        green = pixels[:, :, 1].reshape(total_pixels)
+        blue = pixels[:, :, 2].reshape(total_pixels)
+
+        mean_red = float(np.mean(red, dtype=np.float32))
+        mean_green = float(np.mean(green, dtype=np.float32))
+        mean_blue = float(np.mean(blue, dtype=np.float32))
+
+        global_mean = (mean_red + mean_green + mean_blue) / 3.0
+        red = np.clip(red * (global_mean / max(mean_red, EPSILON)), 0.0, 1.0)
+        green = np.clip(green * (global_mean / max(mean_green, EPSILON)), 0.0, 1.0)
+        blue = np.clip(blue * (global_mean / max(mean_blue, EPSILON)), 0.0, 1.0)
+
+        luminance = (0.299 * red + 0.587 * green + 0.114 * blue).reshape(TARGET_HEIGHT, TARGET_WIDTH)
+        gradients = np.zeros((TARGET_HEIGHT, TARGET_WIDTH), dtype=np.float32)
+        gradients[1:-1, 1:-1] = np.sqrt(
+            (luminance[1:-1, 2:] - luminance[1:-1, :-2]) ** 2
+            + (luminance[2:, 1:-1] - luminance[:-2, 1:-1]) ** 2
+        )
+
+        values = np.stack([red, green, blue, gradients.reshape(total_pixels)], axis=1).reshape(-1)
 
         stride = values.size / TARGET_DIMENSION
         reduced = np.zeros(TARGET_DIMENSION, dtype=np.float32)

@@ -1,6 +1,7 @@
 const TARGET_WIDTH = 32;
 const TARGET_HEIGHT = 32;
 const TARGET_DIMENSION = 512;
+const EPSILON = 1e-6;
 
 export class EmbeddingProcessingError extends Error {
     constructor(message: string) {
@@ -41,6 +42,77 @@ function reduceToFixedSize(values: number[], targetSize: number): number[] {
     return reduced;
 }
 
+function clamp01(value: number): number {
+    if (value <= 0) return 0;
+    if (value >= 1) return 1;
+    return value;
+}
+
+function computeRobustFeatures(pixels: Uint8ClampedArray): number[] {
+    const totalPixels = TARGET_WIDTH * TARGET_HEIGHT;
+    const red = new Array<number>(totalPixels);
+    const green = new Array<number>(totalPixels);
+    const blue = new Array<number>(totalPixels);
+    const luminance = new Array<number>(totalPixels);
+
+    let meanRed = 0;
+    let meanGreen = 0;
+    let meanBlue = 0;
+
+    for (let index = 0; index < totalPixels; index += 1) {
+        const base = index * 4;
+        const r = pixels[base] / 255;
+        const g = pixels[base + 1] / 255;
+        const b = pixels[base + 2] / 255;
+
+        red[index] = r;
+        green[index] = g;
+        blue[index] = b;
+
+        meanRed += r;
+        meanGreen += g;
+        meanBlue += b;
+    }
+
+    meanRed /= totalPixels;
+    meanGreen /= totalPixels;
+    meanBlue /= totalPixels;
+
+    const globalMean = (meanRed + meanGreen + meanBlue) / 3;
+    const gainRed = globalMean / Math.max(meanRed, EPSILON);
+    const gainGreen = globalMean / Math.max(meanGreen, EPSILON);
+    const gainBlue = globalMean / Math.max(meanBlue, EPSILON);
+
+    for (let index = 0; index < totalPixels; index += 1) {
+        const r = clamp01(red[index] * gainRed);
+        const g = clamp01(green[index] * gainGreen);
+        const b = clamp01(blue[index] * gainBlue);
+
+        red[index] = r;
+        green[index] = g;
+        blue[index] = b;
+        luminance[index] = 0.299 * r + 0.587 * g + 0.114 * b;
+    }
+
+    const gradients = new Array<number>(totalPixels).fill(0);
+    const pixelAt = (x: number, y: number) => luminance[y * TARGET_WIDTH + x];
+
+    for (let y = 1; y < TARGET_HEIGHT - 1; y += 1) {
+        for (let x = 1; x < TARGET_WIDTH - 1; x += 1) {
+            const gx = pixelAt(x + 1, y) - pixelAt(x - 1, y);
+            const gy = pixelAt(x, y + 1) - pixelAt(x, y - 1);
+            gradients[y * TARGET_WIDTH + x] = Math.hypot(gx, gy);
+        }
+    }
+
+    const values: number[] = [];
+    for (let index = 0; index < totalPixels; index += 1) {
+        values.push(red[index], green[index], blue[index], gradients[index]);
+    }
+
+    return values;
+}
+
 export async function extractImageEmbedding(imageBlob: Blob): Promise<number[]> {
     if (imageBlob.size <= 0) {
         throw new EmbeddingProcessingError("A imagem capturada está vazia.");
@@ -60,14 +132,7 @@ export async function extractImageEmbedding(imageBlob: Blob): Promise<number[]> 
 
         context.drawImage(bitmap, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
         const pixels = context.getImageData(0, 0, TARGET_WIDTH, TARGET_HEIGHT).data;
-        const values: number[] = [];
-
-        for (let index = 0; index < pixels.length; index += 4) {
-            const red = pixels[index] / 255;
-            const green = pixels[index + 1] / 255;
-            const blue = pixels[index + 2] / 255;
-            values.push(red, green, blue);
-        }
+        const values = computeRobustFeatures(pixels);
 
         const reduced = reduceToFixedSize(values, TARGET_DIMENSION);
         return l2Normalize(reduced);
