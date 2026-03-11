@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 from io import BytesIO
-import os
-import sys
-from threading import Lock
 
 import numpy as np
 from PIL import Image
 
-_MODEL = None
-_PREPROCESS = None
-_MODEL_INIT_ERROR: EmbeddingServiceError | None = None
-_MODEL_LOCK = Lock()
+TARGET_WIDTH = 32
+TARGET_HEIGHT = 32
+TARGET_DIMENSION = 512
+_RGB_CHANNELS = 3
+_EXPECTED_RAW_SIZE = TARGET_WIDTH * TARGET_HEIGHT * _RGB_CHANNELS
 
 
 class EmbeddingServiceError(RuntimeError):
@@ -20,67 +18,6 @@ class EmbeddingServiceError(RuntimeError):
     def __init__(self, message: str, *, status_code: int = 400):
         super().__init__(message)
         self.status_code = status_code
-
-
-def _load_clip_model():
-    global _MODEL, _PREPROCESS, _MODEL_INIT_ERROR
-
-    if _MODEL is not None and _PREPROCESS is not None:
-        return _MODEL, _PREPROCESS
-
-    if _MODEL_INIT_ERROR is not None:
-        raise _MODEL_INIT_ERROR
-
-    with _MODEL_LOCK:
-        if _MODEL is not None and _PREPROCESS is not None:
-            return _MODEL, _PREPROCESS
-
-        if _MODEL_INIT_ERROR is not None:
-            raise _MODEL_INIT_ERROR
-
-        if os.getenv("DISABLE_EMBEDDING_MODEL", "").strip().lower() in {"1", "true", "yes", "on"}:
-            _MODEL_INIT_ERROR = EmbeddingServiceError(
-                "Busca por imagem está desativada no ambiente atual.",
-                status_code=503,
-            )
-            raise _MODEL_INIT_ERROR
-
-        if sys.version_info >= (3, 13):
-            _MODEL_INIT_ERROR = EmbeddingServiceError(
-                "Busca por imagem indisponível com Python 3.13+. Configure o servidor com Python 3.11 ou 3.12.",
-                status_code=503,
-            )
-            raise _MODEL_INIT_ERROR
-
-        os.environ.setdefault("TORCH_DISABLE_DYNAMO", "1")
-
-        try:
-            import open_clip
-            import torch  # noqa: F401 — valida disponibilidade do torch
-        except ImportError as exc:
-            _MODEL_INIT_ERROR = EmbeddingServiceError(
-                "Dependências de embedding indisponíveis. Instale open-clip-torch e torch."
-            )
-            raise _MODEL_INIT_ERROR from exc
-
-        try:
-            model, _, preprocess = open_clip.create_model_and_transforms(
-                "ViT-B-32",
-                pretrained="laion2b_s34b_b79k",
-            )
-        except Exception as exc:
-            _MODEL_INIT_ERROR = EmbeddingServiceError(
-                "Não foi possível inicializar o modelo de busca por imagem no servidor.",
-                status_code=503,
-            )
-            raise _MODEL_INIT_ERROR from exc
-
-        model.eval()
-
-        _MODEL = model
-        _PREPROCESS = preprocess
-
-    return _MODEL, _PREPROCESS
 
 
 def load_image_from_upload(image_file) -> Image.Image:
@@ -97,18 +34,36 @@ def load_image_from_bytes(image_bytes: bytes) -> Image.Image:
         raise EmbeddingServiceError("Não foi possível abrir os bytes da imagem.") from exc
 
 
+def _reduce_to_fixed_size(values: np.ndarray, target_size: int) -> np.ndarray:
+    if values.size < target_size:
+        raise EmbeddingServiceError("Dimensão insuficiente para gerar embedding.")
+
+    stride = values.size / target_size
+    reduced = np.zeros(target_size, dtype=np.float32)
+
+    for index in range(target_size):
+        start = int(np.floor(index * stride))
+        end = max(start + 1, int(np.floor((index + 1) * stride)))
+        reduced[index] = np.mean(values[start:end], dtype=np.float32)
+
+    return reduced
+
+
+def _l2_normalize(values: np.ndarray) -> np.ndarray:
+    norm = np.linalg.norm(values)
+    if not np.isfinite(norm) or norm <= 0:
+        raise EmbeddingServiceError("Falha ao normalizar embedding da imagem.")
+    return (values / norm).astype(np.float32)
+
+
 def generate_embedding(image: Image.Image) -> np.ndarray:
-    model, preprocess = _load_clip_model()
+    resized_image = image.convert("RGB").resize((TARGET_WIDTH, TARGET_HEIGHT), resample=Image.BILINEAR)
 
-    try:
-        import torch
-    except ImportError as exc:
-        raise EmbeddingServiceError("Dependência torch indisponível para gerar embedding.") from exc
+    pixels = np.asarray(resized_image, dtype=np.float32) / 255.0
+    flattened_values = pixels.reshape(-1)
 
-    image_tensor = preprocess(image).unsqueeze(0)
+    if flattened_values.size != _EXPECTED_RAW_SIZE:
+        raise EmbeddingServiceError("Dimensão inesperada ao processar a imagem.")
 
-    with torch.no_grad():
-        embedding = model.encode_image(image_tensor)
-
-    normalized_embedding = embedding / embedding.norm(dim=-1, keepdim=True)
-    return normalized_embedding[0].cpu().numpy().astype(np.float32)
+    reduced = _reduce_to_fixed_size(flattened_values, TARGET_DIMENSION)
+    return _l2_normalize(reduced)
