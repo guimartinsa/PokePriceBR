@@ -43,7 +43,7 @@ from .auth import (
 )
 
 urlpatterns = [
-    path("scan/", scan_card_view, name="scan-card-ocr"),
+    path("scan/", scan_card_view, name="scan-card-embedding"),
     path("cards/", CardListView.as_view(), name="card-list"),
     path("cards/<int:pk>/", CardDetailView.as_view(), name="card-detail"),
 

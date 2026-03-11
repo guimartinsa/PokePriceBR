@@ -8,9 +8,8 @@ export class ScanApiError extends Error {
     }
 }
 
-export type ScanCardPayload = {
-    name: string;
-    number: string;
+export type ScanEmbeddingPayload = {
+    embedding: number[];
 };
 
 function normalizeBaseUrl(rawUrl?: string): string {
@@ -55,48 +54,24 @@ function buildAuthHeaders(): HeadersInit {
         "Content-Type": "application/json",
     };
 
-    if (token) {
-        return {
-            ...headers,
-            Authorization: `Bearer ${token}`,
-        };
-    }
-
-    return headers;
-}
-
-function buildMultipartAuthHeaders(): HeadersInit {
-    const token = localStorage.getItem("access");
-
     if (!token) {
-        return {};
+        return headers;
     }
 
     return {
+        ...headers,
         Authorization: `Bearer ${token}`,
     };
 }
 
-function normalizePayload(payload: ScanCardPayload): ScanCardPayload {
-    return {
-        name: payload.name.trim(),
-        number: payload.number.trim(),
-    };
-}
-
-function validatePayload(payload: ScanCardPayload) {
-    if (!payload.name) {
-        throw new Error("Nome da carta não pode ser vazio.");
-    }
-
-    if (!payload.number || !/\d{1,3}\/\d{1,3}/.test(payload.number)) {
-        throw new Error("Número da carta inválido para envio.");
+function validatePayload(payload: ScanEmbeddingPayload) {
+    if (!Array.isArray(payload.embedding) || payload.embedding.length !== 512) {
+        throw new Error("Embedding inválido para envio. São esperados 512 valores.");
     }
 }
 
-export async function submitScanCard(payload: ScanCardPayload): Promise<unknown> {
-    const normalizedPayload = normalizePayload(payload);
-    validatePayload(normalizedPayload);
+export async function submitScanEmbedding(payload: ScanEmbeddingPayload): Promise<unknown> {
+    validatePayload(payload);
 
     const scanUrls = getScanUrls();
     let lastError: Error | null = null;
@@ -108,7 +83,7 @@ export async function submitScanCard(payload: ScanCardPayload): Promise<unknown>
             response = await fetch(url, {
                 method: "POST",
                 headers: buildAuthHeaders(),
-                body: JSON.stringify(normalizedPayload),
+                body: JSON.stringify(payload),
             });
         } catch (networkError) {
             lastError = networkError instanceof Error
@@ -123,81 +98,17 @@ export async function submitScanCard(payload: ScanCardPayload): Promise<unknown>
         }
 
         if (!response.ok) {
-            let detail = "Erro ao enviar dados da carta";
+            let detail = "Erro ao consultar embedding";
 
             try {
                 const errorPayload = await response.json() as Record<string, unknown>;
-
-                if (
-                    typeof errorPayload.detail === "string" &&
-                    errorPayload.detail.trim().length > 0
-                ) {
+                if (typeof errorPayload.detail === "string" && errorPayload.detail.trim()) {
                     detail = errorPayload.detail;
-                } else if (
-                    typeof errorPayload.error === "string" &&
-                    errorPayload.error.trim().length > 0
-                ) {
+                } else if (typeof errorPayload.error === "string" && errorPayload.error.trim()) {
                     detail = errorPayload.error;
                 }
             } catch {
-                // resposta sem payload JSON válido
-            }
-
-            throw new ScanApiError(detail, response.status);
-        }
-
-        return response.json();
-    }
-
-    throw lastError ?? new Error("Todas as URLs de scan falharam.");
-}
-
-export async function submitScanImage(image: File): Promise<unknown> {
-    const scanUrls = getScanUrls();
-    let lastError: Error | null = null;
-    const formData = new FormData();
-    formData.append("image", image);
-
-    for (const url of scanUrls) {
-        let response: Response;
-
-        try {
-            response = await fetch(url, {
-                method: "POST",
-                headers: buildMultipartAuthHeaders(),
-                body: formData,
-            });
-        } catch (networkError) {
-            lastError = networkError instanceof Error
-                ? networkError
-                : new Error(String(networkError));
-            continue;
-        }
-
-        if (response.status === 404) {
-            lastError = new Error(`Endpoint de scan não encontrado: ${url}`);
-            continue;
-        }
-
-        if (!response.ok) {
-            let detail = "Erro ao processar imagem";
-
-            try {
-                const errorPayload = await response.json() as Record<string, unknown>;
-
-                if (
-                    typeof errorPayload.detail === "string" &&
-                    errorPayload.detail.trim().length > 0
-                ) {
-                    detail = errorPayload.detail;
-                } else if (
-                    typeof errorPayload.error === "string" &&
-                    errorPayload.error.trim().length > 0
-                ) {
-                    detail = errorPayload.error;
-                }
-            } catch {
-                // resposta sem payload JSON válido
+                // resposta sem json
             }
 
             throw new ScanApiError(detail, response.status);
