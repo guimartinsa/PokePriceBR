@@ -1,7 +1,7 @@
 import { env, pipeline } from "@xenova/transformers";
 
-// Primeiro tenta o id atual da comunidade ONNX; se falhar, usa o id legado da Xenova.
-const CLIP_MODEL_IDS = ["onnx-community/clip-vit-base-patch32", "Xenova/clip-vit-base-patch32"];
+// Usa um repositório público estável do Transformers.js para evitar 401 em artefatos do modelo.
+const CLIP_MODEL_ID = "Xenova/clip-vit-base-patch32";
 const CLIP_IMAGE_SIZE = 224;
 const EMBEDDING_DIMENSION = 512;
 
@@ -39,17 +39,15 @@ async function getClipExtractor(): Promise<ClipExtractor> {
         extractorPromise = (async () => {
             let latestError: unknown = null;
 
-            for (const modelId of CLIP_MODEL_IDS) {
-                try {
-                    const loaded = await pipeline("feature-extraction", modelId);
-                    return loaded as unknown as ClipExtractor;
-                } catch (error) {
-                    latestError = error;
-                }
+            try {
+                const loaded = await pipeline("image-feature-extraction", CLIP_MODEL_ID);
+                return loaded as unknown as ClipExtractor;
+            } catch (error) {
+                latestError = error;
             }
 
             throw new ClipEmbeddingError(
-                `Nao foi possivel carregar o modelo CLIP (${CLIP_MODEL_IDS.join(" -> ")}): ${String(latestError)}`,
+                `Nao foi possivel carregar o modelo CLIP (${CLIP_MODEL_ID}): ${String(latestError)}`,
             );
         })().catch((error) => {
             extractorPromise = null;
