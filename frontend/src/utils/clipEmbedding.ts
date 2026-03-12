@@ -1,6 +1,7 @@
-import { pipeline } from "@xenova/transformers";
+import { env, pipeline } from "@xenova/transformers";
 
-const CLIP_MODEL_ID = "Xenova/clip-vit-base-patch32";
+// Primeiro tenta o id atual da comunidade ONNX; se falhar, usa o id legado da Xenova.
+const CLIP_MODEL_IDS = ["onnx-community/clip-vit-base-patch32", "Xenova/clip-vit-base-patch32"];
 const CLIP_IMAGE_SIZE = 224;
 const EMBEDDING_DIMENSION = 512;
 
@@ -18,6 +19,24 @@ type ClipExtractor = (
 
 let extractorPromise: Promise<ClipExtractor> | null = null;
 
+function configureTransformersRuntime() {
+    env.allowLocalModels = false;
+    env.allowRemoteModels = true;
+}
+
+
+function toClipErrorMessage(error: unknown): string {
+    if (error instanceof Error && typeof error.message === "string" && error.message.trim().length > 0) {
+        return error.message;
+    }
+
+    if (typeof error === "string" && error.trim().length > 0) {
+        return error;
+    }
+
+    return String(error);
+}
+
 function normalizeL2(values: number[]): number[] {
     const norm = Math.sqrt(values.reduce((sum, value) => sum + value * value, 0));
     if (!Number.isFinite(norm) || norm <= 0) {
@@ -29,17 +48,26 @@ function normalizeL2(values: number[]): number[] {
 
 async function getClipExtractor(): Promise<ClipExtractor> {
     if (!extractorPromise) {
-        extractorPromise = pipeline(
-            "feature-extraction",
-            CLIP_MODEL_ID,
-        )
-            .then((loaded) => loaded as unknown as ClipExtractor)
-            .catch((error) => {
-                extractorPromise = null;
-                throw new ClipEmbeddingError(
-                    `Nao foi possivel carregar o modelo CLIP: ${String(error)}`,
-                );
-            });
+        configureTransformersRuntime();
+        extractorPromise = (async () => {
+            let latestError: unknown = null;
+
+            for (const modelId of CLIP_MODEL_IDS) {
+                try {
+                    const loaded = await pipeline("feature-extraction", modelId);
+                    return loaded as unknown as ClipExtractor;
+                } catch (error) {
+                    latestError = error;
+                }
+            }
+
+            throw new ClipEmbeddingError(
+                `Nao foi possivel carregar o modelo CLIP (${CLIP_MODEL_IDS.join(" -> ")}): ${toClipErrorMessage(latestError)}`,
+            );
+        })().catch((error) => {
+            extractorPromise = null;
+            throw error;
+        });
     }
 
     return extractorPromise;
@@ -152,14 +180,24 @@ function toEmbedding512(values: number[]): number[] {
 export async function extractClipEmbedding(
     image: HTMLImageElement | HTMLCanvasElement | ImageBitmap,
 ): Promise<number[]> {
-    const inputCanvas = toSquareCanvas(image);
-    const extractor = await getClipExtractor();
-    const output = await extractor(inputCanvas, {
-        pooling: "mean",
-        normalize: false,
-    });
+    try {
+        const inputCanvas = toSquareCanvas(image);
+        const extractor = await getClipExtractor();
+        const output = await extractor(inputCanvas, {
+            pooling: "mean",
+            normalize: false,
+        });
 
-    const flattened = flattenFiniteNumbers(output);
-    const embedding = toEmbedding512(flattened);
-    return normalizeL2(embedding);
+        const flattened = flattenFiniteNumbers(output);
+        const embedding = toEmbedding512(flattened);
+        return normalizeL2(embedding);
+    } catch (error) {
+        if (error instanceof ClipEmbeddingError) {
+            throw error;
+        }
+
+        throw new ClipEmbeddingError(
+            `Falha ao gerar embedding CLIP: ${toClipErrorMessage(error)}`,
+        );
+    }
 }
