@@ -41,7 +41,7 @@ async function getClipExtractor(): Promise<ClipExtractor> {
 
             for (const modelId of CLIP_MODEL_IDS) {
                 try {
-                    const loaded = await pipeline("feature-extraction", modelId);
+                    const loaded = await pipeline("image-feature-extraction", modelId);
                     return loaded as unknown as ClipExtractor;
                 } catch (error) {
                     latestError = error;
