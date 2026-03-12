@@ -42,7 +42,7 @@ def l2_normalize(values: np.ndarray) -> np.ndarray:
 
 def load_clip() -> tuple[CLIPProcessor, CLIPModel, torch.device]:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    processor = CLIPProcessor.from_pretrained(MODEL_ID)
+    processor = CLIPProcessor.from_pretrained(MODEL_ID, use_fast=False)
     model = CLIPModel.from_pretrained(MODEL_ID)
     model.eval()
     model.to(device)
@@ -60,11 +60,17 @@ def generate_clip_embedding(
     inputs = {name: tensor.to(device) for name, tensor in inputs.items()}
 
     image_features = model.get_image_features(**inputs)
-    vector = image_features[0].detach().cpu().numpy().astype(np.float32)
+    array = image_features.detach().cpu().numpy().astype(np.float32)
 
-    if vector.shape[0] != EXPECTED_EMBEDDING_DIMENSION:
+    # Alguns ambientes retornam shape [1, 1, 512].
+    if array.ndim == 1:
+        vector = array.reshape(-1)
+    else:
+        vector = array[0].reshape(-1)
+
+    if vector.size != EXPECTED_EMBEDDING_DIMENSION:
         raise ValueError(
-            f"Dimensao inesperada do embedding: {vector.shape[0]}. "
+            f"Dimensao inesperada do embedding: shape={array.shape}, size={vector.size}. "
             f"Esperado: {EXPECTED_EMBEDDING_DIMENSION}."
         )
 
