@@ -12,7 +12,7 @@ from cards.models import Card
 logger = logging.getLogger(__name__)
 
 EXPECTED_EMBEDDING_DIMENSION = 512
-MIN_SIMILARITY_THRESHOLD = 0.72
+MIN_SIMILARITY_THRESHOLD = 0.85
 
 
 def _scan_log_context(request) -> dict[str, object]:

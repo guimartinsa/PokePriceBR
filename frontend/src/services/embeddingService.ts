@@ -1,7 +1,11 @@
-const TARGET_WIDTH = 32;
-const TARGET_HEIGHT = 32;
+import { ClipEmbeddingError, extractClipEmbedding } from "../utils/clipEmbedding";
+
+const LEGACY_TARGET_WIDTH = 32;
+const LEGACY_TARGET_HEIGHT = 32;
 const TARGET_DIMENSION = 512;
 const EPSILON = 1e-6;
+const ENABLE_LEGACY_FALLBACK =
+    (import.meta.env.VITE_ENABLE_LEGACY_EMBEDDING_FALLBACK ?? "true").toLowerCase() !== "false";
 
 export class EmbeddingProcessingError extends Error {
     constructor(message: string) {
@@ -21,7 +25,7 @@ function l2Normalize(values: number[]): number[] {
 
 function reduceToFixedSize(values: number[], targetSize: number): number[] {
     if (values.length < targetSize) {
-        throw new EmbeddingProcessingError("Dimensão insuficiente para gerar embedding.");
+        throw new EmbeddingProcessingError("Dimensao insuficiente para gerar embedding.");
     }
 
     const stride = values.length / targetSize;
@@ -49,7 +53,7 @@ function clamp01(value: number): number {
 }
 
 function computeRobustFeatures(pixels: Uint8ClampedArray): number[] {
-    const totalPixels = TARGET_WIDTH * TARGET_HEIGHT;
+    const totalPixels = LEGACY_TARGET_WIDTH * LEGACY_TARGET_HEIGHT;
     const red = new Array<number>(totalPixels);
     const green = new Array<number>(totalPixels);
     const blue = new Array<number>(totalPixels);
@@ -95,13 +99,13 @@ function computeRobustFeatures(pixels: Uint8ClampedArray): number[] {
     }
 
     const gradients = new Array<number>(totalPixels).fill(0);
-    const pixelAt = (x: number, y: number) => luminance[y * TARGET_WIDTH + x];
+    const pixelAt = (x: number, y: number) => luminance[y * LEGACY_TARGET_WIDTH + x];
 
-    for (let y = 1; y < TARGET_HEIGHT - 1; y += 1) {
-        for (let x = 1; x < TARGET_WIDTH - 1; x += 1) {
+    for (let y = 1; y < LEGACY_TARGET_HEIGHT - 1; y += 1) {
+        for (let x = 1; x < LEGACY_TARGET_WIDTH - 1; x += 1) {
             const gx = pixelAt(x + 1, y) - pixelAt(x - 1, y);
             const gy = pixelAt(x, y + 1) - pixelAt(x, y - 1);
-            gradients[y * TARGET_WIDTH + x] = Math.hypot(gx, gy);
+            gradients[y * LEGACY_TARGET_WIDTH + x] = Math.hypot(gx, gy);
         }
     }
 
@@ -113,29 +117,60 @@ function computeRobustFeatures(pixels: Uint8ClampedArray): number[] {
     return values;
 }
 
+function extractLegacyEmbeddingFromBitmap(bitmap: ImageBitmap): number[] {
+    const canvas = document.createElement("canvas");
+    canvas.width = LEGACY_TARGET_WIDTH;
+    canvas.height = LEGACY_TARGET_HEIGHT;
+
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) {
+        throw new EmbeddingProcessingError("Nao foi possivel preparar canvas para embedding.");
+    }
+
+    context.drawImage(bitmap, 0, 0, LEGACY_TARGET_WIDTH, LEGACY_TARGET_HEIGHT);
+    const pixels = context.getImageData(0, 0, LEGACY_TARGET_WIDTH, LEGACY_TARGET_HEIGHT).data;
+    const values = computeRobustFeatures(pixels);
+
+    const reduced = reduceToFixedSize(values, TARGET_DIMENSION);
+    return l2Normalize(reduced);
+}
+
+function toProcessingError(error: unknown): EmbeddingProcessingError {
+    if (error instanceof EmbeddingProcessingError) {
+        return error;
+    }
+
+    if (error instanceof ClipEmbeddingError) {
+        return new EmbeddingProcessingError(error.message);
+    }
+
+    if (error instanceof Error && error.message.trim().length > 0) {
+        return new EmbeddingProcessingError(error.message);
+    }
+
+    return new EmbeddingProcessingError("Nao foi possivel gerar embedding da imagem.");
+}
+
 export async function extractImageEmbedding(imageBlob: Blob): Promise<number[]> {
     if (imageBlob.size <= 0) {
-        throw new EmbeddingProcessingError("A imagem capturada está vazia.");
+        throw new EmbeddingProcessingError("A imagem capturada esta vazia.");
     }
 
     const bitmap = await createImageBitmap(imageBlob);
 
     try {
-        const canvas = document.createElement("canvas");
-        canvas.width = TARGET_WIDTH;
-        canvas.height = TARGET_HEIGHT;
+        try {
+            return await extractClipEmbedding(bitmap);
+        } catch (clipError) {
+            if (!ENABLE_LEGACY_FALLBACK) {
+                throw toProcessingError(clipError);
+            }
 
-        const context = canvas.getContext("2d", { willReadFrequently: true });
-        if (!context) {
-            throw new EmbeddingProcessingError("Não foi possível preparar canvas para embedding.");
+            console.warn("Falha ao gerar embedding CLIP. Aplicando fallback legado.", clipError);
+            return extractLegacyEmbeddingFromBitmap(bitmap);
         }
-
-        context.drawImage(bitmap, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
-        const pixels = context.getImageData(0, 0, TARGET_WIDTH, TARGET_HEIGHT).data;
-        const values = computeRobustFeatures(pixels);
-
-        const reduced = reduceToFixedSize(values, TARGET_DIMENSION);
-        return l2Normalize(reduced);
+    } catch (error) {
+        throw toProcessingError(error);
     } finally {
         bitmap.close();
     }
