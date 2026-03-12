@@ -13,7 +13,7 @@ export class ClipEmbeddingError extends Error {
 }
 
 type ClipExtractor = (
-    input: CanvasImageSource,
+    input: ImageData,
     options?: Record<string, unknown>,
 ) => Promise<unknown>;
 
@@ -166,8 +166,14 @@ export async function extractClipEmbedding(
     image: HTMLImageElement | HTMLCanvasElement | ImageBitmap,
 ): Promise<number[]> {
     const inputCanvas = toSquareCanvas(image);
+    const context = inputCanvas.getContext("2d");
+    if (!context) {
+        throw new ClipEmbeddingError("Nao foi possivel ler os pixels da imagem para o CLIP.");
+    }
+
+    const inputImageData = context.getImageData(0, 0, CLIP_IMAGE_SIZE, CLIP_IMAGE_SIZE);
     const extractor = await getClipExtractor();
-    const output = await extractor(inputCanvas, {
+    const output = await extractor(inputImageData, {
         pooling: "mean",
         normalize: false,
     });
