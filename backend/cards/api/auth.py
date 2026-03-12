@@ -13,12 +13,21 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
 
+def _resolve_avatar(profile, fallback=""):
+    if profile.avatar_upload:
+        return profile.avatar_upload.url
+    if profile.avatar_option:
+        if profile.avatar_option.image_upload:
+            return profile.avatar_option.image_upload.url
+        return profile.avatar_option.image_url
+    return profile.avatar or fallback
+
 
 def _build_auth_response(user, avatar=""):
     
     profile, _ = Profile.objects.get_or_create(user=user)
     refresh_subscription_status(profile)
-    final_avatar = profile.avatar_option.image_url if profile.avatar_option else (profile.avatar or avatar)
+    final_avatar = _resolve_avatar(profile, avatar)
 
     refresh = RefreshToken.for_user(user)
 
@@ -29,7 +38,8 @@ def _build_auth_response(user, avatar=""):
             "email": user.email,
             "name": user.first_name,
             "avatar": final_avatar,
-            "plan": profile.plan,
+            "plan": Profile.PlanChoices.ADMIN if profile.is_admin_plan else profile.plan,
+            "is_admin": profile.is_admin_plan,
             "badge": "PRO" if profile.can_access_pro_features else None,
         },
     }
@@ -116,11 +126,12 @@ def me(request):
     user = request.user
     profile, _ = Profile.objects.get_or_create(user=user)
     refresh_subscription_status(profile)
-    avatar = profile.avatar_option.image_url if profile.avatar_option else profile.avatar
+    avatar = _resolve_avatar(profile)
     return Response({
         "email": user.email,
         "name": user.first_name,
         "avatar": avatar,
-        "plan": profile.plan,
+        "plan": Profile.PlanChoices.ADMIN if profile.is_admin_plan else profile.plan,
+        "is_admin": profile.is_admin_plan,
         "badge": "PRO" if profile.can_access_pro_features else None,
     })

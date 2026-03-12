@@ -2,9 +2,8 @@ import "./series.css";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { fetchCards } from "../api/cards";
 import { fetchSeries, type SeriesItem, type SeriesSet } from "../api/series";
-import { fetchCollectionCards, fetchCollections, type Collection } from "../services/collection";
+import { fetchCollectionSetProgress, fetchCollections } from "../services/collection";
 
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
@@ -12,7 +11,7 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
     year: "numeric",
 });
 
-type ProgressBySetCode = Record<string, { owned: number; total: number }>;
+type ProgressBySetId = Record<number, { owned: number; total: number }>;
 
 function getLevel(percentage: number): number {
     if (percentage >= 75) return 3;
@@ -28,9 +27,8 @@ export default function SeriesDetailPage() {
     const [series, setSeries] = useState<SeriesItem[]>([]);
     const [loadingSeries, setLoadingSeries] = useState(true);
 
-    const [collections, setCollections] = useState<Collection[]>([]);
     const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
-    const [progressBySetCode, setProgressBySetCode] = useState<ProgressBySetCode>({});
+    const [progressBySetId, setProgressBySetId] = useState<ProgressBySetId>({});
 
     useEffect(() => {
         fetchSeries()
@@ -39,12 +37,11 @@ export default function SeriesDetailPage() {
 
         fetchCollections()
             .then((items) => {
-                setCollections(items);
                 if (items.length > 0) {
                     setSelectedCollectionId(items[0].id);
                 }
             })
-            .catch(() => setCollections([]));
+            .catch(() => setSelectedCollectionId(null));
     }, []);
 
     const selectedSeries = useMemo(
@@ -67,47 +64,29 @@ export default function SeriesDetailPage() {
         if (!selectedSeries) return;
 
         const fetchProgress = async () => {
-            const ownedBySetCode: Record<string, number> = {};
+            const ownedBySetId: Record<number, number> = {};
 
             if (selectedCollectionId) {
-                const collectionCards = await fetchCollectionCards(selectedCollectionId);
-                collectionCards
-                    .filter((item) => item.owned)
-                    .forEach((item) => {
-                        const setCode = item.set?.codigo_liga;
-                        if (!setCode) return;
-
-                        ownedBySetCode[setCode] = (ownedBySetCode[setCode] ?? 0) + 1;
-                    });
+                const rows = await fetchCollectionSetProgress(selectedCollectionId);
+                rows.forEach((row) => {
+                    if (row.set_id) {
+                        ownedBySetId[row.set_id] = row.owned;
+                    }
+                });
             }
 
-            const entries = await Promise.all(
-                selectedSeries.sets.map(async (setItem) => {
-                    const setCode = setItem.codigo_liga;
-                    if (!setCode) {
-                        return ["", { owned: 0, total: 0 }] as const;
-                    }
-
-                    try {
-                        const response = await fetchCards({ set: setCode, page: 1 });
-                        return [setCode, { owned: ownedBySetCode[setCode] ?? 0, total: response.count }] as const;
-                    } catch {
-                        return [setCode, { owned: ownedBySetCode[setCode] ?? 0, total: 0 }] as const;
-                    }
-                }),
-            );
-
-            const nextProgress: ProgressBySetCode = {};
-            entries.forEach(([setCode, value]) => {
-                if (setCode) {
-                    nextProgress[setCode] = value;
-                }
+            const nextProgress: ProgressBySetId = {};
+            selectedSeries.sets.forEach((setItem) => {
+                nextProgress[setItem.id] = {
+                    owned: ownedBySetId[setItem.id] ?? 0,
+                    total: setItem.cards_total ?? 0,
+                };
             });
 
-            setProgressBySetCode(nextProgress);
+            setProgressBySetId(nextProgress);
         };
 
-        fetchProgress().catch(() => setProgressBySetCode({}));
+        fetchProgress().catch(() => setProgressBySetId({}));
     }, [selectedCollectionId, selectedSeries]);
 
     if (loadingSeries) return <p style={{ padding: 16 }}>Carregando serie...</p>;
@@ -116,7 +95,7 @@ export default function SeriesDetailPage() {
         return (
             <main style={{ padding: 16 }}>
                 <button type="button" className="series-back" onClick={() => navigate("/series")}>
-                    ← Voltar para series
+                    Voltar para series
                 </button>
                 <p>Serie nao encontrada.</p>
             </main>
@@ -125,28 +104,20 @@ export default function SeriesDetailPage() {
 
     return (
         <main className="series-detail-page">
-            <button type="button" className="series-back" onClick={() => navigate("/series")}>← All Series</button>
+            <button type="button" className="series-back" onClick={() => navigate("/series")}>All Series</button>
 
             <section className="series-detail-hero">
                 {selectedSeries.logo ? <img src={selectedSeries.logo} alt={selectedSeries.nome} className="series-detail-hero__logo" /> : null}
             </section>
 
-            {collections.length > 0 ? (
-                <label className="series-collection-picker">
-                    Colecao
-                    <select value={selectedCollectionId ?? ""} onChange={(event) => setSelectedCollectionId(Number(event.target.value))}>
-                        {collections.map((collection) => (
-                            <option key={collection.id} value={collection.id}>
-                                {collection.name}
-                            </option>
-                        ))}
-                    </select>
-                </label>
-            ) : null}
-
             <section className="series-set-list">
                 {orderedSets.map((setItem) => (
-                    <SeriesSetCard key={setItem.id} setItem={setItem} progress={progressBySetCode[setItem.codigo_liga ?? ""]} onOpenSet={() => setItem.codigo_liga && navigate(`/series/sets/${encodeURIComponent(setItem.codigo_liga)}`)} />
+                    <SeriesSetCard
+                        key={setItem.id}
+                        setItem={setItem}
+                        progress={progressBySetId[setItem.id]}
+                        onOpenSet={() => setItem.codigo_liga && navigate(`/series/sets/${encodeURIComponent(setItem.codigo_liga)}`)}
+                    />
                 ))}
             </section>
         </main>
@@ -197,3 +168,5 @@ function SeriesSetCard({
         </button>
     );
 }
+
+

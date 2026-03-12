@@ -10,6 +10,8 @@ import type {Card} from "../types/Card"
 export type Collection = {
     id: number;
     name: string;
+    cover_card_id?: number | null;
+    cover_image?: string | null;
 };
 
 export type CollectionCard = Card &{
@@ -29,8 +31,14 @@ export async function fetchCollections(): Promise<Collection[]> {
 
 /* 🔹 Criar nova coleção */
 /* 🔹 Criar coleção */
-export async function createCollection(name: string): Promise<Collection> {
-    const res = await api.post<Collection>("/collections/", { name });
+export async function createCollection(
+    name: string,
+    coverCardId?: number | null,
+): Promise<Collection> {
+    const res = await api.post<Collection>("/collections/", {
+        name,
+        cover_card_id: coverCardId ?? null,
+    });
     return res.data;
 }
 
@@ -53,15 +61,61 @@ export async function fetchCollectionCards(
     return res.data;
 }
 
+export type CollectionSetProgress = {
+    set_id: number;
+    owned: number;
+};
+
+export async function fetchCollectionSetProgress(
+    collectionId: number,
+): Promise<CollectionSetProgress[]> {
+    const res = await api.get<CollectionSetProgress[]>(
+        `/collections/${collectionId}/progress-by-set/`,
+    );
+    return res.data;
+}
+
 /* 🔹 Marcar / desmarcar "Tenho" */
+export type CardVariation = "normal" | "foil" | "reverse_foil" | "master_ball" | "pokeball_foil";
+
 export async function toggleCollectionCard(
     collectionId: number,
     cardId: number,
-    owned: boolean
+    owned: boolean,
+    variation?: CardVariation
 ): Promise<void> {
     await api.post(`/collections/${collectionId}/toggle/`, {
         card_id: cardId,
         owned,
+        variation,
+    });
+}
+
+
+export type OwnedCardState = {
+    id: number;
+    owned: boolean;
+    owned_normal: boolean;
+    owned_foil: boolean;
+    owned_reverse_foil: boolean;
+    owned_master_ball: boolean;
+    owned_pokeball_foil: boolean;
+};
+
+export async function fetchOwnedCards(): Promise<OwnedCardState[]> {
+    const res = await api.get<OwnedCardState[]>("/owned-cards/");
+    return res.data;
+}
+
+export async function toggleOwnedCard(
+    cardId: number,
+    owned: boolean,
+    variation?: CardVariation,
+): Promise<void> {
+    await api.post("/owned-cards/toggle/", {
+        card_id: cardId,
+        owned,
+        variation,
     });
 }
 
@@ -88,3 +142,4 @@ export async function atualizarPrecosColecao(collectionId: number): Promise<{ st
     );
     return res.data;
 }
+

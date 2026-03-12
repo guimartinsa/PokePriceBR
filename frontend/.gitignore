@@ -25,3 +25,5 @@ dist-ssr
 .env
 
 *.sqlite3
+
+package-lock.json

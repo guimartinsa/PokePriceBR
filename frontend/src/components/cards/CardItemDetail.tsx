@@ -1,14 +1,15 @@
 import type { Card } from "../../types/Card";
+import type { CardVariation } from "../../services/collection";
 import "./style.css";
 
 type Props = {
-    card: Card & { owned?: boolean };
+    card: Card;
     compact?: boolean;
     showOwnedToggle?: boolean;
 
     /** usado na CollectionPage */
     onClick?: () => void;
-    onToggleOwned?: (value: boolean) => void;
+    onToggleOwned?: (variation: CardVariation, value: boolean) => void;
 };
 
 function getLowestPrice(card: Pick<Card, "preco_min" | "preco_med" | "preco_max">): string | null {
@@ -20,6 +21,26 @@ function getLowestPrice(card: Pick<Card, "preco_min" | "preco_med" | "preco_max"
     return Math.min(...values).toFixed(2);
 }
 
+const variationLabels = [
+    { key: "possui_normal", ownedKey: "owned_normal", shortLabel: "N", label: "Normal", className: "variation-normal", variation: "normal" },
+    { key: "possui_foil", ownedKey: "owned_foil", shortLabel: "F", label: "Foil", className: "variation-foil", variation: "foil" },
+    { key: "possui_reverse_foil", ownedKey: "owned_reverse_foil", shortLabel: "RF", label: "Reverse Foil", className: "variation-reverse", variation: "reverse_foil" },
+    { key: "possui_master_ball", ownedKey: "owned_master_ball", shortLabel: "MB", label: "Master Ball", className: "variation-master", variation: "master_ball" },
+    { key: "possui_pokeball_foil", ownedKey: "owned_pokeball_foil", shortLabel: "PB", label: "Poké Ball Foil", className: "variation-pokeball", variation: "pokeball_foil" },
+] as const;
+
+function isOverSetNumber(numeroCompleto: string): boolean {
+    const [cardNumber, totalSet] = numeroCompleto.split("/").map((value) => Number(value));
+
+    return Number.isFinite(cardNumber)
+        && Number.isFinite(totalSet)
+        && cardNumber > totalSet;
+}
+
+function isExCard(cardName: string): boolean {
+    return /\bex\b/i.test(cardName);
+}
+
 export function CardItemDetail({
     card,
     compact = false,
@@ -28,6 +49,13 @@ export function CardItemDetail({
 
 }: Props) {
     const lowestPrice = getLowestPrice(card);
+
+    const forceFoilOnly = isExCard(card.nome) || isOverSetNumber(card.numero_completo);
+    const availableVariations = forceFoilOnly
+        ? [variationLabels[1]]
+        : variationLabels.filter((variation) => Boolean(card[variation.key]));
+
+
     return (
         <div
             className={`card-item ${compact ? "compact" : ""} ${onClick ? "is-clickable" : ""}`}
@@ -50,18 +78,28 @@ export function CardItemDetail({
                     Menor valor: {lowestPrice ? `R$ ${lowestPrice}` : "Indisponível"}
                 </p>
 
-                {card.preco_min && <p className="price-min">Menor valor: R$ {card.preco_min}</p>}
 
-                {!compact && (
-                    //<label className="owned-checkbox">
-                    <label className="owned-checkbox" onClick={(e) => e.stopPropagation()}>
-                        <input
-                            type="checkbox"
-                            checked={!!card.owned}
-                            onChange={(e) => onToggleOwned?.(e.target.checked)}
-                        />
-                        <span>Normal</span>
-                    </label>
+
+                {!compact && availableVariations.length > 0 && (
+                    <div className="owned-variations" aria-label="Variações disponíveis">
+                        {availableVariations.map((variation) => (
+                            <label
+                                key={variation.key}
+                                className="owned-checkbox"
+                                onClick={(e) => e.stopPropagation()}
+                                title={variation.label}
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(card[variation.ownedKey])}
+                                    onChange={(e) => onToggleOwned?.(variation.variation, e.target.checked)}
+                                />
+                                <span className={`variation-marker ${variation.className}`}>
+                                    {variation.shortLabel}
+                                </span>
+                            </label>
+                        ))}
+                    </div>
                 )}
             </div>
         </div>

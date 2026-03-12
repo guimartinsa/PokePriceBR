@@ -1,13 +1,14 @@
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import path, reverse
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from celery.result import AsyncResult
 from cards.tasks.update_card_from_tcgdex import update_card_from_tcgdex_task
 from cards.tasks.update_set_cards_from_tcgdex import update_set_cards_from_tcgdex_task
 from cards.tasks.atualizar_precos_set_task import atualizar_precos_set_task
 from cards.models import Card, CardAdminLog
 from django.contrib import messages
+import re
 from cards.services.admin_log import log_admin_action
 
 from cards.models import Set, Card, Avatar, Profile, Series
@@ -19,9 +20,11 @@ from cards.services.liga_url import gerar_liga_url
 
 @admin.register(Series)
 class SeriesAdmin(admin.ModelAdmin):
-    list_display = ("nome", "tcgdex_id")
+    list_display = ("nome", "tcgdex_id", "total_sets_relacionados")
     search_fields = ("nome", "tcgdex_id")
     ordering = ("nome",)
+    readonly_fields = ("sets_relacionados",)
+    fields = ("nome", "tcgdex_id", "logo", "sets_relacionados")
 
     actions = ["importar_series_tcgdex"]
 
@@ -34,6 +37,23 @@ class SeriesAdmin(admin.ModelAdmin):
             f"Importação/atualização de séries iniciada (task {task.id}).",
             level=messages.SUCCESS,
         )
+
+    @admin.display(description="Total de sets")
+    def total_sets_relacionados(self, obj):
+        return Set.objects.filter(serie_id=obj.tcgdex_id).count()
+
+    @admin.display(description="Sets relacionados")
+    def sets_relacionados(self, obj):
+        sets = Set.objects.filter(serie_id=obj.tcgdex_id).order_by("release_date", "nome")
+        if not sets.exists():
+            return "Nenhum set relacionado."
+
+        itens = format_html_join(
+            "",
+            "<li>{} ({})</li>",
+            ((set_obj.nome, set_obj.codigo_liga or "sem código") for set_obj in sets),
+        )
+        return format_html("<ul>{}</ul>", itens)
 
 
 
@@ -62,6 +82,7 @@ class CardAdmin(admin.ModelAdmin):
         "restaurar_cartas",
         "atualizar_precos_global",   
         "atualizar_detalhes_tcgdex",
+        "atualizar_numero_completo",
         "atualizar_links_liga",
     ]
 
@@ -185,6 +206,22 @@ class CardAdmin(admin.ModelAdmin):
             f"{total} carta(s) enviadas para atualização de detalhes.",
             level=messages.SUCCESS,
         )
+        
+    @admin.action(description='Atualizar "número completo" (numero/total_set) das cartas selecionadas')
+    def atualizar_numero_completo(self, request, queryset):
+        atualizadas = 0
+
+        for card in queryset:
+            card.numero_completo = f"{card.numero}/{card.total_set}"
+            card.liga_num = card.numero_completo
+            card.save(update_fields=["numero_completo", "liga_num"])
+            atualizadas += 1
+
+        self.message_user(
+            request,
+            f'"Número completo" atualizado para {atualizadas} carta(s) selecionada(s).',
+            level=messages.SUCCESS,
+        )
 
     @admin.action(description="Atualizar link da Liga das cartas selecionadas")
     def atualizar_links_liga(self, request, queryset):
@@ -232,9 +269,33 @@ class SetAdmin(admin.ModelAdmin):
         "atualizar_precos_do_set",
         "atualizar_detalhes_do_set",
         "atualizar_links_liga_dos_sets",
+        "adicionar_variantes_master_ball_pokeball_foil",
     ]
 
     # -------- AÇÕES -------- #
+    
+    @staticmethod
+    def _extrair_numero_base(numero_raw):
+        if numero_raw is None:
+            return None
+
+        numero_str = str(numero_raw).strip()
+        if not numero_str:
+            return None
+
+        match = re.match(r"^(\d+)", numero_str)
+        if not match:
+            return None
+
+        return int(match.group(1))
+
+    @classmethod
+    def _eh_carta_ex(cls, card):
+        nome = (card.nome or "").lower()
+        raridade = (card.raridade or "").lower()
+
+        return " ex" in nome or nome.endswith("ex") or "double rare" in raridade
+
 
     @admin.action(description="Importar/atualizar sets selecionados da TCGdex")
     def importar_sets_tcgdex(self, request, queryset):
@@ -319,6 +380,42 @@ class SetAdmin(admin.ModelAdmin):
             level=messages.SUCCESS,
         )
 
+    @admin.action(description="Adicionar Master Ball e Pokeball Foil (cartas elegíveis)")
+    def adicionar_variantes_master_ball_pokeball_foil(self, request, queryset):
+        atualizadas = 0
+
+        for set_obj in queryset:
+            for card in set_obj.cartas.all():
+                numero_base = self._extrair_numero_base(card.numero)
+                if numero_base is None:
+                    continue
+
+                if numero_base >= card.total_set:
+                    continue
+
+                if self._eh_carta_ex(card):
+                    continue
+
+                changed = False
+
+                if not card.possui_master_ball:
+                    card.possui_master_ball = True
+                    changed = True
+
+                if not card.possui_pokeball_foil:
+                    card.possui_pokeball_foil = True
+                    changed = True
+
+                if changed:
+                    card.save(update_fields=["possui_master_ball", "possui_pokeball_foil"])
+                    atualizadas += 1
+
+        self.message_user(
+            request,
+            f"{atualizadas} carta(s) atualizada(s) com Master Ball e Pokeball Foil.",
+            level=messages.SUCCESS,
+        )
+
 
     @admin.action(description="Atualizar link da Liga de todas as cartas dos sets")
     def atualizar_links_liga_dos_sets(self, request, queryset):
@@ -345,14 +442,14 @@ class SetAdmin(admin.ModelAdmin):
     total_cartas.short_description = "Qtd. Cartas"
 
     def has_delete_permission(self, request, obj=None):
-        if obj and obj.cartas.exists():
-            return False
+        #if obj and obj.cartas.exists():
+        #    return False
         return True
 
-    def get_readonly_fields(self, request, obj=None):
-        if obj:
-            return ("codigo_liga",)
-        return ()
+    #def get_readonly_fields(self, request, obj=None):
+    #    if obj:
+    #        return ("codigo_liga",)
+    #    return ()
 
 
 @admin.register(Avatar)
@@ -360,7 +457,13 @@ class AvatarAdmin(admin.ModelAdmin):
     list_display = ("name", "is_active", "created_at")
     list_filter = ("is_active",)
     search_fields = ("name",)
+    readonly_fields = ("created_at",)
 
+    fieldsets = (
+        (None, {"fields": ("name", "is_active")}),
+        ("Imagem", {"fields": ("image_url", "image_upload")}),
+        ("Metadados", {"fields": ("created_at",)}),
+    )
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):

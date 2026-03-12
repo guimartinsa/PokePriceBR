@@ -14,6 +14,7 @@ export interface SearchFiltersState {
     over: boolean | null;
     preco_min: string;
     preco_max: string;
+    ordenar: string;
 }
 
 type Props = {
@@ -23,6 +24,14 @@ type Props = {
 
 export function SearchFilters({ filters, onChange }: Props) {
     const [showAdvanced, setShowAdvanced] = useState(false);
+
+    const sortOptions = [
+        { value: "", label: "Padrão" },
+        { value: "nome", label: "Nome (A-Z)" },
+        { value: "numero", label: "Número (crescente)" },
+        { value: "preco", label: "Preço (menor primeiro)" },
+        { value: "lancamento", label: "Lançamento (mais novo)" },
+    ] as const;
 
     const updateFilter = (key: keyof SearchFiltersState, value: string | boolean | null) => {
         onChange({ ...filters, [key]: value });
@@ -37,6 +46,7 @@ export function SearchFilters({ filters, onChange }: Props) {
             over: null,
             preco_min: "",
             preco_max: "",
+            ordenar: "",
         });
     };
 
@@ -59,6 +69,27 @@ export function SearchFilters({ filters, onChange }: Props) {
                 <CardAutocomplete value={filters.nome} onSelect={(nome) => updateFilter("nome", nome)} />
 
                 <SetAutocomplete value={filters.set} onChange={(set) => updateFilter("set", set)} />
+
+                <div>
+                    <span className="filters-label">Ordenar por</span>
+                    <div className="filters-sort-options" role="radiogroup" aria-label="Ordenar por">
+                        {sortOptions.map((option) => {
+                            const isActive = filters.ordenar === option.value;
+                            return (
+                                <button
+                                    key={option.value || "padrao"}
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={isActive}
+                                    onClick={() => updateFilter("ordenar", option.value)}
+                                    className={`filters-sort-option ${isActive ? "is-active" : ""}`}
+                                >
+                                    {option.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
 
                 {/* Toggle Filtros Avançados */}
                 <button
@@ -101,6 +132,7 @@ export function SearchFilters({ filters, onChange }: Props) {
                         filters.over === false && "Normais",
                         filters.preco_min && `Preço min: R$ ${filters.preco_min}`,
                         filters.preco_max && `Preço max: R$ ${filters.preco_max}`,
+                        filters.ordenar && `Ordenação: ${filters.ordenar}`,
                     ]
                         .filter(Boolean)
                         .join(" • ")}

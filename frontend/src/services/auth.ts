@@ -4,6 +4,9 @@ export type AuthUser = {
     email: string;
     name: string;
     avatar?: string;
+    plan?: "FREE" | "PRO" | "ADMIN";
+    is_admin?: boolean;
+    badge?: "PRO" | null;
 };
 
 type AuthResponse = {

@@ -4,6 +4,7 @@ import type { PaginatedResponse } from "../types/PaginatedResponse";
 
 export interface CardFilters {
   page?: number;
+  set_id?: number;
   nome?: string;
   set?: string;
   raridade?: string;
@@ -13,6 +14,7 @@ export interface CardFilters {
   numero?: string;
   preco_min?: string;
   preco_max?: string;
+  ordenar?: string;
 }
 
 export const fetchCards = async (filters: CardFilters) => {

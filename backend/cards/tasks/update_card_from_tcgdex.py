@@ -37,6 +37,8 @@ def update_card_from_tcgdex_task(self, card_id: int):
         .get("official")
     )
 
+    variants = data.get("variants") or {}
+    
     updated_fields = []
 
     if ilustrador:
@@ -54,6 +56,24 @@ def update_card_from_tcgdex_task(self, card_id: int):
 
         updated_fields.extend(["imagem", "imagem_grande"])
 
+
+    # -------- VARIANTES --------
+    possui_foil = bool(variants.get("holo"))
+    possui_normal = bool(variants.get("normal"))
+    possui_reverse_foil = bool(variants.get("reverse"))
+
+    if card.possui_foil != possui_foil:
+        card.possui_foil = possui_foil
+        updated_fields.append("possui_foil")
+
+    if card.possui_normal != possui_normal:
+        card.possui_normal = possui_normal
+        updated_fields.append("possui_normal")
+
+    if card.possui_reverse_foil != possui_reverse_foil:
+        card.possui_reverse_foil = possui_reverse_foil
+        updated_fields.append("possui_reverse_foil")
+        
     if official_total:
         card.total_set = official_total
         card.numero_completo = f"{card.numero}/{official_total}"

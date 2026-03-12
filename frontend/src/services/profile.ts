@@ -15,13 +15,38 @@ export type Profile = {
     bio?: string;
 };
 
+export type UpdateProfilePayload = Partial<Profile> & {
+    avatar_upload?: File | null;
+};
+
 export async function fetchProfile() {
     const res = await api.get<Profile>("/profile/");
     return res.data;
 }
 
-export async function updateProfile(payload: Partial<Profile>) {
-    const res = await api.put<Profile>("/profile/", payload);
+export async function updateProfile(payload: UpdateProfilePayload) {
+    const formData = new FormData();
+
+    if (payload.name !== undefined) formData.append("name", payload.name);
+    if (payload.bio !== undefined) formData.append("bio", payload.bio ?? "");
+
+    if (payload.avatar_option !== undefined) {
+        if (payload.avatar_option === null) {
+            formData.append("avatar_option", "");
+        } else {
+            formData.append("avatar_option", String(payload.avatar_option));
+        }
+    }
+
+    if (payload.avatar_upload !== undefined) {
+        if (payload.avatar_upload) {
+            formData.append("avatar_upload", payload.avatar_upload);
+        } else {
+            formData.append("avatar_upload", "");
+        }
+    }
+
+    const res = await api.put<Profile>("/profile/", formData);
     return res.data;
 }
 

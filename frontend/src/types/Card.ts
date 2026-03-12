@@ -15,8 +15,19 @@ export interface Card {
   preco_med: string | null;
   preco_max: string | null;
   imagem: string | null;
+  imagem_grande?: string | null;
   liga_url?: string | null;
+  possui_normal?: boolean;
+  possui_foil?: boolean;
+  possui_reverse_foil?: boolean;
+  possui_master_ball?: boolean;
+  possui_pokeball_foil?: boolean;
+  owned?: boolean;
+  owned_normal?: boolean;
+  owned_foil?: boolean;
+  owned_reverse_foil?: boolean;
+  owned_master_ball?: boolean;
+  owned_pokeball_foil?: boolean;
   set: Set;
 }
-
 

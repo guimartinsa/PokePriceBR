@@ -2,6 +2,7 @@ from django.db import models
 from cards.services.liga_url import gerar_liga_url
 from django.conf import settings
 from django.utils import timezone
+from pgvector.django import VectorField
 
 
 class Set(models.Model):
@@ -55,6 +56,7 @@ class Card(models.Model):
     raridade = models.CharField(max_length=50, blank=True, null=True)
     imagem = models.URLField(blank=True, null=True)
     imagem_grande = models.URLField(blank=True, null=True)
+    embedding = VectorField(dimensions=512, null=True, blank=True)
 
     # URL oficial da Liga Pokémon (gerada automaticamente)
     liga_url = models.URLField(blank=True, null=True)
@@ -124,6 +126,11 @@ class Card(models.Model):
     )
 
     detalhes_atualizados = models.BooleanField(default=False)
+    possui_normal = models.BooleanField(default=True)
+    possui_foil = models.BooleanField(default=False)
+    possui_reverse_foil = models.BooleanField(default=False)
+    possui_master_ball = models.BooleanField(default=False)
+    possui_pokeball_foil = models.BooleanField(default=False)
 
     # -------- IMAGENS DERIVADAS -------- #
 
@@ -247,7 +254,8 @@ class Profile(models.Model):
     
 class Avatar(models.Model):
     name = models.CharField(max_length=80, unique=True)
-    image_url = models.URLField()
+    image_url = models.URLField(blank=True, null=True)
+    image_upload = models.ImageField(upload_to="avatar_options/", blank=True, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -298,6 +306,13 @@ class Collection(models.Model):
         related_name="collections"
     )
     name = models.CharField(max_length=120)
+    cover_card = models.ForeignKey(
+        "cards.Card",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="collection_covers",
+    )
     is_public = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -317,6 +332,11 @@ class CollectionCard(models.Model):
     )
     custom_photo = models.ImageField(upload_to="collection-cards/", blank=True, null=True)
     owned = models.BooleanField(default=False)
+    owned_normal = models.BooleanField(default=False)
+    owned_foil = models.BooleanField(default=False)
+    owned_reverse_foil = models.BooleanField(default=False)
+    owned_master_ball = models.BooleanField(default=False)
+    owned_pokeball_foil = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ("collection", "card")

@@ -1,17 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import { fetchCardsAutocomplete } from "../../api/cardsAutocomplete";
 import {
     fetchCollections,
     createCollection,
     deleteCollection,
     type Collection,
 } from "../../services/collection";
-import { useNavigate } from "react-router-dom";
+import type { CardAutocomplete } from "../../types/CardAutocomplete";
+import "./collectionsList.css";
+import { hasSubscriberPrivileges } from "../../utils/plan";
+
+import icon from "../../assets/icons/colecaoicon.svg";
+
+const FREE_COLLECTION_LIMIT = 1;
+
 
 export default function CollectionsListPage() {
     const [collections, setCollections] = useState<Collection[]>([]);
     const [newName, setNewName] = useState("");
+    const [cardQuery, setCardQuery] = useState("");
+    const [cardOptions, setCardOptions] = useState<CardAutocomplete[]>([]);
+    const [selectedCoverCard, setSelectedCoverCard] = useState<CardAutocomplete | null>(null);
     const navigate = useNavigate();
+    const { user } = useAuth();
 
+    const hasUnlimitedCollections = hasSubscriberPrivileges(user?.plan);
+    const reachedFreeLimit = !hasUnlimitedCollections && collections.length >= FREE_COLLECTION_LIMIT;
 
     async function loadCollections() {
         try {
@@ -26,14 +42,27 @@ export default function CollectionsListPage() {
         loadCollections();
     }, []);
 
+    useEffect(() => {
+        if (cardQuery.trim().length < 2) {
+            setCardOptions([]);
+            return;
+        }
+
+        fetchCardsAutocomplete(cardQuery)
+            .then((cards) => setCardOptions(cards.slice(0, 6)))
+            .catch(() => setCardOptions([]));
+    }, [cardQuery]);
 
     async function handleCreate() {
-        if (!newName.trim()) return;
+        if (!newName.trim() || reachedFreeLimit) return;
 
         try {
-            const created = await createCollection(newName);
+            const created = await createCollection(newName, selectedCoverCard?.id ?? null);
             setCollections((prev) => [...prev, created]);
             setNewName("");
+            setCardQuery("");
+            setCardOptions([]);
+            setSelectedCoverCard(null);
         } catch (err) {
             console.error("Erro ao criar coleção", err);
         }
@@ -51,90 +80,126 @@ export default function CollectionsListPage() {
         }
     }
 
+    const helperMessage = useMemo(() => {
+        if (hasUnlimitedCollections) {
+            return "Seu plano permite criar coleções ilimitadas.";
+        }
+
+        if (collections.length === 0) {
+            return "Você pode criar sua primeira coleção grátis.";
+        }
+
+        return "Você já usou sua coleção grátis. Assine o Pro para criar coleções ilimitadas.";
+    }, [collections.length, hasUnlimitedCollections]);
+
     return (
-        <div style={{ padding: 20, maxWidth: 800, margin: "0 auto" }}>
-            <h1>📁 Minhas Coleções</h1>
+        <div className="collections-page">
+            <header className="collections-header">
+                <div>
+                    <img src={icon} alt="" width={45} />
+                    <h1>Minhas Coleções</h1>
+                    <p>{helperMessage}</p>
+                </div>
+                {!hasUnlimitedCollections && collections.length > 0 && (
+                    <button
+                        type="button"
+                        className="subscribe-btn"
+                        onClick={() => navigate("/perfil")}
+                    >
+                        Assinar Pro
+                    </button>
+                )}
+            </header>
 
-            {/* Criar coleção */}
-            <div
-                style={{
-                    display: "flex",
-                    gap: 8,
-                    marginTop: 16,
-                }}
-            >
-                <input
-                    type="text"
-                    placeholder="Nome da nova coleção"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    style={{
-                        flex: 1,
-                        padding: 10,
-                        borderRadius: 8,
-                        border: "1px solid #444",
-                        background: "#121212",
-                        color: "#fff",
-                    }}
-                />
-                <button
-                    onClick={handleCreate}
-                    style={{
-                        padding: "10px 16px",
-                        borderRadius: 8,
-                        border: "none",
-                        background: "#4caf50",
-                        color: "#fff",
-                        cursor: "pointer",
-                    }}
-                >
-                    Criar
-                </button>
-            </div>
+            <section className="create-collection-card">
+                <h2>Criar coleção</h2>
+                <div className="create-row">
+                    <input
+                        type="text"
+                        placeholder="Nome da nova coleção"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        disabled={reachedFreeLimit}
+                    />
+                    <button
+                        onClick={handleCreate}
+                        disabled={reachedFreeLimit || !newName.trim()}
+                    >
+                        Criar
+                    </button>
+                </div>
 
-            {/* Lista */}
-            <div style={{ display: "grid", gap: 16, marginTop: 24 }}>
+                <div className="cover-picker">
+                    <label>Escolher carta de capa</label>
+                    <input
+                        type="text"
+                        value={selectedCoverCard ? selectedCoverCard.nome : cardQuery}
+                        onChange={(e) => {
+                            setSelectedCoverCard(null);
+                            setCardQuery(e.target.value);
+                        }}
+                        placeholder="Busque uma carta para ser a imagem da coleção"
+                        disabled={reachedFreeLimit}
+                    />
+
+                    {!selectedCoverCard && cardOptions.length > 0 && (
+                        <ul className="cover-options">
+                            {cardOptions.map((card) => (
+                                <li
+                                    key={card.id}
+                                    onMouseDown={() => {
+                                        setSelectedCoverCard(card);
+                                        setCardQuery("");
+                                        setCardOptions([]);
+                                    }}
+                                >
+                                    {card.imagem && <img src={card.imagem} alt={card.nome} />}
+                                    <div>
+                                        <strong>{card.nome}</strong>
+                                        <small>
+                                            #{card.numero_completo} • {card.set.codigo_liga}
+                                        </small>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+            </section>
+
+            <section className="collections-grid">
                 {collections.length === 0 && (
-                    <p style={{ color: "#999" }}>
-                        Você ainda não criou nenhuma coleção.
-                    </p>
+                    <p className="empty-collections">Você ainda não criou nenhuma coleção.</p>
                 )}
 
                 {collections.map((col) => (
-                    <div
-                        key={col.id}
-                        style={{
-                            padding: 16,
-                            borderRadius: 12,
-                            background: "#1e1e1e",
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                        }}
-                    >
-                        <div
-                            onClick={() =>
-                                navigate(`/collections/${col.id}`)
-                            }
-                            style={{ cursor: "pointer" }}
-                        >
-                            <strong>{col.name}</strong>
-                        </div>
+                    <article key={col.id} className="collection-set-card">
 
                         <button
-                            onClick={() => handleDelete(col.id)}
-                            style={{
-                                background: "transparent",
-                                border: "none",
-                                color: "#f44336",
-                                cursor: "pointer",
-                            }}
+                            type="button"
+                            className="cover-area"
+                            onClick={() => navigate(`/collections/${col.id}`)}
                         >
-                            Excluir
+                            {col.cover_image ? (
+                                <img src={col.cover_image} alt={col.name} />
+                            ) : (
+                                <div className="cover-fallback">Sem capa</div>
+                            )}
                         </button>
-                    </div>
+
+                        <div className="collection-info">
+                            <strong>{col.name}</strong>
+                            <span>Coleção pessoal</span>
+                            <div className="collection-actions">
+                                <button onClick={() => navigate(`/collections/${col.id}`)}>Abrir</button>
+                                <button onClick={() => handleDelete(col.id)} className="danger-btn">
+                                    Excluir
+                                </button>
+                            </div>
+                        </div>
+                    </article>
                 ))}
-            </div>
+            </section>
         </div>
     );
 }

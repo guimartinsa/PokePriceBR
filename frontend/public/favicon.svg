@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="PriceDexBR">
+  <rect width="128" height="128" rx="24" fill="#0f172a"/>
+  <circle cx="64" cy="64" r="48" fill="#38bdf8"/>
+  <circle cx="64" cy="64" r="40" fill="#1e293b"/>
+  <rect x="16" y="60" width="96" height="8" fill="#38bdf8"/>
+  <circle cx="64" cy="64" r="14" fill="#f8fafc"/>
+  <circle cx="64" cy="64" r="9" fill="#38bdf8"/>
+</svg>

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db.models import Count, Q
 from cards.models import Avatar, Card, CardAdminLog, Collection, CollectionCard, Profile, Series, Set, UserCard
 
 
@@ -9,9 +10,11 @@ class SetSerializer(serializers.ModelSerializer):
         fields = ["id", "nome", "codigo_liga", "logo", "release_date", "serie_id", "serie_nome", "tcgdex_id"]
 
 class SeriesSetSerializer(serializers.ModelSerializer):
+    cards_total = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Set
-        fields = ["id", "nome", "codigo_liga", "logo", "release_date", "serie_id", "serie_nome", "tcgdex_id"]
+        fields = ["id", "nome", "codigo_liga", "logo", "release_date", "serie_id", "serie_nome", "tcgdex_id", "cards_total"]
 
 
 class SeriesSerializer(serializers.ModelSerializer):
@@ -20,9 +23,17 @@ class SeriesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Series
         fields = ["id", "tcgdex_id", "nome", "logo", "sets"]
-
     def get_sets(self, obj):
-        queryset = Set.objects.filter(serie_id=obj.tcgdex_id).order_by("nome")
+        sets_by_series = self.context.get("sets_by_series")
+        if sets_by_series is not None:
+            queryset = sets_by_series.get(obj.tcgdex_id, [])
+        else:
+            queryset = (
+                Set.objects
+                .filter(serie_id=obj.tcgdex_id)
+                .annotate(cards_total=Count("cartas", filter=Q(cartas__ativa=True)))
+                .order_by("nome")
+            )
         return SeriesSetSerializer(queryset, many=True).data
 
 
@@ -42,11 +53,17 @@ class CardSerializer(serializers.ModelSerializer):
             "liga_num",
             "raridade",
             "imagem",
+            "imagem_grande",
             "preco_min",
             "preco_med",
             "preco_max",
             "is_over_number",
             "liga_url",
+            "possui_normal",
+            "possui_foil",
+            "possui_reverse_foil",
+            "possui_master_ball",
+            "possui_pokeball_foil",
             "set",
         ]
 
@@ -61,9 +78,18 @@ class CardAdminLogSerializer(serializers.ModelSerializer):
 #users
 
 class AvatarSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Avatar
         fields = ["id", "name", "image_url"]
+    def get_image_url(self, obj):
+        if obj.image_upload:
+            request = self.context.get("request")
+            url = obj.image_upload.url
+            return request.build_absolute_uri(url) if request else url
+        return obj.image_url
+
 
 class ProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
@@ -98,8 +124,14 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def get_avatar_url(self, obj):
         if obj.avatar_upload:
-            return obj.avatar_upload.url
+            request = self.context.get("request")
+            url = obj.avatar_upload.url
+            return request.build_absolute_uri(url) if request else url
         if obj.avatar_option:
+            if obj.avatar_option.image_upload:
+                request = self.context.get("request")
+                url = obj.avatar_option.image_upload.url
+                return request.build_absolute_uri(url) if request else url
             return obj.avatar_option.image_url
         return obj.avatar
 
@@ -107,6 +139,9 @@ class ProfileSerializer(serializers.ModelSerializer):
         return "PRO" if obj.can_access_pro_features else None
 
     def validate_avatar_upload(self, avatar_upload):
+        if avatar_upload is None:
+            return avatar_upload
+        
         profile = self.instance
         if profile and not profile.can_access_pro_features and not profile.is_admin_plan:
             raise serializers.ValidationError("Upload de avatar personalizado exige plano PRO.")
@@ -128,6 +163,20 @@ class ProfileSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"avatar": "Plano FREE permite apenas avatares predefinidos."}
             )
+
+        avatar_option = attrs.get("avatar_option")
+        if avatar_option is not None and not avatar_option.is_active:
+            raise serializers.ValidationError(
+                {"avatar_option": "Avatar selecionado está inativo."}
+            )
+
+        if attrs.get("avatar_upload"):
+            attrs["avatar"] = ""
+            attrs["avatar_option"] = None
+        elif avatar_option is not None:
+            attrs["avatar"] = ""
+            attrs["avatar_upload"] = None
+
         return attrs
 
     def update(self, instance, validated_data):
@@ -138,7 +187,6 @@ class ProfileSerializer(serializers.ModelSerializer):
             
         if not instance.can_access_pro_features and validated_data.get("avatar_option") is None:
             validated_data.pop("avatar", None)
-            
         return super().update(instance, validated_data)
 
 class UserCardSerializer(serializers.ModelSerializer):
@@ -150,14 +198,22 @@ class UserCardSerializer(serializers.ModelSerializer):
 
 #coleção
 class CollectionSerializer(serializers.ModelSerializer):
+    cover_card_id = serializers.IntegerField(source="cover_card.id", read_only=True)
+    cover_image = serializers.CharField(source="cover_card.imagem", read_only=True)
+
     class Meta:
         model = Collection
-        fields = ["id", "name", "is_public", "created_at"]
+        fields = ["id", "name", "is_public", "created_at", "cover_card", "cover_card_id", "cover_image"]
+        extra_kwargs = {
+            "cover_card": {"write_only": True, "required": False, "allow_null": True},
+        }
+
 
 class CollectionCardSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source="card.id")
     nome = serializers.CharField(source="card.nome")
     imagem = serializers.CharField(source="card.imagem")
+    imagem_grande = serializers.CharField(source="card.imagem_grande", allow_null=True)
     numero_completo = serializers.CharField(source="card.numero_completo")
     raridade = serializers.CharField(source="card.raridade", allow_null=True)
     liga_url = serializers.CharField(source="card.liga_url", allow_null=True)
@@ -184,12 +240,24 @@ class CollectionCardSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
 
+    possui_normal = serializers.BooleanField(source="card.possui_normal", read_only=True)
+    possui_foil = serializers.BooleanField(source="card.possui_foil", read_only=True)
+    possui_reverse_foil = serializers.BooleanField(source="card.possui_reverse_foil", read_only=True)
+    possui_master_ball = serializers.BooleanField(source="card.possui_master_ball", read_only=True)
+    possui_pokeball_foil = serializers.BooleanField(source="card.possui_pokeball_foil", read_only=True)
+    owned_normal = serializers.BooleanField(read_only=True)
+    owned_foil = serializers.BooleanField(read_only=True)
+    owned_reverse_foil = serializers.BooleanField(read_only=True)
+    owned_master_ball = serializers.BooleanField(read_only=True)
+    owned_pokeball_foil = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = CollectionCard
         fields = [
             "id",
             "nome",
             "imagem",
+            "imagem_grande",
             "numero_completo",
             "raridade",
             "set",
@@ -197,6 +265,17 @@ class CollectionCardSerializer(serializers.ModelSerializer):
             "preco_min",
             "preco_med",
             "preco_max",
+            "possui_normal",
+            "possui_foil",
+            "possui_reverse_foil",
+            "possui_master_ball",
+            "possui_pokeball_foil",
             "owned",
+            "owned_normal",
+            "owned_foil",
+            "owned_reverse_foil",
+            "owned_master_ball",
+            "owned_pokeball_foil",
             "custom_photo",
         ]
+

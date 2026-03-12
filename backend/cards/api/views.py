@@ -1,3 +1,5 @@
+import re
+from collections import defaultdict
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -23,12 +25,10 @@ from django.db import models
 
 from cards.models import Card, CardAdminLog
 from cards.models import Series, Set
-from cards.models import Collection, CollectionCard
+from cards.models import Collection, CollectionCard, UserCard
 
 from cards.services.liga_scraper import atualizar_preco_carta
 from cards.services.admin_log import log_admin_action
-from .serializers import SetSerializer
-
 from cards.tasks.atualizar_todas_cartas import atualizar_todas_cartas
 from cards.tasks.atualizar_preco_carta import atualizar_preco_carta_task
 from cards.tasks.import_sets import import_series_from_tcgdex_task, import_sets_from_tcgdex_task
@@ -48,6 +48,31 @@ from celery.result import AsyncResult
 class CardListView(ListAPIView):
     serializer_class = CardSerializer
 
+    CARD_SEARCH_WITH_NUMBER_PATTERN = re.compile(
+        r"^(?P<name>.+?)\s*\(\s*(?P<number>[^/]+)\s*/\s*(?P<total>\d+)\s*\)\s*$"
+    )
+
+    @classmethod
+    def _build_exact_card_query(cls, raw_search_term: str):
+        """
+        Permite busca no formato "Nome (001/159)" para filtrar exatamente a carta.
+        """
+        match = cls.CARD_SEARCH_WITH_NUMBER_PATTERN.match(raw_search_term.strip())
+        if not match:
+            return None
+
+        card_name = match.group("name").strip()
+        card_number = match.group("number").strip()
+        set_total = int(match.group("total"))
+        normalized_number = card_number.lstrip("0") or "0"
+
+        return Q(nome__iexact=card_name) & Q(total_set=set_total) & (
+            Q(numero=card_number)
+            | Q(numero=normalized_number)
+            | Q(numero_completo__iexact=f"{card_number}/{set_total}")
+            | Q(numero_completo__iexact=f"{normalized_number}/{set_total}")
+        )
+
     def get_queryset(self):
         qs = Card.objects.select_related("set").filter(ativa=True)
         
@@ -64,12 +89,25 @@ class CardListView(ListAPIView):
                     consume_external_api_usage(profile)
                 except PlanLimitError:
                     return Card.objects.none()
-            qs = qs.filter(nome__icontains=search_term)
 
-        # Filtro por set
+            exact_card_query = self._build_exact_card_query(search_term)
+            if exact_card_query is not None:
+                qs = qs.filter(exact_card_query)
+            else:
+                qs = qs.filter(nome__icontains=search_term)
+
+        # Filtro por set (vinculo exato por ID quando informado)
+        set_id = self.request.query_params.get("set_id")
+        if set_id:
+            qs = qs.filter(set_id=set_id)
+
+        # Filtro por set (codigo/nome)
         set_code = self.request.query_params.get("set")
         if set_code:
-            qs = qs.filter(set__codigo_liga__iexact=set_code)
+            qs = qs.filter(
+                Q(set__codigo_liga__iexact=set_code)
+                | Q(set__nome__icontains=set_code)
+            )
 
         # Filtro por raridade
         raridade = self.request.query_params.get("raridade")
@@ -102,6 +140,17 @@ class CardListView(ListAPIView):
         
         if preco_max:
             qs = qs.filter(preco_med__lte=preco_max)
+
+        ordenar = self.request.query_params.get("ordenar")
+        ordering_map = {
+            "nome": ["nome", "id"],
+            "numero": ["total_set", "numero", "id"],
+            "preco": ["preco_med", "id"],
+            "lancamento": ["-set__release_date", "id"],
+        }
+
+        if ordenar in ordering_map:
+            return qs.order_by(*ordering_map[ordenar])
 
         return qs.order_by('id')  # Ordem consistente para paginação
 
@@ -264,6 +313,33 @@ class SeriesListView(ListAPIView):
 
         return qs
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        series_items = list(page) if page is not None else list(queryset)
+
+        sets_by_series = defaultdict(list)
+        series_ids = [item.tcgdex_id for item in series_items if item.tcgdex_id]
+        if series_ids:
+            set_queryset = (
+                Set.objects
+                .filter(serie_id__in=series_ids)
+                .annotate(cards_total=Count("cartas", filter=Q(cartas__ativa=True)))
+                .order_by("nome")
+            )
+            for set_item in set_queryset:
+                sets_by_series[set_item.serie_id].append(set_item)
+
+        serializer = self.get_serializer(
+            series_items,
+            many=True,
+            context={**self.get_serializer_context(), "sets_by_series": sets_by_series},
+        )
+
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+
 
 class ImportSeriesFromTCGDexView(APIView):
     permission_classes = [IsAdminUser]
@@ -285,6 +361,10 @@ class SetListView(ListAPIView):
 
     def get_queryset(self):
         qs = Set.objects.all().order_by("nome")
+
+        codigo = self.request.query_params.get("codigo")
+        if codigo:
+            qs = qs.filter(codigo_liga__iexact=codigo)
 
         search = self.request.query_params.get("search")
         if search:
@@ -395,7 +475,7 @@ def collections_view(request):
         refresh_subscription_status(profile)
         name = request.data.get("name")
         is_public = bool(request.data.get("is_public", False))
-
+        cover_card_id = request.data.get("cover_card_id")
         if not name:
             return Response(
                 {"error": "Nome é obrigatório"},
@@ -407,10 +487,15 @@ def collections_view(request):
         except PlanLimitError as exc:
             return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
 
+        cover_card = None
+        if cover_card_id:
+            cover_card = get_object_or_404(Card, id=cover_card_id)
+
         collection = Collection.objects.create(
             user=request.user,
             name=name,
             is_public=is_public,
+            cover_card=cover_card,
         )
 
         serializer = CollectionSerializer(collection)
@@ -452,11 +537,36 @@ def collection_cards_view(request, collection_id):
     cards = (
         CollectionCard.objects
         .filter(collection=collection)
-        .select_related("card")  # 🔥 ESSENCIAL
+        .select_related("card__set")  # Evita N+1 no serializer de card.set
     )
-
     serializer = CollectionCardSerializer(cards, many=True)
     return Response(serializer.data)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def collection_progress_by_set_view(request, collection_id):
+    collection = get_object_or_404(
+        Collection,
+        id=collection_id,
+        user=request.user,
+    )
+
+    rows = (
+        CollectionCard.objects
+        .filter(collection=collection, owned=True, card__set_id__isnull=False)
+        .values("card__set_id")
+        .annotate(owned=Count("id"))
+    )
+
+    payload = [
+        {
+            "set_id": row["card__set_id"],
+            "owned": row["owned"],
+        }
+        for row in rows
+    ]
+
+    return Response(payload)
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
@@ -493,9 +603,8 @@ def atualizar_colecao_view(request, collection_id):
 @permission_classes([IsAuthenticated])
 def toggle_card_owned(request, collection_id):
     """
-    POST: Marca/desmarca uma carta como "tenho"
+    POST: Marca/desmarca uma carta em uma coleção personalizada.
     """
-    # Verifica se a coleção pertence ao usuário
     collection = get_object_or_404(
         Collection,
         id=collection_id,
@@ -506,7 +615,16 @@ def toggle_card_owned(request, collection_id):
     refresh_subscription_status(profile)
 
     card_id = request.data.get("card_id")
-    owned = request.data.get("owned", False)
+    owned = bool(request.data.get("owned", False))
+    variation = request.data.get("variation")
+
+    variation_to_field = {
+        "normal": "owned_normal",
+        "foil": "owned_foil",
+        "reverse_foil": "owned_reverse_foil",
+        "master_ball": "owned_master_ball",
+        "pokeball_foil": "owned_pokeball_foil",
+    }
 
     if not card_id:
         return Response(
@@ -514,24 +632,101 @@ def toggle_card_owned(request, collection_id):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    if owned:
+    collection_card = CollectionCard.objects.filter(collection=collection, card_id=card_id).first()
+    if not collection_card and owned:
         try:
-            enforce_card_creation_limit(profile)
+            enforce_card_creation_limit(profile, collection)
         except PlanLimitError as exc:
             return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
 
-    # Cria ou atualiza o registro
-    collection_card, created = CollectionCard.objects.get_or_create(
+    collection_card, _ = CollectionCard.objects.get_or_create(
         collection=collection,
         card_id=card_id,
         defaults={"owned": owned}
     )
 
-    if not created:
+    if variation in variation_to_field:
+        setattr(collection_card, variation_to_field[variation], owned)
+        collection_card.owned = any(
+            getattr(collection_card, field_name)
+            for field_name in variation_to_field.values()
+        )
+        collection_card.save(update_fields=[variation_to_field[variation], "owned"])
+    else:
         collection_card.owned = owned
-        collection_card.save()
+        for field_name in variation_to_field.values():
+            setattr(collection_card, field_name, owned)
+        collection_card.save(update_fields=["owned", *variation_to_field.values()])
 
-    return Response({"ok": True, "owned": owned})
+    return Response({"ok": True, "owned": collection_card.owned})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def owned_cards_view(request):
+    cards = UserCard.objects.filter(user=request.user)
+    variation_map = {
+        "normal": "owned_normal",
+        "foil": "owned_foil",
+        "reverse_foil": "owned_reverse_foil",
+        "master_ball": "owned_master_ball",
+        "pokeball_foil": "owned_pokeball_foil",
+    }
+
+    owned_by_card_id = {}
+    for item in cards:
+        card_id = item.card_id
+        state = owned_by_card_id.setdefault(
+            card_id,
+            {
+                "id": card_id,
+                "owned": False,
+                "owned_normal": False,
+                "owned_foil": False,
+                "owned_reverse_foil": False,
+                "owned_master_ball": False,
+                "owned_pokeball_foil": False,
+            },
+        )
+
+        field_name = variation_map.get((item.foil_type or "").lower() or "normal")
+        if field_name:
+            state[field_name] = True
+            state["owned"] = True
+
+    return Response(list(owned_by_card_id.values()))
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def toggle_owned_card_view(request):
+    card_id = request.data.get("card_id")
+    owned = bool(request.data.get("owned", False))
+    variation = (request.data.get("variation") or "normal").lower()
+
+    if not card_id:
+        return Response({"error": "card_id é obrigatório"}, status=status.HTTP_400_BAD_REQUEST)
+
+    valid_variations = {"normal", "foil", "reverse_foil", "master_ball", "pokeball_foil"}
+    if variation not in valid_variations:
+        return Response({"error": "variation inválida"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if owned:
+        UserCard.objects.get_or_create(
+            user=request.user,
+            card_id=card_id,
+            foil_type=variation,
+            defaults={"quantity": 1},
+        )
+    else:
+        UserCard.objects.filter(
+            user=request.user,
+            card_id=card_id,
+            foil_type=variation,
+        ).delete()
+
+    has_any = UserCard.objects.filter(user=request.user, card_id=card_id).exists()
+    return Response({"ok": True, "owned": has_any})
 
 api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -591,3 +786,4 @@ def export_collection_view(request, collection_id):
         return Response({"format": "csv", "content": output.getvalue()})
 
     return Response({"format": "json", "content": payload})
+
