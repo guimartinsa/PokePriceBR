@@ -49,6 +49,53 @@ def load_clip() -> tuple[CLIPProcessor, CLIPModel, torch.device]:
     return processor, model, device
 
 
+def maybe_project_image_features(
+    features: torch.Tensor,
+    model: CLIPModel,
+) -> torch.Tensor:
+    projection = getattr(model, "visual_projection", None)
+    if not callable(projection):
+        return features
+
+    in_features = getattr(projection, "in_features", None)
+    out_features = getattr(projection, "out_features", None)
+    last_dimension = features.shape[-1]
+
+    if in_features is not None and last_dimension == in_features:
+        return projection(features)
+
+    if out_features is not None and last_dimension == out_features:
+        return features
+
+    return features
+
+
+def coerce_image_features_to_tensor(
+    image_features: object,
+    model: CLIPModel,
+) -> torch.Tensor:
+    if isinstance(image_features, torch.Tensor):
+        return maybe_project_image_features(image_features, model)
+
+    pooler_output = getattr(image_features, "pooler_output", None)
+    if isinstance(pooler_output, torch.Tensor):
+        return maybe_project_image_features(pooler_output, model)
+
+    last_hidden_state = getattr(image_features, "last_hidden_state", None)
+    if isinstance(last_hidden_state, torch.Tensor):
+        cls_embedding = last_hidden_state[:, 0, :]
+        return maybe_project_image_features(cls_embedding, model)
+
+    if isinstance(image_features, (tuple, list)):
+        for value in image_features:
+            if isinstance(value, torch.Tensor):
+                return maybe_project_image_features(value, model)
+
+    raise TypeError(
+        "Formato de retorno nao suportado para get_image_features: "
+        f"{type(image_features).__name__}"
+    )
+
 @torch.inference_mode()
 def generate_clip_embedding(
     image: Image.Image,
@@ -60,6 +107,7 @@ def generate_clip_embedding(
     inputs = {name: tensor.to(device) for name, tensor in inputs.items()}
 
     image_features = model.get_image_features(**inputs)
+    image_features = coerce_image_features_to_tensor(image_features, model)
     array = image_features.detach().cpu().numpy().astype(np.float32)
 
     # Alguns ambientes retornam shape [1, 1, 512].

@@ -144,8 +144,11 @@ function toProcessingError(error: unknown): EmbeddingProcessingError {
         return new EmbeddingProcessingError(error.message);
     }
 
-    if (error instanceof Error && error.message.trim().length > 0) {
-        return new EmbeddingProcessingError(error.message);
+    if (error instanceof Error) {
+        const message = String((error as { message?: unknown }).message ?? "").trim();
+        if (message.length > 0) {
+            return new EmbeddingProcessingError(message);
+        };
     }
 
     return new EmbeddingProcessingError("Nao foi possivel gerar embedding da imagem.");
