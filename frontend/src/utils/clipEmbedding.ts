@@ -13,7 +13,7 @@ export class ClipEmbeddingError extends Error {
 }
 
 type ClipExtractor = (
-    input: CanvasImageSource,
+    input: ImageData | HTMLCanvasElement | HTMLImageElement | ImageBitmap,
     options?: Record<string, unknown>,
 ) => Promise<unknown>;
 
