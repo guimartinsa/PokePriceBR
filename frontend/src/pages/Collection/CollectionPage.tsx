@@ -17,6 +17,7 @@ import { CardItemDetail } from "../../components/cards/CardItemDetail";
 import { AddCardsPanel } from "./AddCardsPanel";
 
 import { CardQuickViewModal } from "../../components/cards/CardQuickViewModal";
+import { useAuth } from "../../hooks/useAuth";
 import "./collectionPage.css";
 
 export default function CollectionPage() {
@@ -46,6 +47,8 @@ export default function CollectionPage() {
     const [isUpdatingPrices, setIsUpdatingPrices] = useState(false);
     const [updateMessage, setUpdateMessage] = useState<string | null>(null);
     const [currentBinderPage, setCurrentBinderPage] = useState(0);
+    const { user } = useAuth();
+    const isAdminUser = user?.is_admin === true || user?.plan === "ADMIN";
 
     const toPriceNumber = (value: string | null) => Number.parseFloat(value ?? "0") || 0;
 
@@ -160,6 +163,19 @@ export default function CollectionPage() {
         }
     }
 
+    function exportCollectionAsTxt() {
+        const content = collection.map((card) => `${card.nome} (${card.numero_completo})`).join("\n");
+        const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `colecao-${collectionId}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
     if (loading) return <Loading />;
 
     if (!collectionId) {
@@ -268,6 +284,23 @@ export default function CollectionPage() {
                 >
                     {isUpdatingPrices ? "Atualizando..." : "🔄 Atualizar preços"}
                 </button>
+
+                {isAdminUser && (
+                    <button
+                        type="button"
+                        onClick={exportCollectionAsTxt}
+                        style={{
+                            padding: "8px 12px",
+                            borderRadius: 8,
+                            background: "#0b8f54",
+                            color: "#fff",
+                            border: "none",
+                            cursor: "pointer",
+                        }}
+                    >
+                        📄 Exportar coleção
+                    </button>
+                )}
             </div>
 
             {updateMessage && <p style={{ marginTop: -8, marginBottom: 16, color: "#c3d1ff" }}>{updateMessage}</p>}
