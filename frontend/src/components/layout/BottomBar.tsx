@@ -4,6 +4,7 @@ import IconeCamera from "../../assets/icons/camera-pokemon.svg";
 import IconeColecao from "../../assets/icons/colecaoicon.svg";
 import IconHome from "../../assets/icons/home-icon.svg";
 import WishlistIcon from "../../assets/icons/wishlist-icon.svg";
+import CheckballIcon from "../../assets/icons/checkball-icon.svg";
 import { usePwaInstall } from "../../hooks/usePwaInstall";
 
 
@@ -31,6 +32,10 @@ export default function BottomBar() {
 
             <button id="tour-bottom-series" aria-label="Ver séries" onClick={() => navigate("/series")}>
                 <img src={WishlistIcon} alt="" width={45} height={45} />
+            </button>
+
+            <button aria-label="Ver artistas" onClick={() => navigate("/artists")}>
+                <img src={CheckballIcon} alt="" width={42} height={42} />
             </button>
 
             <button id="tour-bottom-collection" aria-label="Abrir coleções" onClick={() => navigate("/collection")}>
