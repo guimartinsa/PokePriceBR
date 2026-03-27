@@ -708,18 +708,29 @@ input:focus {
 
     .filters-sort-option {
         border: 1px solid #334766;
-        background: #111b2c;
-        color: #cdd7e5;
-        border-radius: 999px;
-        padding: 8px 12px;
+        background: #1c2739;
+        color: #9aa8bc;
+        border-radius: 10px;
+        padding: 10px 12px;
         font-size: 0.82rem;
         cursor: pointer;
+        min-width: 92px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        font-weight: 700;
     }
 
     .filters-sort-option.is-active {
         border-color: #f6c400;
-        background: rgba(246, 196, 0, 0.16);
-        color: #ffe58f;
+        background: #f6d957;
+        color: #1b1f2a;
+    }
+
+    .filters-sort-option__arrow {
+        font-size: 0.75rem;
+        opacity: 0.85;
+        margin-left: 8px;
     }
 
     .filters-select {
