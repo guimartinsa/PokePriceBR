@@ -1,23 +1,23 @@
-//import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-//import LoginButton from "../login/LoginButton";
 
 const fallbackAvatar = "https://ui-avatars.com/api/?name=User&background=222b38&color=fff";
 
-export default function TopBar() {
-    const { user, loading, isAuthenticated, logout } = useAuth();
-    // Força re-render após login bem-sucedido
-    //const [, setTick] = useState(0);
+type TopBarProps = {
+    onMenuClick: () => void;
+};
 
-    if (loading) return null; // não flash de UI enquanto verifica token
+export default function TopBar({ onMenuClick }: TopBarProps) {
+    const { user, loading, isAuthenticated, logout } = useAuth();
+
+    if (loading) return null;
 
     return (
         <header
             style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "flex-end",
+                justifyContent: "space-between",
                 gap: 12,
                 padding: "10px 16px",
                 background: "#0b111a",
@@ -25,6 +25,26 @@ export default function TopBar() {
                 minHeight: 48,
             }}
         >
+            <button
+                type="button"
+                onClick={onMenuClick}
+                aria-label="Abrir menu"
+                style={{
+                    background: "transparent",
+                    border: "1px solid #334155",
+                    color: "#c8d2e2",
+                    borderRadius: 8,
+                    width: 36,
+                    height: 36,
+                    display: "grid",
+                    placeItems: "center",
+                    cursor: "pointer",
+                    fontSize: 18,
+                }}
+            >
+                ☰
+            </button>
+
             {isAuthenticated && user ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <Link to="/perfil" style={{ display: "flex", alignItems: "center", gap: 8, color: "#b9c2cf", textDecoration: "none" }}>
