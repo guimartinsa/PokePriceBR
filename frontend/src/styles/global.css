@@ -88,6 +88,49 @@ input:focus {
     min-height: 100vh;
 }
 
+.app-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
+.side-drawer {
+    display: none;
+    width: 220px;
+    border-right: 1px solid #2e3647;
+    background: #121826;
+    padding: 16px 12px;
+}
+
+.side-drawer__title {
+    font-size: 0.9rem;
+    color: #95a1b5;
+    margin: 0 0 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.side-drawer__list {
+    list-style: none;
+    display: grid;
+    gap: 8px;
+}
+
+.side-drawer__link {
+    display: block;
+    border: 1px solid #2e3647;
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: #dfe8f8;
+    background: #1a2232;
+}
+
+.side-drawer__link.is-active {
+    border-color: #5ca8ff;
+    color: #fff;
+    background: linear-gradient(145deg, #2a3141, #232a38);
+}
+
 .app-content {
     flex: 1;
     overflow-y: auto;
@@ -192,6 +235,20 @@ input:focus {
 
 .bottom-bar button.active svg {
     animation: pop 0.25s ease-out;
+}
+
+@media (min-width: 960px) {
+    .side-drawer {
+        display: block;
+    }
+
+    .app-content {
+        padding-bottom: 0;
+    }
+
+    .bottom-bar {
+        display: none;
+    }
 }
 
 @keyframes pop {

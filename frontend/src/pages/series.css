@@ -184,6 +184,96 @@
     min-width: 40px;
 }
 
+.artists-header input {
+    margin-top: 10px;
+    max-width: 420px;
+    background: #121826;
+    border-color: #2e3647;
+    color: #fff;
+}
+
+.artist-card {
+    border: 1px solid #2e3647;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #2a3141, #232a38);
+    padding: 14px;
+}
+
+.artist-card__header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+}
+
+.artist-card__header p {
+    margin: 4px 0 0;
+    color: #98a5b9;
+}
+
+.artist-oldest-card {
+    margin-top: 12px;
+    border: 1px solid #2e3647;
+    border-radius: 12px;
+    background: #1a2231;
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 10px;
+    padding: 10px;
+}
+
+.artist-oldest-card__image-wrap {
+    border-radius: 10px;
+    overflow: hidden;
+    background: #121826;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.artist-oldest-card__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.artist-oldest-card h3 {
+    margin: 2px 0;
+}
+
+.artist-oldest-card p {
+    margin: 0;
+    color: #98a5b9;
+}
+
+.artist-cards-grid {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+}
+
+.artist-mini-card {
+    border: 1px solid #2e3647;
+    background: #1a2232;
+    border-radius: 10px;
+    padding: 6px;
+    display: grid;
+    gap: 6px;
+    text-align: left;
+    color: #fff;
+}
+
+.artist-mini-card img {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.artist-mini-card span {
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
 @media (max-width: 640px) {
     .series-set-card {
         grid-template-columns: 95px 1fr;

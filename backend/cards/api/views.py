@@ -453,6 +453,50 @@ class IlustradoresAutocompleteView(APIView):
         )
         
         return Response(list(ilustradores))
+
+
+class ArtistsListView(APIView):
+    def get(self, request):
+        search = request.query_params.get("search", "").strip()
+
+        queryset = (
+            Card.objects
+            .select_related("set")
+            .filter(ativa=True, ilustrador__isnull=False)
+            .exclude(ilustrador="")
+        )
+
+        if search:
+            queryset = queryset.filter(ilustrador__icontains=search)
+
+        cards = list(queryset.order_by("ilustrador", "set__release_date", "id"))
+
+        artists: dict[str, list[Card]] = defaultdict(list)
+        for card in cards:
+            artist_name = (card.ilustrador or "").strip()
+            if not artist_name:
+                continue
+            artists[artist_name].append(card)
+
+        payload = []
+        serializer_context = {"request": request}
+
+        for artist_name in sorted(artists.keys()):
+            artist_cards = artists[artist_name]
+            if not artist_cards:
+                continue
+
+            oldest_card = artist_cards[0]
+            payload.append(
+                {
+                    "artist": artist_name,
+                    "total_cards": len(artist_cards),
+                    "oldest_card": CardSerializer(oldest_card, context=serializer_context).data,
+                    "cards": CardSerializer(artist_cards, many=True, context=serializer_context).data,
+                }
+            )
+
+        return Response(payload)
     
 #coleções
 
@@ -786,4 +830,3 @@ def export_collection_view(request, collection_id):
         return Response({"format": "csv", "content": output.getvalue()})
 
     return Response({"format": "json", "content": payload})
-

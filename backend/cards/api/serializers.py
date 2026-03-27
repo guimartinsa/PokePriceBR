@@ -52,6 +52,7 @@ class CardSerializer(serializers.ModelSerializer):
             "numero_completo",
             "liga_num",
             "raridade",
+            "ilustrador",
             "imagem",
             "imagem_grande",
             "preco_min",
@@ -278,4 +279,3 @@ class CollectionCardSerializer(serializers.ModelSerializer):
             "owned_pokeball_foil",
             "custom_photo",
         ]
-

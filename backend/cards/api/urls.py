@@ -21,6 +21,7 @@ from .views import (
     ImportSeriesFromTCGDexView,
     RaridadesListView,  # 🆕 NOVO
     IlustradoresAutocompleteView,
+    ArtistsListView,
     collection_delete_view,  # 🆕 NOVO
     collections_view,
     collection_cards_view,
@@ -59,6 +60,7 @@ urlpatterns = [
     # 🆕 NOVO: Endpoints de filtros
     path("raridades/", RaridadesListView.as_view(), name="raridades-list"),
     path("ilustradores/", IlustradoresAutocompleteView.as_view(), name="ilustradores-autocomplete"),
+    path("artists/", ArtistsListView.as_view(), name="artists-list"),
 
     path("sets/", SetListView.as_view(), name="set-list"),
     path("series/", SeriesListView.as_view(), name="series-list"),
@@ -93,4 +95,3 @@ urlpatterns = [
     path("admin/users/<int:user_id>/force-downgrade/", admin_force_downgrade_view),
 
 ]
-

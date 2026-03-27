@@ -2,6 +2,11 @@ export interface Set {
   id: number;
   nome: string;
   codigo_liga: string;
+  release_date?: string | null;
+  logo?: string | null;
+  serie_id?: string | null;
+  serie_nome?: string | null;
+  tcgdex_id?: string | null;
 }
 
 export interface Card {
@@ -11,6 +16,7 @@ export interface Card {
   total_set: number;
   numero_completo: string;
   raridade: string | null;
+  ilustrador?: string | null;
   preco_min: string | null;
   preco_med: string | null;
   preco_max: string | null;
@@ -30,4 +36,3 @@ export interface Card {
   owned_pokeball_foil?: boolean;
   set: Set;
 }
-
