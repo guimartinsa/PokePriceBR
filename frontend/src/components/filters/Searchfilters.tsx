@@ -26,15 +26,51 @@ export function SearchFilters({ filters, onChange }: Props) {
     const [showAdvanced, setShowAdvanced] = useState(false);
 
     const sortOptions = [
-        { value: "", label: "Padrão" },
-        { value: "nome", label: "Nome (A-Z)" },
-        { value: "numero", label: "Número (crescente)" },
-        { value: "preco", label: "Preço (menor primeiro)" },
-        { value: "lancamento", label: "Lançamento (mais novo)" },
+        { value: "custom", label: "Custom" },
+        { value: "numero", label: "Number" },
+        { value: "nome", label: "Name" },
+        { value: "raridade", label: "Rarity" },
+        { value: "preco", label: "Price" },
+        { value: "set", label: "Set" },
+        { value: "lancamento", label: "Released" },
     ] as const;
+
+    const parseSortState = (sortValue: string): { field: string; direction: "asc" | "desc" } => {
+        if (!sortValue || sortValue === "custom") {
+            return { field: "custom", direction: "asc" };
+        }
+
+        if (sortValue.endsWith("_desc")) {
+            return { field: sortValue.replace("_desc", ""), direction: "desc" };
+        }
+
+        if (sortValue.endsWith("_asc")) {
+            return { field: sortValue.replace("_asc", ""), direction: "asc" };
+        }
+
+        return { field: sortValue, direction: "asc" };
+    };
+
+    const { field: activeSortField, direction: activeSortDirection } = parseSortState(filters.ordenar);
+    const activeSortLabel = sortOptions.find((option) => option.value === activeSortField)?.label;
 
     const updateFilter = (key: keyof SearchFiltersState, value: string | boolean | null) => {
         onChange({ ...filters, [key]: value });
+    };
+
+    const handleSortClick = (field: string) => {
+        if (field === "custom") {
+            updateFilter("ordenar", "");
+            return;
+        }
+
+        if (activeSortField === field) {
+            const nextDirection = activeSortDirection === "asc" ? "desc" : "asc";
+            updateFilter("ordenar", `${field}_${nextDirection}`);
+            return;
+        }
+
+        updateFilter("ordenar", `${field}_asc`);
     };
 
     const clearAll = () => {
@@ -72,19 +108,23 @@ export function SearchFilters({ filters, onChange }: Props) {
 
                 <div>
                     <span className="filters-label">Ordenar por</span>
-                    <div className="filters-sort-options" role="radiogroup" aria-label="Ordenar por">
+                    <div className="filters-sort-options" role="toolbar" aria-label="Ordenar por">
                         {sortOptions.map((option) => {
-                            const isActive = filters.ordenar === option.value;
+                            const isActive = activeSortField === option.value;
+                            const sortArrow = isActive && option.value !== "custom"
+                                ? (activeSortDirection === "asc" ? "▲" : "▼")
+                                : "↕";
+
                             return (
                                 <button
                                     key={option.value || "padrao"}
                                     type="button"
-                                    role="radio"
-                                    aria-checked={isActive}
-                                    onClick={() => updateFilter("ordenar", option.value)}
+                                    aria-pressed={isActive}
+                                    onClick={() => handleSortClick(option.value)}
                                     className={`filters-sort-option ${isActive ? "is-active" : ""}`}
                                 >
-                                    {option.label}
+                                    <span>{option.label}</span>
+                                    <span className="filters-sort-option__arrow">{sortArrow}</span>
                                 </button>
                             );
                         })}
@@ -132,7 +172,9 @@ export function SearchFilters({ filters, onChange }: Props) {
                         filters.over === false && "Normais",
                         filters.preco_min && `Preço min: R$ ${filters.preco_min}`,
                         filters.preco_max && `Preço max: R$ ${filters.preco_max}`,
-                        filters.ordenar && `Ordenação: ${filters.ordenar}`,
+                        activeSortField !== "custom"
+                        && activeSortLabel
+                        && `Ordenação: ${activeSortLabel} (${activeSortDirection === "asc" ? "crescente" : "decrescente"})`,
                     ]
                         .filter(Boolean)
                         .join(" • ")}

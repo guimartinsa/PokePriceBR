@@ -65,20 +65,51 @@ export default function CollectionPage() {
     const filteredAndSortedCollection = useMemo(() => {
         const cards = [...filteredCollection];
 
+        const sortValue = filters.ordenar;
+        const sortDirection = sortValue.endsWith("_desc") ? "desc" : "asc";
+        const sortField = sortValue.replace(/_(asc|desc)$/, "");
+        const applyDirection = (result: number) => (sortDirection === "desc" ? -result : result);
+
         switch (filters.ordenar) {
             case "nome":
+            case "nome_asc":
+            case "nome_desc":
                 cards.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" }));
+                if (sortDirection === "desc") cards.reverse();
                 break;
             case "numero":
-                cards.sort((a, b) => (a.numero ?? 0) - (b.numero ?? 0));
+            case "numero_asc":
+            case "numero_desc":
+                cards.sort((a, b) => applyDirection((a.numero ?? 0) - (b.numero ?? 0)));
                 break;
-            case "preco":
-                cards.sort((a, b) => toPriceNumber(a.preco_med) - toPriceNumber(b.preco_med));
+            case "raridade":
+            case "raridade_asc":
+            case "raridade_desc":
+                cards.sort((a, b) =>
+                    applyDirection((a.raridade || "").localeCompare(b.raridade || "", "pt-BR", { sensitivity: "base" })),
+                );
                 break;
             case "lancamento":
-                cards.sort((a, b) => b.id - a.id);
+            case "lancamento_asc":
+            case "lancamento_desc":
+                cards.sort((a, b) => applyDirection(b.id - a.id));
+                break;
+            case "set":
+            case "set_asc":
+            case "set_desc":
+                cards.sort((a, b) =>
+                    applyDirection((a.set?.nome || "").localeCompare(b.set?.nome || "", "pt-BR", { sensitivity: "base" })),
+                );
+                break;
+            case "preco":
+            case "preco_asc":
+            case "preco_desc":
+                cards.sort((a, b) => applyDirection(toPriceNumber(a.preco_med) - toPriceNumber(b.preco_med)));
                 break;
             default:
+                if (sortField === "custom" || !sortField) {
+                    break;
+                }
                 break;
         }
 
