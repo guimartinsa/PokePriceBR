@@ -2,8 +2,7 @@ import { useEffect } from "react";
 import { Hero } from "./Hero";
 import "../../styles/global.css";
 //import "./home.css"
-import "./Professor"
-import { Profesor } from "./Professor";
+
 
 //import baner from "../../assets/baner-herois.jpg";
 import baner from "../../assets/baner-herois-Dqf_ERhK.webp"
@@ -138,7 +137,6 @@ export default function HomePage() {
 
     return (
         <div className="home">
-            <Profesor/>
             <Hero />
 
             <section
