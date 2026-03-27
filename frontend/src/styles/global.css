@@ -88,6 +88,91 @@ input:focus {
     min-height: 100vh;
 }
 
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    background: #0b111a;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    min-height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 110;
+}
+
+.topbar__menu-button {
+    background: transparent;
+    border: 1px solid #334155;
+    color: #c8d2e2;
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 0;
+}
+
+.topbar__logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #f3f7ff;
+    font-weight: 700;
+    text-decoration: none;
+    margin-right: auto;
+}
+
+.topbar__logo img {
+    width: 24px;
+    height: 24px;
+}
+
+.topbar__search {
+    display: none;
+}
+
+.topbar__profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.topbar__profile-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #b9c2cf;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.topbar__avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.topbar__logout {
+    background: transparent;
+    border: 1px solid #555;
+    color: #aaa;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.topbar__login {
+    color: #b9c2cf;
+    text-decoration: none;
+    font-size: 14px;
+}
+
 .app-body {
     display: flex;
     flex: 1;
@@ -133,6 +218,7 @@ input:focus {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    margin-bottom: 10px;
 }
 
 .side-drawer__close {
@@ -148,7 +234,7 @@ input:focus {
 .side-drawer__title {
     font-size: 0.9rem;
     color: #95a1b5;
-    margin: 0 0 10px;
+    margin: 0;
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }
@@ -160,12 +246,20 @@ input:focus {
 }
 
 .side-drawer__link {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     border: 1px solid #2e3647;
     border-radius: 10px;
     padding: 10px 12px;
     color: #dfe8f8;
     background: #1a2232;
+}
+
+.side-drawer__icon {
+    width: 20px;
+    display: inline-flex;
+    justify-content: center;
 }
 
 .side-drawer__link.is-active {
@@ -249,6 +343,56 @@ input:focus {
 }
 
 @media (min-width: 960px) {
+    .app-shell.is-desktop .app-body {
+        margin-left: 280px;
+        transition: margin-left 0.25s ease;
+    }
+
+    .app-shell.is-desktop.is-desktop-collapsed .app-body {
+        margin-left: 88px;
+    }
+
+    .topbar {
+        padding: 10px 24px;
+    }
+
+    .topbar__search {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        max-width: 640px;
+        background: #111a28;
+        border: 1px solid #2b3647;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .topbar__search input {
+        border: 0;
+        background: transparent;
+        color: #d7deea;
+        height: 40px;
+    }
+
+    .topbar__search input:focus {
+        border-color: transparent;
+    }
+
+    .topbar__search button,
+    .topbar__advanced-search {
+        width: 40px;
+        height: 40px;
+        border: 0;
+        background: transparent;
+        color: #9ba7bb;
+        display: grid;
+        place-items: center;
+        text-decoration: none;
+        border-left: 1px solid #2b3647;
+        border-radius: 0;
+        padding: 0;
+    }
+
     .app-content {
         padding-bottom: 0;
     }
@@ -259,6 +403,30 @@ input:focus {
 
     .side-drawer__backdrop {
         background: rgba(0, 0, 0, 0.35);
+    }
+
+    .side-drawer.is-desktop {
+        transform: translateX(0);
+        width: 280px;
+        z-index: 109;
+    }
+
+    .side-drawer.is-desktop .side-drawer__close {
+        margin-left: auto;
+    }
+
+    .side-drawer.is-desktop.is-collapsed {
+        width: 88px;
+    }
+
+    .side-drawer.is-desktop.is-collapsed .side-drawer__list {
+        justify-items: center;
+    }
+
+    .side-drawer.is-desktop.is-collapsed .side-drawer__link {
+        width: 52px;
+        justify-content: center;
+        padding: 10px;
     }
 }
 

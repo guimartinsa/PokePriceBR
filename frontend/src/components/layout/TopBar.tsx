@@ -1,77 +1,78 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import type { FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
 const fallbackAvatar = "https://ui-avatars.com/api/?name=User&background=222b38&color=fff";
 
 type TopBarProps = {
     onMenuClick: () => void;
+    isDesktop: boolean;
 };
 
-export default function TopBar({ onMenuClick }: TopBarProps) {
+export default function TopBar({ onMenuClick, isDesktop }: TopBarProps) {
     const { user, loading, isAuthenticated, logout } = useAuth();
+    const navigate = useNavigate();
+    const [searchValue, setSearchValue] = useState("");
 
     if (loading) return null;
 
+    const handleSearch = (event: FormEvent) => {
+        event.preventDefault();
+        const query = searchValue.trim();
+        navigate(query ? `/cards?nome=${encodeURIComponent(query)}` : "/cards");
+    };
+
     return (
-        <header
-            style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-                padding: "10px 16px",
-                background: "#0b111a",
-                borderBottom: "1px solid rgba(255,255,255,0.08)",
-                minHeight: 48,
-            }}
-        >
+        <header className="topbar">
             <button
                 type="button"
                 onClick={onMenuClick}
-                aria-label="Abrir menu"
-                style={{
-                    background: "transparent",
-                    border: "1px solid #334155",
-                    color: "#c8d2e2",
-                    borderRadius: 8,
-                    width: 36,
-                    height: 36,
-                    display: "grid",
-                    placeItems: "center",
-                    cursor: "pointer",
-                    fontSize: 18,
-                }}
+                aria-label={isDesktop ? "Recolher menu" : "Abrir menu"}
+                className="topbar__menu-button"
             >
                 ☰
             </button>
 
+            <Link to="/" className="topbar__logo" aria-label="Ir para a página inicial">
+                <img src="/favicon.svg" alt="PokePriceBR" />
+                <span>PokePriceBR</span>
+            </Link>
+
+            {isDesktop && (
+                <form className="topbar__search" onSubmit={handleSearch}>
+                    <input
+                        type="search"
+                        placeholder="Buscar cartas..."
+                        value={searchValue}
+                        onChange={(event) => setSearchValue(event.target.value)}
+                        aria-label="Buscar cartas"
+                    />
+                    <button type="submit" aria-label="Buscar cartas">
+                        🔎
+                    </button>
+                    <Link to="/cards" className="topbar__advanced-search" aria-label="Busca avançada">
+                        ⚙
+                    </Link>
+                </form>
+            )}
+
             {isAuthenticated && user ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <Link to="/perfil" style={{ display: "flex", alignItems: "center", gap: 8, color: "#b9c2cf", textDecoration: "none" }}>
+                <div className="topbar__profile">
+                    <Link to="/perfil" className="topbar__profile-link">
                         <img
                             src={user.avatar || fallbackAvatar}
                             alt="Avatar do usuário"
-                            style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }}
+                            className="topbar__avatar"
                         />
-                        <span style={{ fontSize: 14 }}>{user.name || user.email}</span>
+                        <span>{user.name || user.email}</span>
                     </Link>
-                    <button
-                        onClick={logout}
-                        style={{
-                            background: "transparent",
-                            border: "1px solid #555",
-                            color: "#aaa",
-                            borderRadius: 6,
-                            padding: "6px 12px",
-                            fontSize: 13,
-                            cursor: "pointer",
-                        }}
-                    >
+                    <button onClick={logout} className="topbar__logout">
                         Sair
                     </button>
                 </div>
             ) : (
-                <Link to="/auth" style={{ color: "#b9c2cf", textDecoration: "none", fontSize: 14 }}>
+                <Link to="/auth" className="topbar__login">
                     Entrar
                 </Link>
             )}
