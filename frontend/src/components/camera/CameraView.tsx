@@ -26,8 +26,19 @@ function buildScanErrorMessage(error: unknown): string {
     }
 
     if (error instanceof ScanApiError) {
+        const ocr =
+            error.payload && typeof error.payload.ocr === "object" && error.payload.ocr !== null
+                ? (error.payload.ocr as Record<string, unknown>)
+                : null;
+        const ocrName = typeof ocr?.name === "string" ? ocr.name.trim() : "";
+        const ocrNumber = typeof ocr?.number === "string" ? ocr.number.trim() : "";
+
         if (error.status === 503) {
             return "Servico de leitura indisponivel no momento. Tente novamente em instantes.";
+        }
+
+        if (ocrName || ocrNumber) {
+            return `${error.message} OCR extraido: nome="${ocrName || "-"}", numero="${ocrNumber || "-"}".`;
         }
 
         if (error.message.trim().length > 0) {

@@ -1,10 +1,12 @@
 export class ScanApiError extends Error {
     readonly status: number;
+    readonly payload?: Record<string, unknown>;
 
-    constructor(message: string, status: number) {
+    constructor(message: string, status: number, payload?: Record<string, unknown>) {
         super(message);
         this.name = "ScanApiError";
         this.status = status;
+        this.payload = payload;
     }
 }
 
@@ -25,11 +27,7 @@ function normalizeBaseUrl(rawUrl?: string): string {
         .replace(/\/api$/, "");
 }
 
-function dedupeUrls(urls: string[]): string[] {
-    return Array.from(new Set(urls));
-}
-
-function getScanUrls(): string[] {
+function getScanUrl(): string {
     const explicitScanUrl = import.meta.env.VITE_SCAN_API_URL as string | undefined;
 
     if (explicitScanUrl) {
@@ -40,24 +38,18 @@ function getScanUrls(): string[] {
         const normalizedWithoutApi = normalized.replace(/\/api$/i, "");
 
         if (normalized.endsWith("/scan-card")) {
-            return [normalized.replace(/\/scan-card$/i, "/scan") + "/"];
+            return normalized.replace(/\/scan-card$/i, "/scan") + "/";
         }
 
         if (normalized.endsWith("/scan")) {
-            return [normalized + "/"];
+            return normalized + "/";
         }
 
-        return dedupeUrls([
-            `${normalized}/scan/`,
-            `${normalizedWithoutApi}/api/scan/`,
-        ]);
+        return `${normalizedWithoutApi}/api/scan/`;
     }
 
     const baseUrl = normalizeBaseUrl(import.meta.env.VITE_API_URL);
-    return dedupeUrls([
-        `${baseUrl}/api/scan/`,
-        `${baseUrl}/scan/`,
-    ]);
+    return `${baseUrl}/api/scan/`;
 }
 
 function buildAuthHeaders(): HeadersInit {
@@ -91,49 +83,62 @@ function validatePayload(payload: ScanEmbeddingPayload) {
 export async function submitScanEmbedding(payload: ScanEmbeddingPayload): Promise<unknown> {
     validatePayload(payload);
 
-    const scanUrls = getScanUrls();
-    let lastError: Error | null = null;
+    const scanUrl = getScanUrl();
+    let response: Response;
 
-    for (const url of scanUrls) {
-        let response: Response;
-
-        try {
-            response = await fetch(url, {
-                method: "POST",
-                headers: buildAuthHeaders(),
-                body: JSON.stringify(payload),
-            });
-        } catch (networkError) {
-            lastError = networkError instanceof Error
-                ? networkError
-                : new Error(String(networkError));
-            continue;
-        }
-
-        if (response.status === 404) {
-            lastError = new Error(`Endpoint de scan não encontrado: ${url}`);
-            continue;
-        }
-
-        if (!response.ok) {
-            let detail = "Erro ao consultar embedding";
-
-            try {
-                const errorPayload = await response.json() as Record<string, unknown>;
-                if (typeof errorPayload.detail === "string" && errorPayload.detail.trim()) {
-                    detail = errorPayload.detail;
-                } else if (typeof errorPayload.error === "string" && errorPayload.error.trim()) {
-                    detail = errorPayload.error;
-                }
-            } catch {
-                // resposta sem json
-            }
-
-            throw new ScanApiError(detail, response.status);
-        }
-
-        return response.json();
+    try {
+        response = await fetch(scanUrl, {
+            method: "POST",
+            headers: buildAuthHeaders(),
+            body: JSON.stringify(payload),
+        });
+    } catch (networkError) {
+        throw networkError instanceof Error
+            ? networkError
+            : new Error(String(networkError));
     }
 
-    throw lastError ?? new Error("Todas as URLs de scan falharam.");
+    if (response.status === 404) {
+        const contentType = response.headers.get("content-type") ?? "";
+
+        if (!contentType.includes("application/json")) {
+            throw new Error(`Endpoint de scan não encontrado: ${scanUrl}`);
+        }
+
+        let detail = "Nao foi possivel localizar carta com os dados extraidos.";
+        let errorPayload: Record<string, unknown> | undefined;
+
+        try {
+            errorPayload = await response.json() as Record<string, unknown>;
+            if (typeof errorPayload.detail === "string" && errorPayload.detail.trim()) {
+                detail = errorPayload.detail;
+            } else if (typeof errorPayload.error === "string" && errorPayload.error.trim()) {
+                detail = errorPayload.error;
+            }
+        } catch {
+            // resposta sem json válido
+        }
+
+        throw new ScanApiError(detail, response.status, errorPayload);
+    }
+
+    if (!response.ok) {
+        let detail = "Erro ao consultar embedding";
+        let errorPayload: Record<string, unknown> | undefined;
+
+        try {
+            errorPayload = await response.json() as Record<string, unknown>;
+            if (typeof errorPayload.detail === "string" && errorPayload.detail.trim()) {
+                detail = errorPayload.detail;
+            } else if (typeof errorPayload.error === "string" && errorPayload.error.trim()) {
+                detail = errorPayload.error;
+            }
+        } catch {
+            // resposta sem json
+        }
+
+        throw new ScanApiError(detail, response.status, errorPayload);
+    }
+
+    return response.json();
 }
