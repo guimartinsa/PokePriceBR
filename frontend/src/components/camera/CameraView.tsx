@@ -26,8 +26,31 @@ function buildScanErrorMessage(error: unknown): string {
     }
 
     if (error instanceof ScanApiError) {
+        const ocr =
+            error.payload && typeof error.payload.ocr === "object" && error.payload.ocr !== null
+                ? (error.payload.ocr as Record<string, unknown>)
+                : null;
+        const ocrName = typeof ocr?.name === "string" ? ocr.name.trim() : "";
+        const ocrNumber = typeof ocr?.number === "string" ? ocr.number.trim() : "";
+        const ocrDebug =
+            ocr && typeof ocr.debug === "object" && ocr.debug !== null
+                ? (ocr.debug as Record<string, unknown>)
+                : null;
+        const rawNameText =
+            typeof ocrDebug?.raw_name_text === "string" ? ocrDebug.raw_name_text.trim() : "";
+        const rawNumberText =
+            typeof ocrDebug?.raw_number_text === "string" ? ocrDebug.raw_number_text.trim() : "";
+
         if (error.status === 503) {
             return "Servico de leitura indisponivel no momento. Tente novamente em instantes.";
+        }
+
+        if (ocrName || ocrNumber) {
+            return `${error.message} OCR extraido: nome="${ocrName || "-"}", numero="${ocrNumber || "-"}".`;
+        }
+
+        if (rawNameText || rawNumberText) {
+            return `${error.message} OCR bruto: nome="${rawNameText || "-"}", numero="${rawNumberText || "-"}".`;
         }
 
         if (error.message.trim().length > 0) {

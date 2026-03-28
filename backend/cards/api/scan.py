@@ -70,15 +70,15 @@ def _serialize_match(card: Card, similarity: float) -> dict[str, object]:
     }
 
 
-def _error_response(message: str, code: int):
-    return Response(
-        {
-            "success": False,
-            "detail": message,
-            "error": message,
-        },
-        status=code,
-    )
+def _error_response(message: str, code: int, extra: dict[str, object] | None = None):
+    payload: dict[str, object] = {
+        "success": False,
+        "detail": message,
+        "error": message,
+    }
+    if extra:
+        payload.update(extra)
+    return Response(payload, status=code)
 
 
 def _parse_embedding(payload: object) -> list[float] | None:
@@ -212,10 +212,15 @@ def _ocr_card_fields_from_base64(image_b64: str, debug: bool = False) -> OcrResu
     result: OcrResult = {
         "name": _extract_name(name_text),
         "number": _extract_number(number_text),
+        "debug": {
+            "raw_name_text": name_text,
+            "raw_number_text": number_text,
+        },
     }
 
     if debug:
         result["debug"] = {
+            **result.get("debug", {}),
             "regions": {
                 "name": {"x1": 0.02, "y1": 0.02, "x2": 0.75, "y2": 0.18},
                 "number": {"x1": 0.05, "y1": 0.80, "x2": 0.35, "y2": 0.95},
@@ -230,9 +235,11 @@ def _ocr_from_cache_or_vision(image_b64: str, debug: bool = False) -> OcrResult:
     cache_key = f"scan:ocr:{digest}"
     cached = cache.get(cache_key)
     if isinstance(cached, dict):
+        debug_payload = cached.get("debug")
         return {
             "name": cached.get("name") if isinstance(cached.get("name"), str) else None,
             "number": cached.get("number") if isinstance(cached.get("number"), str) else None,
+            "debug": debug_payload if isinstance(debug_payload, dict) else {},
         }
 
     ocr_result = _ocr_card_fields_from_base64(image_b64, debug=debug)
@@ -337,6 +344,7 @@ def scan_card_view(request):
         return _error_response(
             "Nao foi possivel localizar carta com os dados extraidos.",
             status.HTTP_404_NOT_FOUND,
+            extra={"ocr": ocr_result},
         )
 
     best = matches[0]
