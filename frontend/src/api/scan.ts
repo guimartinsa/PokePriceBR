@@ -25,6 +25,10 @@ function normalizeBaseUrl(rawUrl?: string): string {
         .replace(/\/api$/, "");
 }
 
+function dedupeUrls(urls: string[]): string[] {
+    return Array.from(new Set(urls));
+}
+
 function getScanUrls(): string[] {
     const explicitScanUrl = import.meta.env.VITE_SCAN_API_URL as string | undefined;
 
@@ -33,6 +37,7 @@ function getScanUrls(): string[] {
             ? explicitScanUrl
             : `https://${explicitScanUrl}`
         ).replace(/\/+$/, "");
+        const normalizedWithoutApi = normalized.replace(/\/api$/i, "");
 
         if (normalized.endsWith("/scan-card")) {
             return [normalized.replace(/\/scan-card$/i, "/scan") + "/"];
@@ -42,11 +47,17 @@ function getScanUrls(): string[] {
             return [normalized + "/"];
         }
 
-        return [`${normalized}/scan/`];
+        return dedupeUrls([
+            `${normalized}/scan/`,
+            `${normalizedWithoutApi}/api/scan/`,
+        ]);
     }
 
     const baseUrl = normalizeBaseUrl(import.meta.env.VITE_API_URL);
-    return [`${baseUrl}/api/scan/`];
+    return dedupeUrls([
+        `${baseUrl}/api/scan/`,
+        `${baseUrl}/scan/`,
+    ]);
 }
 
 function buildAuthHeaders(): HeadersInit {
