@@ -13,7 +13,7 @@ export class ClipEmbeddingError extends Error {
 }
 
 type ClipExtractor = (
-    input: ImageData | HTMLCanvasElement | HTMLImageElement | ImageBitmap,
+    input: ImageData | HTMLCanvasElement | HTMLImageElement | ImageBitmap | string | URL,
     options?: Record<string, unknown>,
 ) => Promise<unknown>;
 
@@ -40,7 +40,7 @@ async function getClipExtractor(): Promise<ClipExtractor> {
             let latestError: unknown = null;
 
             try {
-                const loaded = await pipeline("feature-extraction", CLIP_MODEL_ID, {
+                const loaded = await pipeline("image-feature-extraction", CLIP_MODEL_ID, {
                     device: "webgpu",
                 });
                 return loaded as unknown as ClipExtractor;
@@ -48,7 +48,7 @@ async function getClipExtractor(): Promise<ClipExtractor> {
                 latestError = error;
 
                 try {
-                    const loaded = await pipeline("feature-extraction", CLIP_MODEL_ID, {
+                    const loaded = await pipeline("image-feature-extraction", CLIP_MODEL_ID, {
                         device: "wasm",
                     });
                     return loaded as unknown as ClipExtractor;
@@ -80,6 +80,18 @@ function getSourceSize(source: HTMLImageElement | HTMLCanvasElement | ImageBitma
         width: source.width,
         height: source.height,
     };
+}
+
+function canvasToPngBlob(source: HTMLCanvasElement): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+        source.toBlob((blob) => {
+            if (!blob) {
+                reject(new ClipEmbeddingError("Falha ao serializar imagem para CLIP."));
+                return;
+            }
+            resolve(blob);
+        }, "image/png");
+    });
 }
 
 function toSquareCanvas(
@@ -178,10 +190,15 @@ export async function extractClipEmbedding(
 ): Promise<number[]> {
     const inputCanvas = toSquareCanvas(image);
     const extractor = await getClipExtractor();
-    const output = await extractor(inputCanvas, {
-        pooling: "mean",
-        normalize: false,
-    });
+    const imageBlob = await canvasToPngBlob(inputCanvas);
+    const objectUrl = URL.createObjectURL(imageBlob);
+
+    let output: unknown;
+    try {
+        output = await extractor(objectUrl);
+    } finally {
+        URL.revokeObjectURL(objectUrl);
+    }
 
     const flattened = flattenFiniteNumbers(output);
     const embedding = toEmbedding512(flattened);

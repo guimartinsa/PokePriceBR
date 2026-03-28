@@ -201,8 +201,8 @@ export function CameraView() {
         setScanError(null);
 
         try {
-            const { imageBase64, embedding } = await buildScanInput(image);
-            const response = await submitScanEmbedding({ image: imageBase64, embedding });
+            const { imageBase64 } = await buildScanInput(image);
+            const response = await submitScanEmbedding({ image: imageBase64 });
             const detection = parseApiResult(response);
 
             setLastDetected(detection);
@@ -281,8 +281,8 @@ export function CameraView() {
                 );
             });
 
-            const { imageBase64, embedding } = await buildScanInput(blob);
-            const response = await submitScanEmbedding({ image: imageBase64, embedding });
+            const { imageBase64 } = await buildScanInput(blob);
+            const response = await submitScanEmbedding({ image: imageBase64 });
 
             const detection = parseApiResult(response);
 
@@ -408,7 +408,7 @@ export function CameraView() {
                 </section>
             )}
 
-            {capturing && <div className="capturing-indicator">Gerando embedding + OCR regional...</div>}
+            {capturing && <div className="capturing-indicator">Lendo nome e numero da carta...</div>}
         </div>
     );
 }
