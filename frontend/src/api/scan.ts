@@ -106,10 +106,9 @@ export async function submitScanEmbedding(payload: ScanEmbeddingPayload): Promis
         }
 
         let detail = "Nao foi possivel localizar carta com os dados extraidos.";
-        let errorPayload: Record<string, unknown> | undefined;
 
         try {
-            errorPayload = await response.json() as Record<string, unknown>;
+            const errorPayload = await response.json() as Record<string, unknown>;
             if (typeof errorPayload.detail === "string" && errorPayload.detail.trim()) {
                 detail = errorPayload.detail;
             } else if (typeof errorPayload.error === "string" && errorPayload.error.trim()) {
@@ -119,15 +118,14 @@ export async function submitScanEmbedding(payload: ScanEmbeddingPayload): Promis
             // resposta sem json válido
         }
 
-        throw new ScanApiError(detail, response.status, errorPayload);
+        throw new ScanApiError(detail, response.status);
     }
 
     if (!response.ok) {
         let detail = "Erro ao consultar embedding";
-        let errorPayload: Record<string, unknown> | undefined;
 
         try {
-            errorPayload = await response.json() as Record<string, unknown>;
+            const errorPayload = await response.json() as Record<string, unknown>;
             if (typeof errorPayload.detail === "string" && errorPayload.detail.trim()) {
                 detail = errorPayload.detail;
             } else if (typeof errorPayload.error === "string" && errorPayload.error.trim()) {
@@ -137,7 +135,7 @@ export async function submitScanEmbedding(payload: ScanEmbeddingPayload): Promis
             // resposta sem json
         }
 
-        throw new ScanApiError(detail, response.status, errorPayload);
+        throw new ScanApiError(detail, response.status);
     }
 
     return response.json();
