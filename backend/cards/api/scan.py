@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 import requests
 from django.core.cache import cache
+from django.db.models import Q
 from pgvector.django import CosineDistance
 from rest_framework import status
 from rest_framework.decorators import api_view, parser_classes
@@ -249,18 +250,62 @@ def _find_top_matches(embedding: list[float], limit: int = 5) -> list[dict[str, 
     return [_serialize_match(card, 1 - float(getattr(card, "distance", 1.0))) for card in cards]
 
 
+def _find_matches_from_ocr(ocr_result: OcrResult, limit: int = 5) -> list[dict[str, object]]:
+    number = (ocr_result.get("number") or "").strip()
+    name = (ocr_result.get("name") or "").strip()
+
+    queryset = Card.objects.filter(ativa=True)
+    matches: list[dict[str, object]] = []
+
+    if number and name:
+        cards = list(
+            queryset.filter(numero_completo=number, nome__icontains=name).order_by("id")[:limit]
+        )
+        matches.extend(_serialize_match(card, 0.98) for card in cards)
+        if matches:
+            return matches
+
+    if number:
+        cards = list(queryset.filter(numero_completo=number).order_by("id")[:limit])
+        matches.extend(_serialize_match(card, 0.9) for card in cards)
+        if matches:
+            return matches
+
+    if name:
+        cards = list(
+            queryset.filter(
+                Q(nome__iexact=name)
+                | Q(nome__istartswith=name)
+                | Q(nome__icontains=name)
+            )
+            .order_by("id")[:limit]
+        )
+        if cards:
+            for card in cards:
+                if card.nome.lower() == name.lower():
+                    similarity = 0.9
+                elif card.nome.lower().startswith(name.lower()):
+                    similarity = 0.82
+                else:
+                    similarity = 0.75
+                matches.append(_serialize_match(card, similarity))
+
+    return matches
+
+
 @api_view(["POST"])
 @parser_classes([JSONParser])
 def scan_card_view(request):
     context = _scan_log_context(request)
 
-    embedding = _parse_embedding(request.data.get("embedding"))
-    if embedding is None:
-        logger.warning("Scan com embedding inválido", extra=context)
-        return _error_response(
-            f"Envie 'embedding' com {EXPECTED_EMBEDDING_DIMENSION} valores numéricos.",
-            status.HTTP_400_BAD_REQUEST,
-        )
+    embedding_payload = request.data.get("embedding")
+    embedding = (
+        _parse_embedding(embedding_payload)
+        if embedding_payload is not None
+        else None
+    )
+    if embedding_payload is not None and embedding is None:
+        logger.warning("Scan com embedding inválido (ignorado)", extra=context)
 
     image_b64 = _parse_image_base64(request.data.get("image"))
     if image_b64 is None:
@@ -282,11 +327,15 @@ def scan_card_view(request):
     except Exception as exc:  # noqa: BLE001
         logger.exception("Falha inesperada no OCR", extra={**context, "error": str(exc)})
 
-    matches = _find_top_matches(embedding)
+    if embedding is not None:
+        matches = _find_top_matches(embedding)
+    else:
+        matches = _find_matches_from_ocr(ocr_result)
+
     if not matches:
-        logger.warning("Nenhuma carta com embedding disponível", extra=context)
+        logger.warning("Nenhuma carta encontrada a partir do scan", extra=context)
         return _error_response(
-            "Nenhuma carta com embedding foi encontrada no catálogo.",
+            "Nao foi possivel localizar carta com os dados extraidos.",
             status.HTTP_404_NOT_FOUND,
         )
 

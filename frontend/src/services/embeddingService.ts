@@ -1,5 +1,3 @@
-import { ClipEmbeddingError, extractClipEmbedding } from "../utils/clipEmbedding";
-
 const TARGET_MIN_WIDTH = 512;
 const TARGET_MAX_WIDTH = 768;
 const JPEG_QUALITY = 0.9;
@@ -14,12 +12,6 @@ export class EmbeddingProcessingError extends Error {
 function toProcessingError(error: unknown): EmbeddingProcessingError {
     if (error instanceof EmbeddingProcessingError) {
         return error;
-    }
-
-    if (error instanceof ClipEmbeddingError) {
-        return new EmbeddingProcessingError(
-            "Nao foi possivel carregar o modelo CLIP neste dispositivo. Recarregue a pagina e tente novamente.",
-        );
     }
 
     if (error instanceof Error) {
@@ -98,7 +90,7 @@ async function blobToBase64(blob: Blob): Promise<string> {
     return base64;
 }
 
-export async function buildScanInput(imageBlob: Blob): Promise<{ imageBase64: string; embedding: number[] }> {
+export async function buildScanInput(imageBlob: Blob): Promise<{ imageBase64: string }> {
     if (imageBlob.size <= 0) {
         throw new EmbeddingProcessingError("A imagem capturada esta vazia.");
     }
@@ -107,9 +99,7 @@ export async function buildScanInput(imageBlob: Blob): Promise<{ imageBase64: st
         const canvas = await toResizedCanvas(imageBlob);
         const optimizedBlob = await canvasToJpegBlob(canvas);
         const imageBase64 = await blobToBase64(optimizedBlob);
-        const embedding = await extractClipEmbedding(canvas);
-
-        return { imageBase64, embedding };
+        return { imageBase64 };
     } catch (error) {
         throw toProcessingError(error);
     }
