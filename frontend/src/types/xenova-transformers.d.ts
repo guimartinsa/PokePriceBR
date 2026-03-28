@@ -4,7 +4,11 @@ declare module "@xenova/transformers" {
     options?: Record<string, unknown>,
   ) => Promise<unknown>;
 
-  export function pipeline(task: string, model?: string): Promise<Pipeline>;
+  export function pipeline(
+    task: string,
+    model?: string,
+    options?: Record<string, unknown>,
+  ): Promise<Pipeline>;
 
   export const env: {
     allowLocalModels: boolean;

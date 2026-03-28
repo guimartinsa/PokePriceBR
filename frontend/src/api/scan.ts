@@ -9,6 +9,7 @@ export class ScanApiError extends Error {
 }
 
 export type ScanEmbeddingPayload = {
+    image: string;
     embedding: number[];
 };
 
@@ -65,6 +66,10 @@ function buildAuthHeaders(): HeadersInit {
 }
 
 function validatePayload(payload: ScanEmbeddingPayload) {
+    if (typeof payload.image !== "string" || payload.image.trim().length === 0) {
+        throw new Error("Imagem base64 inválida para envio.");
+    }
+
     if (!Array.isArray(payload.embedding) || payload.embedding.length !== 512) {
         throw new Error("Embedding inválido para envio. São esperados 512 valores.");
     }
