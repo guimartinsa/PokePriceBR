@@ -199,6 +199,99 @@
     padding: 14px;
 }
 
+.artist-list-item {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 110px 1fr;
+    gap: 12px;
+    text-align: left;
+    color: inherit;
+    border: 1px solid #2e3647;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #2a3141, #232a38);
+    padding: 12px;
+    cursor: pointer;
+}
+
+.artist-list-item__image {
+    border-radius: 10px;
+    overflow: hidden;
+    background: #121826;
+    min-height: 145px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #98a5b9;
+    font-size: 0.85rem;
+}
+
+.artist-list-item__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.artist-list-item__content h2 {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+.artist-list-item__content p {
+    margin: 4px 0;
+    color: #dbe5fb;
+}
+
+.artist-list-item__content small {
+    color: #98a5b9;
+}
+
+.artist-oldest-highlight {
+    margin: 12px 0 18px;
+    border: 1px solid #2e3647;
+    border-radius: 12px;
+    background: #1a2231;
+    display: grid;
+    grid-template-columns: 105px 1fr;
+    gap: 12px;
+    padding: 12px;
+}
+
+.artist-oldest-highlight__image {
+    border-radius: 10px;
+    overflow: hidden;
+    background: #121826;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #98a5b9;
+}
+
+.artist-oldest-highlight__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.artist-oldest-highlight h2 {
+    margin: 2px 0;
+}
+
+.artist-oldest-highlight p {
+    margin: 0;
+    color: #98a5b9;
+}
+
+.artist-load-more {
+    margin: 20px auto 0;
+    display: block;
+    border-radius: 10px;
+    border: 1px solid #2c3440;
+    background: #151a21;
+    color: inherit;
+    padding: 10px 14px;
+    cursor: pointer;
+}
+
 .artist-card__header h2 {
     margin: 0;
     font-size: 1.4rem;

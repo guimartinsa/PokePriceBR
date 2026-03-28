@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AxiosError } from "axios";
 import { useAuth } from "../../hooks/useAuth";
 import { fetchCardsAutocomplete } from "../../api/cardsAutocomplete";
 import {
@@ -23,6 +24,7 @@ export default function CollectionsListPage() {
     const [cardQuery, setCardQuery] = useState("");
     const [cardOptions, setCardOptions] = useState<CardAutocomplete[]>([]);
     const [selectedCoverCard, setSelectedCoverCard] = useState<CardAutocomplete | null>(null);
+    const [showLimitPopup, setShowLimitPopup] = useState(false);
     const navigate = useNavigate();
     const { user } = useAuth();
 
@@ -54,7 +56,11 @@ export default function CollectionsListPage() {
     }, [cardQuery]);
 
     async function handleCreate() {
-        if (!newName.trim() || reachedFreeLimit) return;
+        if (!newName.trim()) return;
+        if (reachedFreeLimit) {
+            setShowLimitPopup(true);
+            return;
+        }
 
         try {
             const created = await createCollection(newName, selectedCoverCard?.id ?? null);
@@ -64,6 +70,10 @@ export default function CollectionsListPage() {
             setCardOptions([]);
             setSelectedCoverCard(null);
         } catch (err) {
+            if (err instanceof AxiosError && err.response?.status === 403) {
+                setShowLimitPopup(true);
+                return;
+            }
             console.error("Erro ao criar coleção", err);
         }
     }
@@ -119,11 +129,10 @@ export default function CollectionsListPage() {
                         placeholder="Nome da nova coleção"
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
-                        disabled={reachedFreeLimit}
                     />
                     <button
                         onClick={handleCreate}
-                        disabled={reachedFreeLimit || !newName.trim()}
+                        disabled={!newName.trim()}
                     >
                         Criar
                     </button>
@@ -139,7 +148,6 @@ export default function CollectionsListPage() {
                             setCardQuery(e.target.value);
                         }}
                         placeholder="Busque uma carta para ser a imagem da coleção"
-                        disabled={reachedFreeLimit}
                     />
 
                     {!selectedCoverCard && cardOptions.length > 0 && (
@@ -166,6 +174,32 @@ export default function CollectionsListPage() {
                     )}
                 </div>
             </section>
+
+            {showLimitPopup && (
+                <div className="collection-limit-overlay" role="presentation" onClick={() => setShowLimitPopup(false)}>
+                    <div className="collection-limit-popup" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+                        <h3>Limite de coleções atingido</h3>
+                        <p>
+                            Você não pode criar mais coleções no plano atual. Adicione cartas em uma coleção existente ou assine o Pro.
+                        </p>
+                        <div className="collection-limit-actions">
+                            <button
+                                type="button"
+                                onClick={() => setShowLimitPopup(false)}
+                            >
+                                Escolher existente
+                            </button>
+                            <button
+                                type="button"
+                                className="subscribe-btn"
+                                onClick={() => navigate("/perfil")}
+                            >
+                                Ver planos
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <section className="collections-grid">
                 {collections.length === 0 && (
