@@ -1,10 +1,12 @@
 export class ScanApiError extends Error {
     readonly status: number;
+    readonly payload?: Record<string, unknown>;
 
-    constructor(message: string, status: number) {
+    constructor(message: string, status: number, payload?: Record<string, unknown>) {
         super(message);
         this.name = "ScanApiError";
         this.status = status;
+        this.payload = payload;
     }
 }
 

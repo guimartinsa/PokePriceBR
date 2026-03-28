@@ -70,15 +70,15 @@ def _serialize_match(card: Card, similarity: float) -> dict[str, object]:
     }
 
 
-def _error_response(message: str, code: int):
-    return Response(
-        {
-            "success": False,
-            "detail": message,
-            "error": message,
-        },
-        status=code,
-    )
+def _error_response(message: str, code: int, extra: dict[str, object] | None = None):
+    payload: dict[str, object] = {
+        "success": False,
+        "detail": message,
+        "error": message,
+    }
+    if extra:
+        payload.update(extra)
+    return Response(payload, status=code)
 
 
 def _parse_embedding(payload: object) -> list[float] | None:
@@ -337,6 +337,7 @@ def scan_card_view(request):
         return _error_response(
             "Nao foi possivel localizar carta com os dados extraidos.",
             status.HTTP_404_NOT_FOUND,
+            extra={"ocr": ocr_result},
         )
 
     best = matches[0]
