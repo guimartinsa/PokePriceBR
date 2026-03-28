@@ -1,5 +1,4 @@
 import re
-from collections import defaultdict
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -469,30 +468,29 @@ class ArtistsListView(APIView):
         if search:
             queryset = queryset.filter(ilustrador__icontains=search)
 
-        cards = list(queryset.order_by("ilustrador", "set__release_date", "id"))
+        serializer_context = {"request": request}
+        totals_by_artist = {
+            row["ilustrador"]: row["total_cards"]
+            for row in queryset.values("ilustrador").annotate(total_cards=Count("id"))
+        }
 
-        artists: dict[str, list[Card]] = defaultdict(list)
-        for card in cards:
-            artist_name = (card.ilustrador or "").strip()
-            if not artist_name:
-                continue
-            artists[artist_name].append(card)
+        oldest_cards = (
+            queryset
+            .order_by("ilustrador", "set__release_date", "id")
+            .distinct("ilustrador")
+        )
 
         payload = []
         serializer_context = {"request": request}
-
-        for artist_name in sorted(artists.keys()):
-            artist_cards = artists[artist_name]
-            if not artist_cards:
+        for oldest_card in oldest_cards:
+            artist_name = (oldest_card.ilustrador or "").strip()
+            if not artist_name:
                 continue
-
-            oldest_card = artist_cards[0]
             payload.append(
                 {
                     "artist": artist_name,
-                    "total_cards": len(artist_cards),
+                    "total_cards": totals_by_artist.get(artist_name, 0),
                     "oldest_card": CardSerializer(oldest_card, context=serializer_context).data,
-                    "cards": CardSerializer(artist_cards, many=True, context=serializer_context).data,
                 }
             )
 
