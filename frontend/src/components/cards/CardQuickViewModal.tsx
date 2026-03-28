@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 //import { Link } from "react-router-dom";
+import { AxiosError } from "axios";
 
 import type { CollectionCard } from "../../services/collection";
-import { fetchCollections, toggleCollectionCard, type Collection } from "../../services/collection";
+import { createCollection, fetchCollections, toggleCollectionCard, type Collection } from "../../services/collection";
 import type { Card } from "../../types/Card";
 
 type CardQuickViewModalProps = {
@@ -41,6 +42,8 @@ export function CardQuickViewModal({
     const [collections, setCollections] = useState<Collection[]>([]);
     const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
     const [isSavingToCollection, setIsSavingToCollection] = useState(false);
+    const [newCollectionName, setNewCollectionName] = useState("");
+    const [showLimitMessage, setShowLimitMessage] = useState(false);
 
     const hasCollections = collections.length > 0;
 
@@ -180,7 +183,44 @@ export function CardQuickViewModal({
                                     >
                                         {isSavingToCollection ? "Adicionando..." : "Adicionar à coleção"}
                                     </button>
-
+                                    <div style={{ display: "grid", gap: 8, width: "100%" }}>
+                                        <input
+                                            value={newCollectionName}
+                                            onChange={(event) => setNewCollectionName(event.target.value)}
+                                            placeholder="Criar coleção e adicionar carta"
+                                            className="card-quick-view-secondary-action"
+                                            style={{ minWidth: 240 }}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="card-quick-view-secondary-action"
+                                            disabled={!newCollectionName.trim() || isSavingToCollection}
+                                            onClick={async () => {
+                                                try {
+                                                    setIsSavingToCollection(true);
+                                                    const newCollection = await createCollection(newCollectionName.trim());
+                                                    await toggleCollectionCard(newCollection.id, card.id, false);
+                                                    setCollections((prev) => [...prev, newCollection]);
+                                                    setSelectedCollectionId(newCollection.id);
+                                                    setNewCollectionName("");
+                                                    setShowLimitMessage(false);
+                                                } catch (error) {
+                                                    if (error instanceof AxiosError && error.response?.status === 403) {
+                                                        setShowLimitMessage(true);
+                                                    }
+                                                } finally {
+                                                    setIsSavingToCollection(false);
+                                                }
+                                            }}
+                                        >
+                                            Criar coleção
+                                        </button>
+                                        {showLimitMessage && (
+                                            <small style={{ color: "#ffd084" }}>
+                                                Limite atingido. Selecione uma coleção existente e clique em “Adicionar à coleção”.
+                                            </small>
+                                        )}
+                                    </div>
 
                                 </>
                             )}

@@ -50,48 +50,34 @@ export default function ArtistsPage() {
                     const oldestDate = artist.oldest_card.set?.release_date;
 
                     return (
-                        <article key={artist.artist} className="artist-card">
-                            <header className="artist-card__header">
-                                <div>
-                                    <h2>{artist.artist}</h2>
-                                    <p>{artist.total_cards} carta(s)</p>
-                                </div>
-                            </header>
-
-                            <section className="artist-oldest-card">
-                                <div className="artist-oldest-card__image-wrap">
-                                    {artist.oldest_card.imagem ? (
-                                        <img
-                                            src={artist.oldest_card.imagem}
-                                            alt={artist.oldest_card.nome}
-                                            className="artist-oldest-card__image"
-                                        />
-                                    ) : null}
-                                </div>
-                                <div>
-                                    <strong>Carta mais antiga</strong>
-                                    <h3>{artist.oldest_card.nome}</h3>
-                                    <p>
-                                        {artist.oldest_card.set?.nome}
-                                        {oldestDate ? ` • ${dateFormatter.format(new Date(oldestDate))}` : ""}
-                                    </p>
-                                </div>
-                            </section>
-
-                            <div className="artist-cards-grid">
-                                {artist.cards.map((card) => (
-                                    <button
-                                        key={card.id}
-                                        className="artist-mini-card"
-                                        type="button"
-                                        onClick={() => navigate(`/cards/${card.id}`)}
-                                    >
-                                        {card.imagem ? <img src={card.imagem} alt={card.nome} /> : null}
-                                        <span>{card.nome}</span>
-                                    </button>
-                                ))}
+                        <button
+                            key={artist.artist}
+                            className="artist-list-item"
+                            type="button"
+                            onClick={() => navigate(`/artists/${encodeURIComponent(artist.artist)}`)}
+                        >
+                            <div className="artist-list-item__image">
+                                {artist.oldest_card.imagem ? (
+                                    <img
+                                        src={artist.oldest_card.imagem}
+                                        alt={artist.oldest_card.nome}
+                                    />
+                                ) : (
+                                    <span>Sem imagem</span>
+                                )}
                             </div>
-                        </article>
+
+                            <div className="artist-list-item__content">
+                                <h2>{artist.artist}</h2>
+                                <p>
+                                    {artist.total_cards} carta(s) • Carta mais antiga: {artist.oldest_card.nome}
+                                </p>
+                                <small>
+                                    {artist.oldest_card.set?.nome}
+                                    {oldestDate ? ` • ${dateFormatter.format(new Date(oldestDate))}` : ""}
+                                </small>
+                            </div>
+                        </button>
                     );
                 })}
             </section>

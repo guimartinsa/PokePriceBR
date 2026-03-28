@@ -184,3 +184,45 @@
 .empty-collections {
     color: #99a1b3;
 }
+
+.collection-limit-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 10, 18, 0.7);
+    display: grid;
+    place-items: center;
+    z-index: 1200;
+    padding: 16px;
+}
+
+.collection-limit-popup {
+    width: min(460px, 100%);
+    background: #121a2a;
+    border: 1px solid #31415d;
+    border-radius: 14px;
+    padding: 18px;
+}
+
+.collection-limit-popup h3 {
+    margin: 0;
+}
+
+.collection-limit-popup p {
+    margin: 8px 0 0;
+    color: #b6c0d3;
+}
+
+.collection-limit-actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.collection-limit-actions button {
+    border: none;
+    border-radius: 10px;
+    padding: 9px 14px;
+    cursor: pointer;
+    font-weight: 700;
+}

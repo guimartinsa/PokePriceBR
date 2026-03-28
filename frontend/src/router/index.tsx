@@ -17,6 +17,7 @@ const SeriesDetailPage = lazy(() => import("../pages/SeriesDetailPage"));
 const SetPage = lazy(() => import("../pages/SetPage"));
 const ScanPage = lazy(() => import("../pages/ScanPage"));
 const ArtistsPage = lazy(() => import("../pages/ArtistsPage"));
+const ArtistDetailPage = lazy(() => import("../pages/ArtistDetailPage"));
 
 export default function AppRoutes() {
   return (
@@ -42,6 +43,7 @@ export default function AppRoutes() {
           <Route path="/series/:seriesId" element={<SeriesDetailPage />} />
           <Route path="/series/sets/:setCode" element={<SetPage />} />
           <Route path="/artists" element={<ArtistsPage />} />
+          <Route path="/artists/:artistName" element={<ArtistDetailPage />} />
         </Route>
       </Routes>
     </Suspense>
