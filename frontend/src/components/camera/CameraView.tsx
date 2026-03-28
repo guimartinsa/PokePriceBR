@@ -4,7 +4,7 @@ import { CaptureButton } from "./CaptureButton";
 import { ScanApiError, submitScanEmbedding } from "../../api/scan";
 import { useAuth } from "../../hooks/useAuth";
 import { hasSubscriberPrivileges } from "../../utils/plan";
-import { EmbeddingProcessingError, extractImageEmbedding } from "../../services/embeddingService";
+import { EmbeddingProcessingError, buildScanInput } from "../../services/embeddingService";
 import "./camera.css";
 
 type CardDetection = {
@@ -70,6 +70,11 @@ function parseApiResult(payload: unknown): CardDetection {
             ? (record.card as Record<string, unknown>)
             : null;
 
+    const ocr =
+        record && typeof record.ocr === "object" && record.ocr !== null
+            ? (record.ocr as Record<string, unknown>)
+            : null;
+
     const toStringValue = (value: unknown): string | null => {
         if (typeof value === "string") {
             const trimmed = value.trim();
@@ -84,26 +89,23 @@ function parseApiResult(payload: unknown): CardDetection {
     };
 
     const name =
-        (record ? toStringValue(record.name) : null) ??
-        (record ? toStringValue(record.card_name) : null) ??
+        toStringValue(ocr?.name) ??
         toStringValue(nestedCard?.name) ??
-        toStringValue(nestedCard?.card_name) ??
+        toStringValue(record?.name) ??
         "Carta desconhecida";
 
     const number =
-        (record ? toStringValue(record.number) : null) ??
-        (record ? toStringValue(record.card_number) : null) ??
-        (record ? toStringValue(record.localId) : null) ??
+        toStringValue(ocr?.number) ??
         toStringValue(nestedCard?.number) ??
-        toStringValue(nestedCard?.card_number) ??
-        toStringValue(nestedCard?.localId) ??
-"-";
+        toStringValue(record?.number) ??
+        "-";
 
+    const priceRaw = nestedCard?.price ?? record?.price;
     const price =
-        record && typeof record.price === "number"
-            ? `R$ ${record.price.toFixed(2).replace(".", ",")}`
-            : record && typeof record.price === "string"
-                ? record.price
+        typeof priceRaw === "number"
+            ? `R$ ${priceRaw.toFixed(2).replace(".", ",")}`
+            : typeof priceRaw === "string"
+                ? priceRaw
                 : "Preco indisponivel";
 
     return {
@@ -199,8 +201,8 @@ export function CameraView() {
         setScanError(null);
 
         try {
-            const embedding = await extractImageEmbedding(image);
-            const response = await submitScanEmbedding({ embedding });
+            const { imageBase64, embedding } = await buildScanInput(image);
+            const response = await submitScanEmbedding({ image: imageBase64, embedding });
             const detection = parseApiResult(response);
 
             setLastDetected(detection);
@@ -279,8 +281,8 @@ export function CameraView() {
                 );
             });
 
-            const embedding = await extractImageEmbedding(blob);
-            const response = await submitScanEmbedding({ embedding });
+            const { imageBase64, embedding } = await buildScanInput(blob);
+            const response = await submitScanEmbedding({ image: imageBase64, embedding });
 
             const detection = parseApiResult(response);
 
@@ -406,7 +408,7 @@ export function CameraView() {
                 </section>
             )}
 
-            {capturing && <div className="capturing-indicator">Gerando embedding da imagem...</div>}
+            {capturing && <div className="capturing-indicator">Gerando embedding + OCR regional...</div>}
         </div>
     );
 }

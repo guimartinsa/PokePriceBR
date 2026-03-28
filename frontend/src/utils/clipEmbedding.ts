@@ -40,10 +40,21 @@ async function getClipExtractor(): Promise<ClipExtractor> {
             let latestError: unknown = null;
 
             try {
-                const loaded = await pipeline("image-feature-extraction", CLIP_MODEL_ID);
+                const loaded = await pipeline("feature-extraction", CLIP_MODEL_ID, {
+                    device: "webgpu",
+                });
                 return loaded as unknown as ClipExtractor;
             } catch (error) {
                 latestError = error;
+
+                try {
+                    const loaded = await pipeline("feature-extraction", CLIP_MODEL_ID, {
+                        device: "wasm",
+                    });
+                    return loaded as unknown as ClipExtractor;
+                } catch (fallbackError) {
+                    latestError = fallbackError;
+                }
             }
 
             throw new ClipEmbeddingError(

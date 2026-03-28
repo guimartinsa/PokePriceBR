@@ -1,6 +1,15 @@
+import base64
+import hashlib
 import logging
+import os
+import re
 from decimal import Decimal
+from typing import TypedDict
 
+import cv2
+import numpy as np
+import requests
+from django.core.cache import cache
 from pgvector.django import CosineDistance
 from rest_framework import status
 from rest_framework.decorators import api_view, parser_classes
@@ -13,6 +22,16 @@ logger = logging.getLogger(__name__)
 
 EXPECTED_EMBEDDING_DIMENSION = 512
 MIN_SIMILARITY_THRESHOLD = 0.75
+GOOGLE_VISION_ENDPOINT = "https://vision.googleapis.com/v1/images:annotate"
+OCR_TIMEOUT_SECONDS = 6
+OCR_CACHE_TTL_SECONDS = 60 * 60 * 24
+MAX_BASE64_SIZE_BYTES = 10 * 1024 * 1024
+
+
+class OcrResult(TypedDict, total=False):
+    name: str | None
+    number: str | None
+    debug: dict[str, object]
 
 
 def _scan_log_context(request) -> dict[str, object]:
@@ -43,6 +62,13 @@ def _serialize_card(card: Card) -> dict:
     }
 
 
+def _serialize_match(card: Card, similarity: float) -> dict[str, object]:
+    return {
+        **_serialize_card(card),
+        "similarity": round(similarity, 4),
+    }
+
+
 def _error_response(message: str, code: int):
     return Response(
         {
@@ -70,21 +96,165 @@ def _parse_embedding(payload: object) -> list[float] | None:
     return values
 
 
-def _find_most_similar_card(embedding: list[float]):
-    return (
+def _parse_image_base64(payload: object) -> str | None:
+    if not isinstance(payload, str):
+        return None
+
+    normalized = payload.strip()
+    if not normalized:
+        return None
+
+    if normalized.startswith("data:"):
+        _, _, normalized = normalized.partition(",")
+
+    if not normalized:
+        return None
+
+    if len(normalized.encode("utf-8")) > MAX_BASE64_SIZE_BYTES:
+        return None
+
+    return normalized
+
+
+def _preprocess_for_ocr(image: np.ndarray) -> np.ndarray:
+    grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, threshold = cv2.threshold(grayscale, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return threshold
+
+
+def crop_regions(image: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    h, w, _ = image.shape
+
+    name_crop = image[
+        int(0.02 * h):int(0.18 * h),
+        int(0.02 * w):int(0.75 * w),
+    ]
+
+    number_crop = image[
+        int(0.80 * h):int(0.95 * h),
+        int(0.05 * w):int(0.35 * w),
+    ]
+
+    return name_crop, number_crop
+
+
+def _encode_image_to_base64(image: np.ndarray) -> str:
+    ok, buffer = cv2.imencode(".jpg", image)
+    if not ok:
+        raise ValueError("Falha ao codificar crop para OCR")
+    return base64.b64encode(buffer.tobytes()).decode("utf-8")
+
+
+def _google_vision_text_detection(content_b64: str) -> str:
+    api_key = os.getenv("GOOGLE_VISION_API_KEY")
+    if not api_key:
+        logger.warning("GOOGLE_VISION_API_KEY nao configurada")
+        return ""
+
+    payload = {
+        "requests": [
+            {
+                "image": {"content": content_b64},
+                "features": [{"type": "TEXT_DETECTION"}],
+            }
+        ]
+    }
+
+    response = requests.post(
+        f"{GOOGLE_VISION_ENDPOINT}?key={api_key}",
+        json=payload,
+        timeout=OCR_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+
+    data = response.json()
+    responses = data.get("responses", [{}])
+    full_text = responses[0].get("fullTextAnnotation", {})
+    return str(full_text.get("text", "")).strip()
+
+
+def _extract_name(text: str) -> str | None:
+    if not text.strip():
+        return None
+
+    for line in (line.strip() for line in text.splitlines()):
+        if not line:
+            continue
+        cleaned = re.sub(r"\b(Stage\s*\d+|Basic|HP\s*\d+)\b", "", line, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip(" -")
+        if cleaned:
+            return cleaned
+
+    return None
+
+
+def _extract_number(text: str) -> str | None:
+    match = re.search(r"\d+/\d+", text)
+    return match.group(0) if match else None
+
+
+def _ocr_card_fields_from_base64(image_b64: str, debug: bool = False) -> OcrResult:
+    decoded = base64.b64decode(image_b64)
+    np_buffer = np.frombuffer(decoded, dtype=np.uint8)
+    image = cv2.imdecode(np_buffer, cv2.IMREAD_COLOR)
+
+    if image is None or image.size == 0:
+        raise ValueError("Imagem inválida para OCR")
+
+    name_crop, number_crop = crop_regions(image)
+    processed_name = _preprocess_for_ocr(name_crop)
+    processed_number = _preprocess_for_ocr(number_crop)
+
+    name_text = _google_vision_text_detection(_encode_image_to_base64(processed_name))
+    number_text = _google_vision_text_detection(_encode_image_to_base64(processed_number))
+
+    result: OcrResult = {
+        "name": _extract_name(name_text),
+        "number": _extract_number(number_text),
+    }
+
+    if debug:
+        result["debug"] = {
+            "regions": {
+                "name": {"x1": 0.02, "y1": 0.02, "x2": 0.75, "y2": 0.18},
+                "number": {"x1": 0.05, "y1": 0.80, "x2": 0.35, "y2": 0.95},
+            }
+        }
+
+    return result
+
+
+def _ocr_from_cache_or_vision(image_b64: str, debug: bool = False) -> OcrResult:
+    digest = hashlib.sha256(image_b64.encode("utf-8")).hexdigest()
+    cache_key = f"scan:ocr:{digest}"
+    cached = cache.get(cache_key)
+    if isinstance(cached, dict):
+        return {
+            "name": cached.get("name") if isinstance(cached.get("name"), str) else None,
+            "number": cached.get("number") if isinstance(cached.get("number"), str) else None,
+        }
+
+    ocr_result = _ocr_card_fields_from_base64(image_b64, debug=debug)
+    cache.set(cache_key, ocr_result, OCR_CACHE_TTL_SECONDS)
+    return ocr_result
+
+
+def _find_top_matches(embedding: list[float], limit: int = 5) -> list[dict[str, object]]:
+    cards = (
         Card.objects.filter(ativa=True, embedding__isnull=False)
         .annotate(distance=CosineDistance("embedding", embedding))
-        .order_by("distance")
-        .first()
+        .order_by("distance")[:limit]
     )
+
+    return [_serialize_match(card, 1 - float(getattr(card, "distance", 1.0))) for card in cards]
 
 
 @api_view(["POST"])
 @parser_classes([JSONParser])
 def scan_card_view(request):
     context = _scan_log_context(request)
-    embedding = _parse_embedding(request.data.get("embedding"))
 
+    embedding = _parse_embedding(request.data.get("embedding"))
     if embedding is None:
         logger.warning("Scan com embedding inválido", extra=context)
         return _error_response(
@@ -92,43 +262,59 @@ def scan_card_view(request):
             status.HTTP_400_BAD_REQUEST,
         )
 
-    card = _find_most_similar_card(embedding)
-    if not card:
+    image_b64 = _parse_image_base64(request.data.get("image"))
+    if image_b64 is None:
+        logger.warning("Scan sem imagem base64 válida", extra=context)
+        return _error_response(
+            "Envie o campo 'image' em base64 para OCR regional.",
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    debug_mode = bool(request.data.get("debug", False))
+
+    ocr_result: OcrResult = {"name": None, "number": None}
+    try:
+        ocr_result = _ocr_from_cache_or_vision(image_b64, debug=debug_mode)
+    except requests.Timeout:
+        logger.warning("Timeout no OCR", extra=context)
+    except requests.RequestException as exc:
+        logger.warning("Erro HTTP no OCR", extra={**context, "error": str(exc)})
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Falha inesperada no OCR", extra={**context, "error": str(exc)})
+
+    matches = _find_top_matches(embedding)
+    if not matches:
         logger.warning("Nenhuma carta com embedding disponível", extra=context)
         return _error_response(
             "Nenhuma carta com embedding foi encontrada no catálogo.",
             status.HTTP_404_NOT_FOUND,
         )
 
-    similarity = 1 - float(getattr(card, "distance", 1.0))
-    if similarity < MIN_SIMILARITY_THRESHOLD:
-        logger.info("Scan sem confiança suficiente", extra={**context, "similarity": similarity})
-        return Response(
-            {
-                "success": False,
-                "error": "Carta não identificada com confiança suficiente.",
-                "similarity": round(similarity, 4),
-                "threshold": MIN_SIMILARITY_THRESHOLD,
-            },
-            status=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        )
+    best = matches[0]
+    similarity = float(best["similarity"])
 
     logger.info(
-        "Scan por embedding concluído",
+        "Scan híbrido concluído",
         extra={
             **context,
-            "card_id": card.id,
-            "detected_name": card.nome,
-            "detected_number": card.numero,
+            "ocr_name": ocr_result.get("name"),
+            "ocr_number": ocr_result.get("number"),
+            "best_match_id": best["id"],
             "similarity": similarity,
         },
     )
 
+    success = similarity >= MIN_SIMILARITY_THRESHOLD
+
     return Response(
         {
-            "success": True,
-            "card": _serialize_card(card),
+            "success": success,
+            "ocr": ocr_result,
+            "embedding": embedding,
+            "matches": matches,
+            "card": best,
             "similarity": round(similarity, 4),
+            "threshold": MIN_SIMILARITY_THRESHOLD,
         },
-        status=status.HTTP_200_OK,
+        status=status.HTTP_200_OK if success else status.HTTP_422_UNPROCESSABLE_ENTITY,
     )
