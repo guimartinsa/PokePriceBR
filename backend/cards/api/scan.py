@@ -117,6 +117,14 @@ def _parse_image_base64(payload: object) -> str | None:
     return normalized
 
 
+def _is_valid_base64(payload: str) -> bool:
+    try:
+        base64.b64decode(payload, validate=True)
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _preprocess_for_ocr(image: np.ndarray) -> np.ndarray:
     grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     _, threshold = cv2.threshold(grayscale, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -314,13 +322,29 @@ def scan_card_view(request):
     if embedding_payload is not None and embedding is None:
         logger.warning("Scan com embedding inválido (ignorado)", extra=context)
 
-    image_b64 = _parse_image_base64(request.data.get("image"))
+    image_payload = request.data.get("image")
+    image_b64 = _parse_image_base64(image_payload)
     if image_b64 is None:
-        logger.warning("Scan sem imagem base64 válida", extra=context)
-        return _error_response(
-            "Envie o campo 'image' em base64 para OCR regional.",
-            status.HTTP_400_BAD_REQUEST,
+        image_present = image_payload is not None
+        logger.warning(
+            "Scan sem imagem base64 válida",
+            extra={**context, "image_present": image_present},
         )
+        return _error_response(
+            "A imagem nao chegou corretamente no backend. Envie o campo 'image' em base64.",
+            status.HTTP_400_BAD_REQUEST,
+            extra={"image_received": image_present},
+        )
+
+    if not _is_valid_base64(image_b64):
+        logger.warning("Campo image recebido, mas base64 inválido", extra=context)
+        return _error_response(
+            "O backend recebeu o campo 'image', mas o base64 esta invalido.",
+            status.HTTP_400_BAD_REQUEST,
+            extra={"image_received": True},
+        )
+
+    logger.info("Imagem recebida no backend para scan", extra={**context, "image_received": True})
 
     debug_mode = bool(request.data.get("debug", False))
 
