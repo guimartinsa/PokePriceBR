@@ -98,44 +98,28 @@ export async function submitScanEmbedding(payload: ScanEmbeddingPayload): Promis
             : new Error(String(networkError));
     }
 
-    if (response.status === 404) {
-        const contentType = response.headers.get("content-type") ?? "";
-
-        if (!contentType.includes("application/json")) {
-            throw new Error(`Endpoint de scan não encontrado: ${scanUrl}`);
-        }
-
-        let detail = "Nao foi possivel localizar carta com os dados extraidos.";
-
-        try {
-            const errorPayload = await response.json() as Record<string, unknown>;
-            if (typeof errorPayload.detail === "string" && errorPayload.detail.trim()) {
-                detail = errorPayload.detail;
-            } else if (typeof errorPayload.error === "string" && errorPayload.error.trim()) {
-                detail = errorPayload.error;
-            }
-        } catch {
-            // resposta sem json válido
-        }
-
-        throw new ScanApiError(detail, response.status);
-    }
-
     if (!response.ok) {
         let detail = "Erro ao consultar embedding";
+        let errorPayload: Record<string, unknown> | undefined;
 
         try {
-            const errorPayload = await response.json() as Record<string, unknown>;
+            errorPayload = await response.json() as Record<string, unknown>;
             if (typeof errorPayload.detail === "string" && errorPayload.detail.trim()) {
                 detail = errorPayload.detail;
             } else if (typeof errorPayload.error === "string" && errorPayload.error.trim()) {
                 detail = errorPayload.error;
             }
+            if (response.status === 404 && detail === "Erro ao consultar embedding") {
+                detail = "Nao foi possivel localizar carta com os dados extraidos.";
+            }
         } catch {
-            // resposta sem json
+            const contentType = response.headers.get("content-type") ?? "";
+            if (response.status === 404 && !contentType.includes("application/json")) {
+                throw new Error(`Endpoint de scan não encontrado: ${scanUrl}`);
+            }
         }
 
-        throw new ScanApiError(detail, response.status);
+        throw new ScanApiError(detail, response.status, errorPayload);
     }
 
     return response.json();
