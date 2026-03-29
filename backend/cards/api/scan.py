@@ -140,8 +140,8 @@ def crop_regions(image: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     ]
 
     number_crop = image[
-        int(0.80 * h):int(0.97 * h),
-        int(0.15 * w):int(0.85 * w),
+        int(0.80*h):int(0.97*h),
+        int(0.15*w):int(0.85*w)  # opcional (mais limpo)
     ]
 
     return name_crop, number_crop
@@ -164,7 +164,7 @@ def _google_vision_text_detection(content_b64: str) -> str:
         "requests": [
             {
                 "image": {"content": content_b64},
-                "features": [{"type": "TEXT_DETECTION"}],
+                "features": [{"type": "DOCUMENT_TEXT_DETECTION"}],
             }
         ]
     }
