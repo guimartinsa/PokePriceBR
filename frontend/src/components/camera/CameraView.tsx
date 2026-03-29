@@ -15,6 +15,17 @@ type CardDetection = {
     source: "api";
 };
 
+type ScanDebugPreview = {
+    sourceLabel: string;
+    capturedDataUrl: string;
+    processedDataUrl: string;
+    capturedResolution: string;
+    processedResolution: string;
+    capturedSizeKb: number;
+    processedSizeKb: number;
+    capturedAtLabel: string;
+};
+
 const FREE_WEEKLY_SCAN_LIMIT = 30;
 const FREE_SCAN_STORAGE_KEY = "scan:free-weekly-usage";
 const TEMP_BATCH_COLLECTION_KEY = "scan:temp-batch-collection";
@@ -128,6 +139,34 @@ function parseApiResult(payload: unknown): CardDetection {
     };
 }
 
+function formatResolution(width: number, height: number): string {
+    return `${Math.round(width)}x${Math.round(height)}`;
+}
+
+async function blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            if (typeof reader.result === "string" && reader.result.length > 0) {
+                resolve(reader.result);
+                return;
+            }
+            reject(new Error("Falha ao converter blob para data URL."));
+        };
+        reader.onerror = () => reject(new Error("Falha ao ler blob para data URL."));
+        reader.readAsDataURL(blob);
+    });
+}
+
+async function readBlobResolution(blob: Blob): Promise<{ width: number; height: number }> {
+    const bitmap = await createImageBitmap(blob);
+    try {
+        return { width: bitmap.width, height: bitmap.height };
+    } finally {
+        bitmap.close();
+    }
+}
+
 export function CameraView() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
@@ -139,6 +178,7 @@ export function CameraView() {
     const [batchMode, setBatchMode] = useState(false);
     const [lastDetected, setLastDetected] = useState<CardDetection | null>(null);
     const [scanError, setScanError] = useState<string | null>(null);
+    const [debugPreview, setDebugPreview] = useState<ScanDebugPreview | null>(null);
     const [tempBatch, setTempBatch] = useState<CardDetection[]>(() => {
         const raw = localStorage.getItem(TEMP_BATCH_COLLECTION_KEY);
         if (!raw) return [];
@@ -213,6 +253,31 @@ export function CameraView() {
 
         try {
             const { imageBase64 } = await buildScanInput(image);
+            const [capturedDataUrl, capturedDimensions] = await Promise.all([
+                blobToDataUrl(image),
+                readBlobResolution(image),
+            ]);
+            const processedDataUrl = `data:image/jpeg;base64,${imageBase64}`;
+            const processedDimensions = await readBlobResolution(
+                await fetch(processedDataUrl).then((response) => response.blob()),
+            );
+
+            setDebugPreview({
+                sourceLabel: "Upload (admin)",
+                capturedDataUrl,
+                processedDataUrl,
+                capturedResolution: formatResolution(
+                    capturedDimensions.width,
+                    capturedDimensions.height,
+                ),
+                processedResolution: formatResolution(
+                    processedDimensions.width,
+                    processedDimensions.height,
+                ),
+                capturedSizeKb: Math.round((image.size / 1024) * 10) / 10,
+                processedSizeKb: Math.round(((imageBase64.length * 3) / 4 / 1024) * 10) / 10,
+                capturedAtLabel: new Date().toLocaleTimeString("pt-BR"),
+            });
             const response = await submitScanEmbedding({ image: imageBase64 });
             const detection = parseApiResult(response);
 
@@ -297,6 +362,31 @@ export function CameraView() {
             });
 
             const { imageBase64 } = await buildScanInput(blob);
+            const [capturedDataUrl, capturedDimensions] = await Promise.all([
+                blobToDataUrl(blob),
+                readBlobResolution(blob),
+            ]);
+            const processedDataUrl = `data:image/jpeg;base64,${imageBase64}`;
+            const processedDimensions = await readBlobResolution(
+                await fetch(processedDataUrl).then((response) => response.blob()),
+            );
+
+            setDebugPreview({
+                sourceLabel: "Camera (recorte do frame)",
+                capturedDataUrl,
+                processedDataUrl,
+                capturedResolution: formatResolution(
+                    capturedDimensions.width,
+                    capturedDimensions.height,
+                ),
+                processedResolution: formatResolution(
+                    processedDimensions.width,
+                    processedDimensions.height,
+                ),
+                capturedSizeKb: Math.round((blob.size / 1024) * 10) / 10,
+                processedSizeKb: Math.round(((imageBase64.length * 3) / 4 / 1024) * 10) / 10,
+                capturedAtLabel: new Date().toLocaleTimeString("pt-BR"),
+            });
             const response = await submitScanEmbedding({ image: imageBase64 });
 
             const detection = parseApiResult(response);
@@ -414,6 +504,36 @@ export function CameraView() {
             )}
 
             {scanError && <div className="scan-error-message">{scanError}</div>}
+
+            {debugPreview && (
+                <section className="scan-debug-preview" aria-live="polite">
+                    <p>
+                        Preview debug ({debugPreview.sourceLabel}) • {debugPreview.capturedAtLabel}
+                    </p>
+                    <div className="scan-debug-images">
+                        <figure>
+                            <img src={debugPreview.capturedDataUrl} alt="Recorte original da carta" />
+                            <figcaption>
+                                Recorte: {debugPreview.capturedResolution} •{" "}
+                                {debugPreview.capturedSizeKb} KB
+                            </figcaption>
+                        </figure>
+                        <figure>
+                            <img
+                                src={debugPreview.processedDataUrl}
+                                alt="Imagem processada enviada para OCR"
+                            />
+                            <figcaption>
+                                Enviado: {debugPreview.processedResolution} •{" "}
+                                {debugPreview.processedSizeKb} KB
+                            </figcaption>
+                        </figure>
+                    </div>
+                    <button type="button" onClick={() => setDebugPreview(null)}>
+                        Fechar preview
+                    </button>
+                </section>
+            )}
 
             {isPremium && tempBatch.length > 0 && (
                 <section className="temp-batch-panel">
