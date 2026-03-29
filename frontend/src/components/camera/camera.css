@@ -304,7 +304,29 @@
     width: 100%;
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.25);
+    margin-bottom: 4px;
+}
+
+.scan-debug-images {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.scan-debug-images figure {
+    margin: 0;
+}
+
+.scan-debug-images figcaption {
+    font-size: 11px;
+    color: #ddd;
     margin-bottom: 8px;
+}
+
+.scan-debug-ocr-focus {
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    margin-top: 4px;
+    padding-top: 8px;
 }
 
 .scan-debug-preview button {
