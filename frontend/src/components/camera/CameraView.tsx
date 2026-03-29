@@ -226,7 +226,11 @@ export function CameraView() {
                 setFreeUsage((previous) => ({ ...previous, count: previous.count + 1 }));
             }
         } catch (uploadError) {
-            console.error("Erro no upload da imagem:", uploadError);
+            if (uploadError instanceof ScanApiError && uploadError.status === 404) {
+                console.warn("Carta nao encontrada no upload:", uploadError.message);
+            } else {
+                console.error("Erro no upload da imagem:", uploadError);
+            }
             setScanError(buildScanErrorMessage(uploadError));
         } finally {
             event.target.value = "";
@@ -307,7 +311,11 @@ export function CameraView() {
                 setFreeUsage((previous) => ({ ...previous, count: previous.count + 1 }));
             }
         } catch (captureError) {
-            console.error("Erro no scan:", captureError);
+            if (captureError instanceof ScanApiError && captureError.status === 404) {
+                console.warn("Carta nao encontrada na captura:", captureError.message);
+            } else {
+                console.error("Erro no scan:", captureError);
+            }
             setScanError(buildScanErrorMessage(captureError));
         } finally {
             setCapturing(false);
