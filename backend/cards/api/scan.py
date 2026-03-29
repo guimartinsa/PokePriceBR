@@ -132,8 +132,8 @@ def crop_regions(image: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     ]
 
     number_crop = image[
-        int(0.80 * h):int(0.95 * h),
-        int(0.05 * w):int(0.35 * w),
+        int(0.80 * h):int(0.97 * h),
+        int(0.15 * w):int(0.85 * w),
     ]
 
     return name_crop, number_crop
@@ -223,7 +223,7 @@ def _ocr_card_fields_from_base64(image_b64: str, debug: bool = False) -> OcrResu
             **result.get("debug", {}),
             "regions": {
                 "name": {"x1": 0.02, "y1": 0.02, "x2": 0.75, "y2": 0.18},
-                "number": {"x1": 0.05, "y1": 0.80, "x2": 0.35, "y2": 0.95},
+                "number": {"x1": 0.15, "y1": 0.80, "x2": 0.85, "y2": 0.97},
             }
         }
 
