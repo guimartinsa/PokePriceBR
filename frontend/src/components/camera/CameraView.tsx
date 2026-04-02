@@ -2,17 +2,28 @@ import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ScanOverlay } from "./ScanOverlay";
 import { CaptureButton } from "./CaptureButton";
 import { ScanApiError, submitScanEmbedding } from "../../api/scan";
+import { api } from "../../api/api";
 import { useAuth } from "../../hooks/useAuth";
 import { hasSubscriberPrivileges } from "../../utils/plan";
 import { EmbeddingProcessingError, buildScanInput } from "../../services/embeddingService";
+import type { Card } from "../../types/Card";
 import "./camera.css";
 
 type CardDetection = {
-    id: string;
+    id: number | string;
     name: string;
     number: string;
     priceLabel: string;
     source: "api";
+};
+
+type ScanMatch = {
+    id: number;
+    name: string;
+    number: string;
+    setName: string | null;
+    priceLabel: string;
+    similarity: number | null;
 };
 
 type ScanDebugPreview = {
@@ -133,13 +144,52 @@ function parseApiResult(payload: unknown): CardDetection {
                 ? priceRaw
                 : "Preco indisponivel";
 
+    const idValue = typeof nestedCard?.id === "number" ? nestedCard.id : crypto.randomUUID();
+
     return {
-        id: crypto.randomUUID(),
+        id: idValue,
         name,
         number,
         priceLabel: price,
         source: "api",
     };
+}
+
+function parseMatches(payload: unknown): ScanMatch[] {
+    if (!payload || typeof payload !== "object") return [];
+    const record = payload as Record<string, unknown>;
+    if (!Array.isArray(record.matches)) return [];
+
+    return record.matches
+        .map((entry) => {
+            if (!entry || typeof entry !== "object") return null;
+            const match = entry as Record<string, unknown>;
+            if (typeof match.id !== "number" || typeof match.name !== "string") return null;
+
+            const number =
+                typeof match.number === "string"
+                    ? match.number.trim()
+                    : typeof match.number === "number"
+                        ? String(match.number)
+                        : "-";
+
+            const priceLabel =
+                typeof match.price === "number"
+                    ? `R$ ${match.price.toFixed(2).replace(".", ",")}`
+                    : typeof match.price === "string"
+                        ? match.price
+                        : "Preco indisponivel";
+
+            return {
+                id: match.id,
+                name: match.name.trim(),
+                number,
+                setName: typeof match.set === "string" ? match.set : null,
+                priceLabel,
+                similarity: typeof match.similarity === "number" ? match.similarity : null,
+            } satisfies ScanMatch;
+        })
+        .filter((item): item is ScanMatch => item !== null);
 }
 
 function formatResolution(width: number, height: number): string {
@@ -221,6 +271,10 @@ export function CameraView() {
     const [capturing, setCapturing] = useState(false);
     const [batchMode, setBatchMode] = useState(false);
     const [lastDetected, setLastDetected] = useState<CardDetection | null>(null);
+    const [scanMatches, setScanMatches] = useState<ScanMatch[]>([]);
+    const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
+    const [selectedMatchDetails, setSelectedMatchDetails] = useState<Card | null>(null);
+    const [loadingSelectedMatch, setLoadingSelectedMatch] = useState(false);
     const [scanError, setScanError] = useState<string | null>(null);
     const [debugPreview, setDebugPreview] = useState<ScanDebugPreview | null>(null);
     const [tempBatch, setTempBatch] = useState<CardDetection[]>(() => {
@@ -245,6 +299,35 @@ export function CameraView() {
     useEffect(() => {
         localStorage.setItem(TEMP_BATCH_COLLECTION_KEY, JSON.stringify(tempBatch));
     }, [tempBatch]);
+
+    useEffect(() => {
+        if (!selectedMatchId) {
+            setSelectedMatchDetails(null);
+            return;
+        }
+
+        let active = true;
+        setLoadingSelectedMatch(true);
+
+        api.get<Card>(`/cards/${selectedMatchId}/`)
+            .then((response) => {
+                if (!active) return;
+                setSelectedMatchDetails(response.data);
+            })
+            .catch((detailError) => {
+                console.error("Nao foi possivel carregar detalhes da carta selecionada:", detailError);
+                if (!active) return;
+                setSelectedMatchDetails(null);
+            })
+            .finally(() => {
+                if (!active) return;
+                setLoadingSelectedMatch(false);
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [selectedMatchId]);
 
     useEffect(() => {
         async function startCamera() {
@@ -329,8 +412,11 @@ export function CameraView() {
             });
             const response = await submitScanEmbedding({ image: imageBase64 });
             const detection = parseApiResult(response);
+            const matches = parseMatches(response);
 
             setLastDetected(detection);
+            setScanMatches(matches);
+            setSelectedMatchId(matches[0]?.id ?? null);
 
             if (batchMode && isPremium) {
                 setTempBatch((previous) => [detection, ...previous]);
@@ -346,6 +432,8 @@ export function CameraView() {
                 console.error("Erro no upload da imagem:", uploadError);
             }
             setScanError(buildScanErrorMessage(uploadError));
+            setScanMatches([]);
+            setSelectedMatchId(null);
         } finally {
             event.target.value = "";
             setCapturing(false);
@@ -444,8 +532,11 @@ export function CameraView() {
             const response = await submitScanEmbedding({ image: imageBase64 });
 
             const detection = parseApiResult(response);
+            const matches = parseMatches(response);
 
             setLastDetected(detection);
+            setScanMatches(matches);
+            setSelectedMatchId(matches[0]?.id ?? null);
 
             if (batchMode && isPremium) {
                 setTempBatch((previous) => [detection, ...previous]);
@@ -461,6 +552,8 @@ export function CameraView() {
                 console.error("Erro no scan:", captureError);
             }
             setScanError(buildScanErrorMessage(captureError));
+            setScanMatches([]);
+            setSelectedMatchId(null);
         } finally {
             setCapturing(false);
         }
@@ -554,6 +647,70 @@ export function CameraView() {
                     <p className="scan-result-name">{lastDetected.name}</p>
                     <p className="scan-result-number">Nº {lastDetected.number}</p>
                     <p className="scan-result-price">{lastDetected.priceLabel}</p>
+                    <div className="scan-found-photos">
+                        <figure>
+                            {debugPreview?.capturedDataUrl || debugPreview?.processedDataUrl ? (
+                                <img
+                                    src={debugPreview?.capturedDataUrl ?? debugPreview?.processedDataUrl}
+                                    alt="Foto capturada da carta"
+                                />
+                            ) : (
+                                <div className="scan-photo-placeholder">Sem captura</div>
+                            )}
+                            <figcaption>Foto capturada</figcaption>
+                        </figure>
+                        <figure>
+                            {loadingSelectedMatch ? (
+                                <div className="scan-photo-placeholder">Carregando banco...</div>
+                            ) : selectedMatchDetails?.imagem ? (
+                                <img src={selectedMatchDetails.imagem} alt="Foto da carta no banco" />
+                            ) : (
+                                <div className="scan-photo-placeholder">Sem imagem do banco</div>
+                            )}
+                            <figcaption>Foto do banco</figcaption>
+                        </figure>
+                    </div>
+                    {scanMatches.length > 1 && (
+                        <div className="scan-matches-list">
+                            <p>Outras possiveis cartas</p>
+                            <div className="scan-match-chips">
+                                {scanMatches.map((match) => (
+                                    <button
+                                        key={match.id}
+                                        type="button"
+                                        className={`scan-match-chip ${selectedMatchId === match.id ? "is-active" : ""}`}
+                                        onClick={() => setSelectedMatchId(match.id)}
+                                    >
+                                        <span>{match.name}</span>
+                                        <small>
+                                            Nº {match.number}
+                                            {match.similarity !== null
+                                                ? ` • ${(match.similarity * 100).toFixed(1)}%`
+                                                : ""}
+                                        </small>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {selectedMatchDetails && (
+                        <div className="scan-selected-details">
+                            <p>
+                                Selecionada: {selectedMatchDetails.nome} • Nº{" "}
+                                {selectedMatchDetails.numero_completo}
+                            </p>
+                            <p>
+                                Set: {selectedMatchDetails.set?.nome ?? "N/I"} • Raridade:{" "}
+                                {selectedMatchDetails.raridade ?? "N/I"}
+                            </p>
+                            <p>
+                                Preco medio:{" "}
+                                {selectedMatchDetails.preco_med
+                                    ? `R$ ${selectedMatchDetails.preco_med}`
+                                    : "Indisponivel"}
+                            </p>
+                        </div>
+                    )}
                 </section>
             )}
 
