@@ -5,6 +5,10 @@ from django.utils.html import format_html, format_html_join
 from celery.result import AsyncResult
 from cards.tasks.update_card_from_tcgdex import update_card_from_tcgdex_task
 from cards.tasks.update_set_cards_from_tcgdex import update_set_cards_from_tcgdex_task
+from cards.tasks.update_card_rarity_from_tcgdex import update_card_rarity_from_tcgdex_task
+from cards.tasks.update_set_cards_rarity_from_tcgdex import (
+    update_set_cards_rarity_from_tcgdex_task,
+)
 from cards.tasks.atualizar_precos_set_task import atualizar_precos_set_task
 from cards.models import Card, CardAdminLog
 from django.contrib import messages
@@ -82,6 +86,7 @@ class CardAdmin(admin.ModelAdmin):
         "restaurar_cartas",
         "atualizar_precos_global",   
         "atualizar_detalhes_tcgdex",
+        "atualizar_raridade_tcgdex",
         "atualizar_numero_completo",
         "atualizar_links_liga",
     ]
@@ -206,6 +211,21 @@ class CardAdmin(admin.ModelAdmin):
             f"{total} carta(s) enviadas para atualização de detalhes.",
             level=messages.SUCCESS,
         )
+
+    @admin.action(description="Importar raridade via TCGdex (PT)")
+    def atualizar_raridade_tcgdex(self, request, queryset):
+        total = 0
+
+        for card in queryset:
+            if card.tcgdex_id:
+                update_card_rarity_from_tcgdex_task.delay(card.id)
+                total += 1
+
+        self.message_user(
+            request,
+            f"{total} carta(s) enviadas para atualização de raridade.",
+            level=messages.SUCCESS,
+        )
         
     @admin.action(description='Atualizar "número completo" (numero/total_set) das cartas selecionadas')
     def atualizar_numero_completo(self, request, queryset):
@@ -268,6 +288,7 @@ class SetAdmin(admin.ModelAdmin):
         "importar_cartas_do_set",
         "atualizar_precos_do_set",
         "atualizar_detalhes_do_set",
+        "atualizar_raridade_dos_sets",
         "atualizar_links_liga_dos_sets",
         "adicionar_variantes_master_ball_pokeball_foil",
     ]
@@ -377,6 +398,20 @@ class SetAdmin(admin.ModelAdmin):
         self.message_user(
             request,
             f"Atualização de detalhes iniciada para {disparados} set(s).",
+            level=messages.SUCCESS,
+        )
+
+    @admin.action(description="Importar raridade das cartas dos sets (TCGdex PT)")
+    def atualizar_raridade_dos_sets(self, request, queryset):
+        disparados = 0
+
+        for set_obj in queryset:
+            update_set_cards_rarity_from_tcgdex_task.delay(set_obj.id)
+            disparados += 1
+
+        self.message_user(
+            request,
+            f"Atualização de raridade iniciada para {disparados} set(s).",
             level=messages.SUCCESS,
         )
 
