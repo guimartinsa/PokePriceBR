@@ -18,7 +18,7 @@ type CardDetection = {
 };
 
 type ScanMatch = {
-    id: number;
+    id: number | string;
     name: string;
     number: string;
     setName: string | null;
@@ -164,7 +164,9 @@ function parseMatches(payload: unknown): ScanMatch[] {
         .map((entry) => {
             if (!entry || typeof entry !== "object") return null;
             const match = entry as Record<string, unknown>;
-            if (typeof match.id !== "number" || typeof match.name !== "string") return null;
+            const parsedId =
+                typeof match.id === "number" || typeof match.id === "string" ? match.id : null;
+            if (!parsedId || typeof match.name !== "string") return null;
 
             const number =
                 typeof match.number === "string"
@@ -181,7 +183,7 @@ function parseMatches(payload: unknown): ScanMatch[] {
                         : "Preco indisponivel";
 
             return {
-                id: match.id,
+                id: parsedId,
                 name: match.name.trim(),
                 number,
                 setName: typeof match.set === "string" ? match.set : null,
@@ -190,6 +192,15 @@ function parseMatches(payload: unknown): ScanMatch[] {
             } satisfies ScanMatch;
         })
         .filter((item): item is ScanMatch => item !== null);
+}
+
+function toNumericCardId(value: number | string | null): number | null {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+        const parsed = Number.parseInt(value, 10);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
 }
 
 function formatResolution(width: number, height: number): string {
@@ -272,9 +283,10 @@ export function CameraView() {
     const [batchMode, setBatchMode] = useState(false);
     const [lastDetected, setLastDetected] = useState<CardDetection | null>(null);
     const [scanMatches, setScanMatches] = useState<ScanMatch[]>([]);
-    const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
+    const [selectedMatchId, setSelectedMatchId] = useState<number | string | null>(null);
     const [selectedMatchDetails, setSelectedMatchDetails] = useState<Card | null>(null);
     const [loadingSelectedMatch, setLoadingSelectedMatch] = useState(false);
+    const [detailsOpen, setDetailsOpen] = useState(false);
     const [scanError, setScanError] = useState<string | null>(null);
     const [debugPreview, setDebugPreview] = useState<ScanDebugPreview | null>(null);
     const [tempBatch, setTempBatch] = useState<CardDetection[]>(() => {
@@ -301,15 +313,17 @@ export function CameraView() {
     }, [tempBatch]);
 
     useEffect(() => {
-        if (!selectedMatchId) {
+        const numericId = toNumericCardId(selectedMatchId);
+        if (!numericId) {
             setSelectedMatchDetails(null);
+            setLoadingSelectedMatch(false);
             return;
         }
 
         let active = true;
         setLoadingSelectedMatch(true);
 
-        api.get<Card>(`/cards/${selectedMatchId}/`)
+        api.get<Card>(`/cards/${numericId}/`)
             .then((response) => {
                 if (!active) return;
                 setSelectedMatchDetails(response.data);
@@ -417,6 +431,7 @@ export function CameraView() {
             setLastDetected(detection);
             setScanMatches(matches);
             setSelectedMatchId(matches[0]?.id ?? null);
+            setDetailsOpen(false);
 
             if (batchMode && isPremium) {
                 setTempBatch((previous) => [detection, ...previous]);
@@ -434,6 +449,8 @@ export function CameraView() {
             setScanError(buildScanErrorMessage(uploadError));
             setScanMatches([]);
             setSelectedMatchId(null);
+            setSelectedMatchDetails(null);
+            setDetailsOpen(false);
         } finally {
             event.target.value = "";
             setCapturing(false);
@@ -537,6 +554,7 @@ export function CameraView() {
             setLastDetected(detection);
             setScanMatches(matches);
             setSelectedMatchId(matches[0]?.id ?? null);
+            setDetailsOpen(false);
 
             if (batchMode && isPremium) {
                 setTempBatch((previous) => [detection, ...previous]);
@@ -554,6 +572,8 @@ export function CameraView() {
             setScanError(buildScanErrorMessage(captureError));
             setScanMatches([]);
             setSelectedMatchId(null);
+            setSelectedMatchDetails(null);
+            setDetailsOpen(false);
         } finally {
             setCapturing(false);
         }
@@ -643,73 +663,110 @@ export function CameraView() {
 
             {lastDetected && (
                 <section className="scan-result-card">
-                    <p className="scan-result-label">Carta identificada</p>
-                    <p className="scan-result-name">{lastDetected.name}</p>
-                    <p className="scan-result-number">Nº {lastDetected.number}</p>
-                    <p className="scan-result-price">{lastDetected.priceLabel}</p>
-                    <div className="scan-found-photos">
-                        <figure>
+                    <p className="scan-result-label">Carta encontrada</p>
+                    <button
+                        type="button"
+                        className="scan-result-summary"
+                        onClick={() => setDetailsOpen((value) => !value)}
+                        aria-expanded={detailsOpen}
+                    >
+                        <div className="scan-summary-thumb">
                             {debugPreview?.capturedDataUrl || debugPreview?.processedDataUrl ? (
                                 <img
                                     src={debugPreview?.capturedDataUrl ?? debugPreview?.processedDataUrl}
-                                    alt="Foto capturada da carta"
+                                    alt="Miniatura da carta encontrada"
                                 />
                             ) : (
                                 <div className="scan-photo-placeholder">Sem captura</div>
                             )}
-                            <figcaption>Foto capturada</figcaption>
-                        </figure>
-                        <figure>
-                            {loadingSelectedMatch ? (
-                                <div className="scan-photo-placeholder">Carregando banco...</div>
-                            ) : selectedMatchDetails?.imagem ? (
-                                <img src={selectedMatchDetails.imagem} alt="Foto da carta no banco" />
-                            ) : (
-                                <div className="scan-photo-placeholder">Sem imagem do banco</div>
-                            )}
-                            <figcaption>Foto do banco</figcaption>
-                        </figure>
-                    </div>
-                    {scanMatches.length > 1 && (
-                        <div className="scan-matches-list">
-                            <p>Outras possiveis cartas</p>
-                            <div className="scan-match-chips">
-                                {scanMatches.map((match) => (
-                                    <button
-                                        key={match.id}
-                                        type="button"
-                                        className={`scan-match-chip ${selectedMatchId === match.id ? "is-active" : ""}`}
-                                        onClick={() => setSelectedMatchId(match.id)}
-                                    >
-                                        <span>{match.name}</span>
-                                        <small>
-                                            Nº {match.number}
-                                            {match.similarity !== null
-                                                ? ` • ${(match.similarity * 100).toFixed(1)}%`
-                                                : ""}
-                                        </small>
-                                    </button>
-                                ))}
+                        </div>
+                        <div className="scan-summary-content">
+                            <p className="scan-result-name">{lastDetected.name}</p>
+                            <p className="scan-result-price">{lastDetected.priceLabel}</p>
+                            <p className="scan-result-hint">
+                                {detailsOpen
+                                    ? "Clique para ocultar detalhes"
+                                    : "Clique para mais detalhes"}
+                            </p>
+                        </div>
+                    </button>
+
+                    {detailsOpen && (
+                        <>
+                            <p className="scan-result-number">Nº {lastDetected.number}</p>
+                            <div className="scan-found-photos">
+                                <figure>
+                                    {debugPreview?.capturedDataUrl || debugPreview?.processedDataUrl ? (
+                                        <img
+                                            src={
+                                                debugPreview?.capturedDataUrl ??
+                                                debugPreview?.processedDataUrl
+                                            }
+                                            alt="Foto capturada da carta"
+                                        />
+                                    ) : (
+                                        <div className="scan-photo-placeholder">Sem captura</div>
+                                    )}
+                                    <figcaption>Foto capturada</figcaption>
+                                </figure>
+                                <figure>
+                                    {loadingSelectedMatch ? (
+                                        <div className="scan-photo-placeholder">
+                                            Carregando banco...
+                                        </div>
+                                    ) : selectedMatchDetails?.imagem ? (
+                                        <img
+                                            src={selectedMatchDetails.imagem}
+                                            alt="Foto da carta no banco"
+                                        />
+                                    ) : (
+                                        <div className="scan-photo-placeholder">Sem imagem do banco</div>
+                                    )}
+                                    <figcaption>Foto do banco</figcaption>
+                                </figure>
                             </div>
-                        </div>
-                    )}
-                    {selectedMatchDetails && (
-                        <div className="scan-selected-details">
-                            <p>
-                                Selecionada: {selectedMatchDetails.nome} • Nº{" "}
-                                {selectedMatchDetails.numero_completo}
-                            </p>
-                            <p>
-                                Set: {selectedMatchDetails.set?.nome ?? "N/I"} • Raridade:{" "}
-                                {selectedMatchDetails.raridade ?? "N/I"}
-                            </p>
-                            <p>
-                                Preco medio:{" "}
-                                {selectedMatchDetails.preco_med
-                                    ? `R$ ${selectedMatchDetails.preco_med}`
-                                    : "Indisponivel"}
-                            </p>
-                        </div>
+                            {scanMatches.length > 1 && (
+                                <div className="scan-matches-list">
+                                    <p>Outras possiveis cartas</p>
+                                    <div className="scan-match-chips">
+                                        {scanMatches.map((match) => (
+                                            <button
+                                                key={`${match.id}`}
+                                                type="button"
+                                                className={`scan-match-chip ${selectedMatchId === match.id ? "is-active" : ""}`}
+                                                onClick={() => setSelectedMatchId(match.id)}
+                                            >
+                                                <span>{match.name}</span>
+                                                <small>
+                                                    Nº {match.number}
+                                                    {match.similarity !== null
+                                                        ? ` • ${(match.similarity * 100).toFixed(1)}%`
+                                                        : ""}
+                                                </small>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {selectedMatchDetails && (
+                                <div className="scan-selected-details">
+                                    <p>
+                                        Selecionada: {selectedMatchDetails.nome} • Nº{" "}
+                                        {selectedMatchDetails.numero_completo}
+                                    </p>
+                                    <p>
+                                        Set: {selectedMatchDetails.set?.nome ?? "N/I"} • Raridade:{" "}
+                                        {selectedMatchDetails.raridade ?? "N/I"}
+                                    </p>
+                                    <p>
+                                        Preco medio:{" "}
+                                        {selectedMatchDetails.preco_med
+                                            ? `R$ ${selectedMatchDetails.preco_med}`
+                                            : "Indisponivel"}
+                                    </p>
+                                </div>
+                            )}
+                        </>
                     )}
                 </section>
             )}
