@@ -394,7 +394,7 @@ export function CameraView() {
 
         try {
             const { imageBase64 } = await buildScanInput(image);
-                        const [capturedDataUrl, capturedDimensions] = await Promise.all([
+            const [capturedDataUrl, capturedDimensions] = await Promise.all([
                 blobToDataUrl(image),
                 readBlobResolution(image),
             ]);
@@ -615,13 +615,13 @@ export function CameraView() {
             <video ref={videoRef} autoPlay playsInline muted className="camera-video" />
             <ScanOverlay />
 
-                <div className="scan-plan-pill">
+            <div className="scan-plan-pill">
                 {isPremium ? (
                     <span>Plano Premium • scans ilimitados + lote</span>
                 ) : (
                     <span>Plano Free • {scansRemaining} scans restantes nesta semana</span>
                 )}
-                </div>
+            </div>
 
             <div className="camera-dev-message">
                 Funcao de camera em desenvolvimento. Melhorias de leitura serao adicionadas em
@@ -671,13 +671,13 @@ export function CameraView() {
                         aria-expanded={detailsOpen}
                     >
                         <div className="scan-summary-thumb">
-                            {debugPreview?.capturedDataUrl || debugPreview?.processedDataUrl ? (
+                            {selectedMatchDetails?.imagem ? (
                                 <img
-                                    src={debugPreview?.capturedDataUrl ?? debugPreview?.processedDataUrl}
+                                    src={selectedMatchDetails.imagem}
                                     alt="Miniatura da carta encontrada"
                                 />
                             ) : (
-                                <div className="scan-photo-placeholder">Sem captura</div>
+                                <div className="scan-photo-placeholder">Sem imagem do banco</div>
                             )}
                         </div>
                         <div className="scan-summary-content">
@@ -773,7 +773,7 @@ export function CameraView() {
 
             {scanError && <div className="scan-error-message">{scanError}</div>}
 
-           {debugPreview && (
+            {debugPreview && (
                 <section className="scan-debug-preview" aria-live="polite">
                     <p>
                         Preview debug ({debugPreview.sourceLabel}) • {debugPreview.capturedAtLabel}

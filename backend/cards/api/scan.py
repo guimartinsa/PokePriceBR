@@ -303,6 +303,56 @@ def _find_matches_from_ocr(ocr_result: OcrResult, limit: int = 5) -> list[dict[s
     return matches
 
 
+def _normalize_card_number(value: str | None) -> str:
+    if not value:
+        return ""
+    match = re.search(r"\d+", value)
+    if not match:
+        return ""
+    return str(int(match.group(0)))
+
+
+def _score_match_with_ocr(match: dict[str, object], ocr_result: OcrResult) -> int:
+    score = 0
+    ocr_name = (ocr_result.get("name") or "").strip().lower()
+    ocr_number = _normalize_card_number(ocr_result.get("number"))
+
+    match_name = str(match.get("name") or "").strip().lower()
+    match_number = _normalize_card_number(str(match.get("number") or ""))
+
+    if ocr_number and match_number and ocr_number == match_number:
+        score += 100
+    if ocr_name and match_name:
+        if ocr_name == match_name:
+            score += 20
+        elif match_name.startswith(ocr_name):
+            score += 10
+
+    return score
+
+
+def _prioritize_matches_with_ocr(matches: list[dict[str, object]], ocr_result: OcrResult) -> list[dict[str, object]]:
+    if not matches:
+        return matches
+
+    scored_matches = [
+        (index, match, _score_match_with_ocr(match, ocr_result))
+        for index, match in enumerate(matches)
+    ]
+    max_score = max(score for _, _, score in scored_matches)
+    if max_score <= 0:
+        return matches
+
+    return [
+        match
+        for _, match, _ in sorted(
+            scored_matches,
+            key=lambda item: (item[2], -float(item[1].get("similarity", 0.0)), -item[0]),
+            reverse=True,
+        )
+    ]
+
+
 @api_view(["POST"])
 @parser_classes([JSONParser])
 def scan_card_view(request):
@@ -357,6 +407,8 @@ def scan_card_view(request):
         matches = _find_top_matches(embedding)
     else:
         matches = _find_matches_from_ocr(ocr_result)
+
+    matches = _prioritize_matches_with_ocr(matches, ocr_result)
 
     if not matches:
         logger.warning("Nenhuma carta encontrada a partir do scan", extra=context)
