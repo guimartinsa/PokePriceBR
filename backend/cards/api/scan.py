@@ -1,13 +1,12 @@
 import base64
 import hashlib
+import json
 import logging
 import os
 import re
 from decimal import Decimal
 from typing import TypedDict
 
-import cv2
-import numpy as np
 import requests
 from django.core.cache import cache
 from django.db.models import Q
@@ -23,10 +22,12 @@ logger = logging.getLogger(__name__)
 
 EXPECTED_EMBEDDING_DIMENSION = 512
 MIN_SIMILARITY_THRESHOLD = 0.75
-GOOGLE_VISION_ENDPOINT = "https://vision.googleapis.com/v1/images:annotate"
+NVIDIA_INVOKE_URL = os.getenv("NVIDIA_INVOKE_URL", "https://integrate.api.nvidia.com/v1/chat/completions")
+NVIDIA_OCR_MODEL = os.getenv("NVIDIA_OCR_MODEL", "mistralai/mistral-small-4-119b-2603")
 OCR_TIMEOUT_SECONDS = 6
 OCR_CACHE_TTL_SECONDS = 60 * 60 * 24
 MAX_BASE64_SIZE_BYTES = 10 * 1024 * 1024
+OCR_MAX_TOKENS = 256
 
 
 class OcrResult(TypedDict, total=False):
@@ -125,61 +126,26 @@ def _is_valid_base64(payload: str) -> bool:
         return False
 
 
-def _preprocess_for_ocr(image: np.ndarray) -> np.ndarray:
-    grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    _, threshold = cv2.threshold(grayscale, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    return threshold
+def _extract_json_from_text(text: str) -> dict[str, object]:
+    cleaned = text.strip()
+    if not cleaned:
+        return {}
 
+    try:
+        data = json.loads(cleaned)
+        return data if isinstance(data, dict) else {}
+    except json.JSONDecodeError:
+        pass
 
-def crop_regions(image: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    h, w, _ = image.shape
+    match = re.search(r"\{[\s\S]*\}", cleaned)
+    if not match:
+        return {}
 
-    name_crop = image[
-        int(0.02 * h):int(0.18 * h),
-        int(0.02 * w):int(0.75 * w),
-    ]
-
-    number_crop = image[
-        int(0.80*h):int(0.97*h),
-        int(0.15*w):int(0.85*w)  # opcional (mais limpo)
-    ]
-
-    return name_crop, number_crop
-
-
-def _encode_image_to_base64(image: np.ndarray) -> str:
-    ok, buffer = cv2.imencode(".jpg", image)
-    if not ok:
-        raise ValueError("Falha ao codificar crop para OCR")
-    return base64.b64encode(buffer.tobytes()).decode("utf-8")
-
-
-def _google_vision_text_detection(content_b64: str) -> str:
-    api_key = os.getenv("GOOGLE_VISION_API_KEY")
-    if not api_key:
-        logger.warning("GOOGLE_VISION_API_KEY nao configurada")
-        return ""
-
-    payload = {
-        "requests": [
-            {
-                "image": {"content": content_b64},
-                "features": [{"type": "DOCUMENT_TEXT_DETECTION"}],
-            }
-        ]
-    }
-
-    response = requests.post(
-        f"{GOOGLE_VISION_ENDPOINT}?key={api_key}",
-        json=payload,
-        timeout=OCR_TIMEOUT_SECONDS,
-    )
-    response.raise_for_status()
-
-    data = response.json()
-    responses = data.get("responses", [{}])
-    full_text = responses[0].get("fullTextAnnotation", {})
-    return str(full_text.get("text", "")).strip()
+    try:
+        data = json.loads(match.group(0))
+        return data if isinstance(data, dict) else {}
+    except json.JSONDecodeError:
+        return {}
 
 
 def _extract_name(text: str) -> str | None:
@@ -203,38 +169,65 @@ def _extract_number(text: str) -> str | None:
 
 
 def _ocr_card_fields_from_base64(image_b64: str, debug: bool = False) -> OcrResult:
-    decoded = base64.b64decode(image_b64)
-    np_buffer = np.frombuffer(decoded, dtype=np.uint8)
-    image = cv2.imdecode(np_buffer, cv2.IMREAD_COLOR)
+    api_key = os.getenv("NVIDIA_API_KEY")
+    if not api_key:
+        logger.warning("NVIDIA_API_KEY nao configurada")
+        return {"name": None, "number": None, "debug": {"raw_response": ""}}
 
-    if image is None or image.size == 0:
-        raise ValueError("Imagem inválida para OCR")
-
-    name_crop, number_crop = crop_regions(image)
-    processed_name = _preprocess_for_ocr(name_crop)
-    processed_number = _preprocess_for_ocr(number_crop)
-
-    name_text = _google_vision_text_detection(_encode_image_to_base64(processed_name))
-    number_text = _google_vision_text_detection(_encode_image_to_base64(processed_number))
-
-    result: OcrResult = {
-        "name": _extract_name(name_text),
-        "number": _extract_number(number_text),
-        "debug": {
-            "raw_name_text": name_text,
-            "raw_number_text": number_text,
-        },
+    payload = {
+        "model": NVIDIA_OCR_MODEL,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "Extraia APENAS estes campos da carta Pokémon e retorne SOMENTE um JSON válido: "
+                            '{"nome":"", "numero_completo":""}. '
+                            "Se não achar algum campo, retorne string vazia."
+                        ),
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"},
+                    },
+                ],
+            }
+        ],
+        "max_tokens": OCR_MAX_TOKENS,
+        "temperature": 0,
+        "top_p": 1.0,
+        "stream": False,
     }
 
-    if debug:
-        result["debug"] = {
-            **result.get("debug", {}),
-            "regions": {
-                "name": {"x1": 0.02, "y1": 0.02, "x2": 0.75, "y2": 0.18},
-                "number": {"x1": 0.15, "y1": 0.80, "x2": 0.85, "y2": 0.97},
-            }
-        }
+    response = requests.post(
+        NVIDIA_INVOKE_URL,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Accept": "application/json",
+        },
+        json=payload,
+        timeout=OCR_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+    response_data = response.json()
 
+    choices = response_data.get("choices", [])
+    first_choice = choices[0] if isinstance(choices, list) and choices else {}
+    message = first_choice.get("message", {}) if isinstance(first_choice, dict) else {}
+    raw_content = message.get("content", "") if isinstance(message, dict) else ""
+    raw_text = raw_content if isinstance(raw_content, str) else ""
+
+    parsed = _extract_json_from_text(raw_text)
+    name = _extract_name(str(parsed.get("nome") or parsed.get("name") or ""))
+    number = _extract_number(
+        str(parsed.get("numero_completo") or parsed.get("number") or parsed.get("numero") or "")
+    )
+
+    result: OcrResult = {"name": name, "number": number, "debug": {"raw_response": raw_text}}
+    if not debug:
+        result.pop("debug", None)
     return result
 
 
@@ -280,12 +273,6 @@ def _find_matches_from_ocr(ocr_result: OcrResult, limit: int = 5) -> list[dict[s
         if matches:
             return matches
 
-    if number:
-        cards = list(queryset.filter(numero_completo=number).order_by("id")[:limit])
-        matches.extend(_serialize_match(card, 0.9) for card in cards)
-        if matches:
-            return matches
-
     if name:
         cards = list(
             queryset.filter(
@@ -304,6 +291,14 @@ def _find_matches_from_ocr(ocr_result: OcrResult, limit: int = 5) -> list[dict[s
                 else:
                     similarity = 0.75
                 matches.append(_serialize_match(card, similarity))
+        if matches:
+            return matches
+
+    if number and not name:
+        cards = list(queryset.filter(numero_completo=number).order_by("id")[:limit])
+        matches.extend(_serialize_match(card, 0.9) for card in cards)
+        if matches:
+            return matches
 
     return matches
 
