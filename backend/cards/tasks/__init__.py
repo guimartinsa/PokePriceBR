@@ -9,7 +9,9 @@ from .price_updates import (
     atualizar_cartas_madrugada,
 )
 from .update_card_from_tcgdex import update_card_from_tcgdex_task
+from .update_card_rarity_from_tcgdex import update_card_rarity_from_tcgdex_task
 from .update_set_cards_from_tcgdex import update_set_cards_from_tcgdex_task
+from .update_set_cards_rarity_from_tcgdex import update_set_cards_rarity_from_tcgdex_task
 
 __all__ = [
     "atualizar_preco_carta_task",
@@ -22,5 +24,7 @@ __all__ = [
     "atualizar_colecao_task",
     "atualizar_cartas_madrugada",
     "update_card_from_tcgdex_task",
+    "update_card_rarity_from_tcgdex_task",
     "update_set_cards_from_tcgdex_task",
+    "update_set_cards_rarity_from_tcgdex_task",
 ]
