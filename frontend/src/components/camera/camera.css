@@ -229,38 +229,156 @@
     left: 50%;
     bottom: 142px;
     transform: translateX(-50%);
-    width: min(90vw, 320px);
+    width: min(92vw, 560px);
+    max-height: min(58vh, 500px);
+    overflow-y: auto;
     background: rgba(12, 10, 8, 0.64);
     border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 14px;
-    text-align: center;
+    text-align: left;
     color: #fff;
-    padding: 14px;
+    padding: 12px;
     z-index: 1002;
 }
 
-.scan-result-label {
+.scan-result-summary {
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.28);
+    color: #fff;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: 58px 1fr auto;
+    gap: 10px;
+    align-items: center;
+    cursor: pointer;
+}
+
+.scan-summary-thumb {
+    width: 58px;
+    height: 78px;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.scan-summary-info {
+    min-width: 0;
+}
+
+.scan-result-name {
     margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.scan-result-price {
+    margin: 4px 0 0;
+    font-size: 21px;
+    line-height: 1.1;
+}
+
+.scan-result-cta {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.2;
+    text-align: right;
+    color: #fff;
+    max-width: 120px;
+}
+
+.scan-result-details {
+    margin-top: 10px;
+}
+
+.scan-found-photos {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.scan-found-photos figure {
+    margin: 0;
+}
+
+.scan-found-photos img,
+.scan-photo-placeholder {
+    width: 100%;
+    aspect-ratio: 63 / 88;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.scan-photo-placeholder {
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    color: #ddd;
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.scan-found-photos figcaption {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #ddd;
+}
+
+.scan-matches-list {
+    margin-top: 10px;
+    text-align: left;
+}
+
+.scan-matches-list p {
+    margin: 0 0 8px;
     font-size: 12px;
     text-transform: uppercase;
     color: #ffda62;
 }
 
-.scan-result-name {
-    margin: 6px 0 2px;
-    font-size: 25px;
-    font-weight: 700;
+.scan-match-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
-.scan-result-number {
-    margin: 0;
-    font-size: 15px;
-    opacity: 0.9;
+.scan-match-chip {
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    border-radius: 10px;
+    padding: 8px 10px;
+    text-align: left;
+    cursor: pointer;
 }
 
-.scan-result-price {
-    margin: 10px 0 0;
-    font-size: 32px;
+.scan-match-chip.is-active {
+    border-color: #f6c400;
+    background: rgba(246, 196, 0, 0.18);
+}
+
+.scan-match-chip span {
+    display: block;
+    font-size: 13px;
+}
+
+.scan-match-chip small {
+    opacity: 0.86;
+    font-size: 11px;
+}
+
+.scan-selected-details {
+    margin-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    padding-top: 10px;
+    text-align: left;
+}
+
+.scan-selected-details p {
+    margin: 0 0 6px;
+    font-size: 13px;
 }
 
 .scan-error-message {
@@ -492,6 +610,28 @@
 
     .scan-result-card {
         bottom: 114px;
+    }
+
+    .scan-result-name {
+        font-size: 16px;
+    }
+
+    .scan-result-price {
+        font-size: 18px;
+    }
+
+    .scan-result-summary {
+        grid-template-columns: 46px 1fr auto;
+    }
+
+    .scan-summary-thumb {
+        width: 46px;
+        height: 62px;
+    }
+
+    .scan-result-cta {
+        font-size: 11px;
+        max-width: 94px;
     }
 
     .temp-batch-panel {
