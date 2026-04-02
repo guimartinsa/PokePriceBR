@@ -273,12 +273,6 @@ def _find_matches_from_ocr(ocr_result: OcrResult, limit: int = 5) -> list[dict[s
         if matches:
             return matches
 
-    if number:
-        cards = list(queryset.filter(numero_completo=number).order_by("id")[:limit])
-        matches.extend(_serialize_match(card, 0.9) for card in cards)
-        if matches:
-            return matches
-
     if name:
         cards = list(
             queryset.filter(
@@ -297,6 +291,14 @@ def _find_matches_from_ocr(ocr_result: OcrResult, limit: int = 5) -> list[dict[s
                 else:
                     similarity = 0.75
                 matches.append(_serialize_match(card, similarity))
+        if matches:
+            return matches
+
+    if number and not name:
+        cards = list(queryset.filter(numero_completo=number).order_by("id")[:limit])
+        matches.extend(_serialize_match(card, 0.9) for card in cards)
+        if matches:
+            return matches
 
     return matches
 
