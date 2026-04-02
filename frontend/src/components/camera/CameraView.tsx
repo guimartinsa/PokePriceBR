@@ -24,7 +24,10 @@ type ScanDebugPreview = {
     capturedSizeKb: number;
     processedSizeKb: number;
     capturedAtLabel: string;
+    ocrNameFocusDataUrl: string;
+    ocrNumberFocusDataUrl: string;
 };
+
 
 const FREE_WEEKLY_SCAN_LIMIT = 30;
 const FREE_SCAN_STORAGE_KEY = "scan:free-weekly-usage";
@@ -167,6 +170,47 @@ async function readBlobResolution(blob: Blob): Promise<{ width: number; height: 
     }
 }
 
+async function cropBlobToDataUrl(
+    blob: Blob,
+    region: { x1: number; y1: number; x2: number; y2: number },
+): Promise<string> {
+    const bitmap = await createImageBitmap(blob);
+    try {
+        const cropX = Math.max(0, Math.floor(bitmap.width * region.x1));
+        const cropY = Math.max(0, Math.floor(bitmap.height * region.y1));
+        const cropWidth = Math.max(1, Math.floor(bitmap.width * (region.x2 - region.x1)));
+        const cropHeight = Math.max(1, Math.floor(bitmap.height * (region.y2 - region.y1)));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = cropWidth;
+        canvas.height = cropHeight;
+
+        const context = canvas.getContext("2d");
+        if (!context) {
+            throw new Error("Falha ao criar canvas para crop de debug.");
+        }
+
+        context.drawImage(bitmap, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+        const croppedBlob = await new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob((outputBlob) => {
+                if (outputBlob) {
+                    resolve(outputBlob);
+                    return;
+                }
+                reject(new Error("Falha ao gerar blob do crop de debug."));
+            }, "image/jpeg", 0.95);
+        });
+
+        return blobToDataUrl(croppedBlob);
+    } finally {
+        bitmap.close();
+    }
+}
+
+const OCR_NAME_REGION = { x1: 0.02, y1: 0.02, x2: 0.75, y2: 0.18 };
+const OCR_NUMBER_REGION = { x1: 0.15, y1: 0.8, x2: 0.85, y2: 0.97 };
+
+
 export function CameraView() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
@@ -253,14 +297,17 @@ export function CameraView() {
 
         try {
             const { imageBase64 } = await buildScanInput(image);
-            const [capturedDataUrl, capturedDimensions] = await Promise.all([
+                        const [capturedDataUrl, capturedDimensions] = await Promise.all([
                 blobToDataUrl(image),
                 readBlobResolution(image),
             ]);
             const processedDataUrl = `data:image/jpeg;base64,${imageBase64}`;
-            const processedDimensions = await readBlobResolution(
-                await fetch(processedDataUrl).then((response) => response.blob()),
-            );
+            const processedBlob = await fetch(processedDataUrl).then((response) => response.blob());
+            const processedDimensions = await readBlobResolution(processedBlob);
+            const [ocrNameFocusDataUrl, ocrNumberFocusDataUrl] = await Promise.all([
+                cropBlobToDataUrl(processedBlob, OCR_NAME_REGION),
+                cropBlobToDataUrl(processedBlob, OCR_NUMBER_REGION),
+            ]);
 
             setDebugPreview({
                 sourceLabel: "Upload (admin)",
@@ -277,6 +324,8 @@ export function CameraView() {
                 capturedSizeKb: Math.round((image.size / 1024) * 10) / 10,
                 processedSizeKb: Math.round(((imageBase64.length * 3) / 4 / 1024) * 10) / 10,
                 capturedAtLabel: new Date().toLocaleTimeString("pt-BR"),
+                ocrNameFocusDataUrl,
+                ocrNumberFocusDataUrl,
             });
             const response = await submitScanEmbedding({ image: imageBase64 });
             const detection = parseApiResult(response);
@@ -367,9 +416,12 @@ export function CameraView() {
                 readBlobResolution(blob),
             ]);
             const processedDataUrl = `data:image/jpeg;base64,${imageBase64}`;
-            const processedDimensions = await readBlobResolution(
-                await fetch(processedDataUrl).then((response) => response.blob()),
-            );
+            const processedBlob = await fetch(processedDataUrl).then((response) => response.blob());
+            const processedDimensions = await readBlobResolution(processedBlob);
+            const [ocrNameFocusDataUrl, ocrNumberFocusDataUrl] = await Promise.all([
+                cropBlobToDataUrl(processedBlob, OCR_NAME_REGION),
+                cropBlobToDataUrl(processedBlob, OCR_NUMBER_REGION),
+            ]);
 
             setDebugPreview({
                 sourceLabel: "Camera (recorte do frame)",
@@ -386,6 +438,8 @@ export function CameraView() {
                 capturedSizeKb: Math.round((blob.size / 1024) * 10) / 10,
                 processedSizeKb: Math.round(((imageBase64.length * 3) / 4 / 1024) * 10) / 10,
                 capturedAtLabel: new Date().toLocaleTimeString("pt-BR"),
+                ocrNameFocusDataUrl,
+                ocrNumberFocusDataUrl,
             });
             const response = await submitScanEmbedding({ image: imageBase64 });
 
@@ -505,7 +559,7 @@ export function CameraView() {
 
             {scanError && <div className="scan-error-message">{scanError}</div>}
 
-            {debugPreview && (
+           {debugPreview && (
                 <section className="scan-debug-preview" aria-live="polite">
                     <p>
                         Preview debug ({debugPreview.sourceLabel}) • {debugPreview.capturedAtLabel}
@@ -528,6 +582,22 @@ export function CameraView() {
                                 {debugPreview.processedSizeKb} KB
                             </figcaption>
                         </figure>
+                    </div>
+                    <div className="scan-debug-ocr-focus">
+                        <p>Foco real do OCR (crops usados para leitura):</p>
+                        <div className="scan-debug-images">
+                            <figure>
+                                <img src={debugPreview.ocrNameFocusDataUrl} alt="Crop de nome usado no OCR" />
+                                <figcaption>OCR nome (topo)</figcaption>
+                            </figure>
+                            <figure>
+                                <img
+                                    src={debugPreview.ocrNumberFocusDataUrl}
+                                    alt="Crop de número usado no OCR"
+                                />
+                                <figcaption>OCR número (rodapé)</figcaption>
+                            </figure>
+                        </div>
                     </div>
                     <button type="button" onClick={() => setDebugPreview(null)}>
                         Fechar preview
