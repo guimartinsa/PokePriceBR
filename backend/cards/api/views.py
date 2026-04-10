@@ -1,4 +1,5 @@
 import re
+import logging
 from collections import defaultdict
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.views import APIView
@@ -44,6 +45,8 @@ from cards.api.serializers import SeriesSerializer, SetSerializer
 from django.db.models import Count
 from django.db.models import Q
 from celery.result import AsyncResult
+
+logger = logging.getLogger(__name__)
 
 class CardListView(ListAPIView):
     serializer_class = CardSerializer
@@ -638,7 +641,23 @@ def atualizar_colecao_view(request, collection_id):
         user=request.user,
     )
 
-    atualizar_colecao_task.delay(collection.id)
+    try:
+        atualizar_colecao_task.delay(collection.id)
+    except Exception:
+        logger.exception(
+            "Falha ao enfileirar atualização de preços da coleção %s",
+            collection.id,
+        )
+        return Response(
+            {
+                "status": "erro_fila",
+                "message": (
+                    "Não foi possível iniciar a atualização agora. "
+                    "Verifique se o worker Celery e o broker estão configurados."
+                ),
+            },
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
 
     return Response({"status": "Atualização iniciada"}, status=status.HTTP_202_ACCEPTED)
 
