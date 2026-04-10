@@ -2,3 +2,4 @@ celery
 redis
 django
 python-dotenv
+django-celery-results
