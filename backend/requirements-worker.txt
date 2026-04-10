@@ -10,3 +10,4 @@ whitenoise==6.11.0
 psycopg==3.3.2
 psycopg-binary==3.3.2
 psycopg2-binary==2.9.10
+pgvector==0.4.2
