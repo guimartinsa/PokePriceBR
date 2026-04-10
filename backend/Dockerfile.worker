@@ -1,0 +1,16 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# Copia apenas o necessário
+COPY requirements-worker.txt .
+
+RUN pip install --upgrade pip && pip install -r requirements-worker.txt
+
+COPY . .
+
+CMD ["celery", "-A", "pokepricebr", "worker", "--loglevel=info", "--concurrency=2"]
