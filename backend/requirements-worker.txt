@@ -3,3 +3,8 @@ redis
 django
 python-dotenv
 django-celery-results
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+whitenoise
+psycopg-binary
