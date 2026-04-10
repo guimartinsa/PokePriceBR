@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 _PLAYWRIGHT_IMPORT_ATTEMPTED = False
 _PLAYWRIGHT_SYNC = None
 _PLAYWRIGHT_TIMEOUT_ERROR = None
+_PLAYWRIGHT_ERROR = None
 _PLAYWRIGHT_WARNING_LOGGED = False
 
 
@@ -15,27 +16,30 @@ def _get_playwright():
     global _PLAYWRIGHT_IMPORT_ATTEMPTED
     global _PLAYWRIGHT_SYNC
     global _PLAYWRIGHT_TIMEOUT_ERROR
+    global _PLAYWRIGHT_ERROR
     global _PLAYWRIGHT_WARNING_LOGGED
 
     if _PLAYWRIGHT_IMPORT_ATTEMPTED:
-        return _PLAYWRIGHT_SYNC, _PLAYWRIGHT_TIMEOUT_ERROR
+        return _PLAYWRIGHT_SYNC, _PLAYWRIGHT_TIMEOUT_ERROR, _PLAYWRIGHT_ERROR
 
     _PLAYWRIGHT_IMPORT_ATTEMPTED = True
 
     try:
         from playwright.sync_api import sync_playwright
         from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+        from playwright.sync_api import Error as PlaywrightError
     except ModuleNotFoundError:
         if not _PLAYWRIGHT_WARNING_LOGGED:
             logger.warning(
                 "Playwright não está instalado; scraping de preços da Liga foi ignorado."
             )
             _PLAYWRIGHT_WARNING_LOGGED = True
-        return None, None
+        return None, None, None
 
     _PLAYWRIGHT_SYNC = sync_playwright
     _PLAYWRIGHT_TIMEOUT_ERROR = PlaywrightTimeoutError
-    return _PLAYWRIGHT_SYNC, _PLAYWRIGHT_TIMEOUT_ERROR
+    _PLAYWRIGHT_ERROR = PlaywrightError
+    return _PLAYWRIGHT_SYNC, _PLAYWRIGHT_TIMEOUT_ERROR, _PLAYWRIGHT_ERROR
 
 
 def _parse_preco(texto: str) -> Decimal:
@@ -49,12 +53,16 @@ def _parse_preco(texto: str) -> Decimal:
 
 
 def extrair_precos_liga(url: str) -> dict:
-    sync_playwright, PlaywrightTimeoutError = _get_playwright()
+    sync_playwright, PlaywrightTimeoutError, PlaywrightError = _get_playwright()
     if not sync_playwright:
         return {}
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        try:
+            browser = p.chromium.launch(headless=True)
+        except PlaywrightError as exc:
+            logger.error("Falha ao iniciar navegador Playwright: %s", exc)
+            return {}
         try:
             page = browser.new_page()
 
