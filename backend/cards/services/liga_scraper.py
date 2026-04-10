@@ -1,9 +1,10 @@
-from playwright.sync_api import sync_playwright
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from decimal import Decimal
+import logging
 import time
 
 from cards.models import Card
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_preco(texto: str) -> Decimal:
@@ -17,6 +18,15 @@ def _parse_preco(texto: str) -> Decimal:
 
 
 def extrair_precos_liga(url: str) -> dict:
+    try:
+        from playwright.sync_api import sync_playwright
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+    except ModuleNotFoundError:
+        logger.warning(
+            "Playwright não está instalado; scraping de preços da Liga foi ignorado."
+        )
+        return {}
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         try:
