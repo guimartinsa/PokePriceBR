@@ -172,7 +172,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CELERY + REDIS
 # =========================
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
+REDIS_URL = os.getenv("REDIS_PUBLIC_URL")
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
 
