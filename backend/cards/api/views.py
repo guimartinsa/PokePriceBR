@@ -1,5 +1,6 @@
 import re
 import logging
+import time
 from collections import defaultdict
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.views import APIView
@@ -641,19 +642,38 @@ def atualizar_colecao_view(request, collection_id):
         user=request.user,
     )
 
-    try:
-        atualizar_colecao_task.delay(collection.id)
-    except Exception:
-        logger.exception(
-            "Falha ao enfileirar atualização de preços da coleção %s",
+    publish_delays = (0.0, 0.25, 0.75)
+    last_exception = None
+
+    for attempt, delay_seconds in enumerate(publish_delays, start=1):
+        if delay_seconds:
+            time.sleep(delay_seconds)
+
+        try:
+            atualizar_colecao_task.delay(collection.id)
+            break
+        except Exception as exc:
+            last_exception = exc
+            logger.warning(
+                "Falha ao enfileirar atualização de preços da coleção %s (tentativa %s/%s)",
+                collection.id,
+                attempt,
+                len(publish_delays),
+                exc_info=True,
+            )
+    else:
+        logger.error(
+            "Não foi possível enfileirar atualização de preços da coleção %s após %s tentativas. Último erro: %s",
             collection.id,
+            len(publish_delays),
+            last_exception,
         )
         return Response(
             {
                 "status": "erro_fila",
                 "message": (
                     "Não foi possível iniciar a atualização agora. "
-                    "Verifique se o worker Celery e o broker estão configurados."
+                    "Tente novamente em alguns segundos."
                 ),
             },
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
