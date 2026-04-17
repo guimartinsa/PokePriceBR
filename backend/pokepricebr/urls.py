@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 
 from django.http import JsonResponse
 from cards.api.scan import scan_card_view
+from .views import healthz
 
 
 def api_root(request):
@@ -12,6 +13,7 @@ def api_root(request):
 
 urlpatterns = [
     path("", api_root),
+    path("healthz/", healthz, name="healthz"),
     path('admin/', admin.site.urls),
     #path('api/', include('cards.urls')),
     path("api/", include("cards.api.urls")),
