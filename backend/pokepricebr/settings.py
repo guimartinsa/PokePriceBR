@@ -181,6 +181,38 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "America/Sao_Paulo"
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_CONNECTION_RETRY = True
+CELERY_BROKER_CONNECTION_MAX_RETRIES = None
+
+# Evita que um worker reserve muitas tasks e fique segurando mensagens sem ack.
+CELERY_WORKER_PREFETCH_MULTIPLIER = int(os.getenv("CELERY_WORKER_PREFETCH_MULTIPLIER", "1"))
+
+# Ack tardio + rejeição quando worker morre: reduz perda silenciosa e melhora redelivery controlado.
+CELERY_TASK_ACKS_LATE = os.getenv("CELERY_TASK_ACKS_LATE", "True") == "True"
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+CELERY_TASK_TRACK_STARTED = True
+
+# Limites globais para impedir tasks travadas indefinidamente.
+CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("CELERY_TASK_SOFT_TIME_LIMIT", "300"))
+CELERY_TASK_TIME_LIMIT = int(os.getenv("CELERY_TASK_TIME_LIMIT", "360"))
+
+# Cancela tasks longas em execução caso a conexão com broker seja perdida.
+CELERY_WORKER_CANCEL_LONG_RUNNING_TASKS_ON_CONNECTION_LOSS = True
+
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    "visibility_timeout": int(os.getenv("CELERY_VISIBILITY_TIMEOUT", "1800")),
+    "socket_keepalive": True,
+    "socket_timeout": int(os.getenv("CELERY_REDIS_SOCKET_TIMEOUT", "30")),
+    "retry_on_timeout": True,
+    "health_check_interval": int(os.getenv("CELERY_REDIS_HEALTH_CHECK_INTERVAL", "30")),
+}
+
+CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {
+    "socket_keepalive": True,
+    "socket_timeout": int(os.getenv("CELERY_REDIS_SOCKET_TIMEOUT", "30")),
+    "retry_on_timeout": True,
+    "health_check_interval": int(os.getenv("CELERY_REDIS_HEALTH_CHECK_INTERVAL", "30")),
+}
 
 
 CORS_ALLOWED_ORIGINS = _split_env_list(

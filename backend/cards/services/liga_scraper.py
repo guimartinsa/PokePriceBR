@@ -57,6 +57,7 @@ def extrair_precos_liga(url: str) -> dict:
     if not sync_playwright:
         return {}
 
+    logger.info("liga_scraper.start url=%s", url)
     with sync_playwright() as p:
         try:
             browser = p.chromium.launch(headless=True)
@@ -67,8 +68,10 @@ def extrair_precos_liga(url: str) -> dict:
             page = browser.new_page()
 
             # Mantém a task responsiva quando a página da Liga não responde.
+            logger.info("liga_scraper.goto_begin url=%s", url)
             page.goto(url, timeout=20_000, wait_until="domcontentloaded")
             page.wait_for_selector(".container-price-mkp", timeout=20_000)
+            logger.info("liga_scraper.goto_end url=%s", url)
 
             time.sleep(1)
 
@@ -107,8 +110,13 @@ def extrair_precos_liga(url: str) -> dict:
                     "max": _parse_preco(max_),
                 }
 
+            logger.info("liga_scraper.success url=%s tipos=%s", url, list(resultado.keys()))
             return resultado
         except PlaywrightTimeoutError:
+            logger.warning("liga_scraper.timeout url=%s", url)
+            return {}
+        except Exception:
+            logger.exception("liga_scraper.error url=%s", url)
             return {}
         finally:
             browser.close()

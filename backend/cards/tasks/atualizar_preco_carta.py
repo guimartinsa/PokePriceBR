@@ -8,6 +8,8 @@ from cards.services.liga_scraper import atualizar_preco_carta
     autoretry_for=(Exception,),
     retry_kwargs={"max_retries": 3, "countdown": 30},
     retry_backoff=True,
+    soft_time_limit=300,
+    time_limit=360,
 )
 def atualizar_preco_carta_task(self, card_id: int):
     """

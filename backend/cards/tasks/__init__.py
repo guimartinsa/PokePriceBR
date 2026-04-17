@@ -12,6 +12,7 @@ from .update_card_from_tcgdex import update_card_from_tcgdex_task
 from .update_card_rarity_from_tcgdex import update_card_rarity_from_tcgdex_task
 from .update_set_cards_from_tcgdex import update_set_cards_from_tcgdex_task
 from .update_set_cards_rarity_from_tcgdex import update_set_cards_rarity_from_tcgdex_task
+from .diagnostics import worker_diagnostic_task
 
 __all__ = [
     "atualizar_preco_carta_task",
@@ -27,4 +28,5 @@ __all__ = [
     "update_card_rarity_from_tcgdex_task",
     "update_set_cards_from_tcgdex_task",
     "update_set_cards_rarity_from_tcgdex_task",
+    "worker_diagnostic_task",
 ]
