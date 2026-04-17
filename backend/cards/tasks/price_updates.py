@@ -68,7 +68,7 @@ def atualizar_preco_task(self, card_id):
                 self.request.id,
                 card_id,
             )
-            atualizar_preco_carta(card)
+            encontrou_preco = atualizar_preco_carta(card)
             logger.info(
                 "atualizar_preco_task.scrape_end task_id=%s card_id=%s",
                 self.request.id,
@@ -84,6 +84,18 @@ def atualizar_preco_task(self, card_id):
                 "status": "failed",
                 "card_id": card_id,
                 "error": str(exc),
+            }
+
+        if not encontrou_preco:
+            logger.warning(
+                "atualizar_preco_task.no_prices_found task_id=%s card_id=%s",
+                self.request.id,
+                card_id,
+            )
+            return {
+                "status": "skipped",
+                "card_id": card_id,
+                "reason": "no_prices_found",
             }
 
         logger.info("atualizar_preco_task.db_update_begin task_id=%s card_id=%s", self.request.id, card_id)

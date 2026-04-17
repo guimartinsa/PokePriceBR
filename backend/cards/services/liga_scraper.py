@@ -52,6 +52,13 @@ def _parse_preco(texto: str) -> Decimal:
     return Decimal(texto)
 
 
+def _serializar_precos_para_log(precos: dict) -> dict:
+    return {
+        tipo: {faixa: str(valor) for faixa, valor in valores.items()}
+        for tipo, valores in precos.items()
+    }
+
+
 def extrair_precos_liga(url: str) -> dict:
     sync_playwright, PlaywrightTimeoutError, PlaywrightError = _get_playwright()
     if not sync_playwright:
@@ -110,7 +117,12 @@ def extrair_precos_liga(url: str) -> dict:
                     "max": _parse_preco(max_),
                 }
 
-            logger.info("liga_scraper.success url=%s tipos=%s", url, list(resultado.keys()))
+            logger.info(
+                "liga_scraper.success url=%s tipos=%s precos=%s",
+                url,
+                list(resultado.keys()),
+                _serializar_precos_para_log(resultado),
+            )
             return resultado
         except PlaywrightTimeoutError:
             logger.warning("liga_scraper.timeout url=%s", url)
@@ -128,6 +140,7 @@ def atualizar_preco_carta(card: Card) -> bool:
         return False
 
     precos = extrair_precos_liga(card.liga_url)
+    encontrou_preco = bool(precos)
 
     if "normal" in precos:
         card.preco_min = precos["normal"]["min"]
@@ -154,5 +167,20 @@ def atualizar_preco_carta(card: Card) -> bool:
         card.preco_med_pokeball_foil = precos["pokeball foil"]["med"]
         card.preco_max_pokeball_foil = precos["pokeball foil"]["max"]
 
-    card.save()
-    return True
+    if encontrou_preco:
+        card.save()
+        logger.info(
+            "atualizar_preco_carta.prices_found card_id=%s nome=%s precos=%s",
+            card.id,
+            card.nome,
+            _serializar_precos_para_log(precos),
+        )
+    else:
+        logger.warning(
+            "atualizar_preco_carta.no_prices_found card_id=%s nome=%s url=%s",
+            card.id,
+            card.nome,
+            card.liga_url,
+        )
+
+    return encontrou_preco
