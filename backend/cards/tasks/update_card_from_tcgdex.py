@@ -1,9 +1,11 @@
 from celery import shared_task
 import requests
+import logging
 
 from cards.models import Card
 
 TCGDEX_CARD_API = "https://api.tcgdex.net/v2/en/cards"
+logger = logging.getLogger(__name__)
 
 
 @shared_task(
@@ -13,14 +15,17 @@ TCGDEX_CARD_API = "https://api.tcgdex.net/v2/en/cards"
     retry_kwargs={"max_retries": 3},
 )
 def update_card_from_tcgdex_task(self, card_id: int):
+    logger.info("update_card_from_tcgdex_task.start task_id=%s card_id=%s", self.request.id, card_id)
     card = Card.objects.get(id=card_id)
 
     if not card.tcgdex_id:
         return {"error": "Carta sem tcgdex_id"}
 
     url = f"{TCGDEX_CARD_API}/{card.tcgdex_id}"
+    logger.info("update_card_from_tcgdex_task.http_begin task_id=%s url=%s", self.request.id, url)
     response = requests.get(url, timeout=30)
     response.raise_for_status()
+    logger.info("update_card_from_tcgdex_task.http_end task_id=%s status=%s", self.request.id, response.status_code)
 
     data = response.json()
 
@@ -83,8 +88,10 @@ def update_card_from_tcgdex_task(self, card_id: int):
         card.detalhes_atualizados = True
         updated_fields.append("detalhes_atualizados")
 
+        logger.info("update_card_from_tcgdex_task.db_save task_id=%s card_id=%s fields=%s", self.request.id, card_id, updated_fields)
         card.save(update_fields=updated_fields)
 
+    logger.info("update_card_from_tcgdex_task.success task_id=%s card_id=%s", self.request.id, card_id)
 
     return {
         "card": card.nome,
