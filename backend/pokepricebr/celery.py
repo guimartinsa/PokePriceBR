@@ -1,7 +1,9 @@
-import os
 import logging
+import os
+import sys
+
 from celery import Celery
-from celery.signals import task_prerun, task_postrun, task_failure
+from celery.signals import setup_logging, task_failure, task_postrun, task_prerun
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pokepricebr.settings")
 
@@ -10,6 +12,21 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
 logger = logging.getLogger(__name__)
+
+
+@setup_logging.connect
+def configure_celery_logging(*_, **__):
+    """Force Celery logs to stdout so log aggregators keep correct severity levels."""
+    root_logger = logging.getLogger()
+    root_logger.handlers.clear()
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(
+        logging.Formatter("[%(asctime)s: %(levelname)s/%(processName)s] %(message)s")
+    )
+
+    root_logger.addHandler(handler)
+    root_logger.setLevel(logging.INFO)
 
 
 @task_prerun.connect

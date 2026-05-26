@@ -192,6 +192,9 @@ CELERY_TASK_ACKS_LATE = os.getenv("CELERY_TASK_ACKS_LATE", "True") == "True"
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
 CELERY_TASK_TRACK_STARTED = True
 
+# Mantém nossa configuração de logs (stdout) sem ser sobrescrita pelo worker.
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False
+
 # Limites globais para impedir tasks travadas indefinidamente.
 CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("CELERY_TASK_SOFT_TIME_LIMIT", "300"))
 CELERY_TASK_TIME_LIMIT = int(os.getenv("CELERY_TASK_TIME_LIMIT", "360"))
