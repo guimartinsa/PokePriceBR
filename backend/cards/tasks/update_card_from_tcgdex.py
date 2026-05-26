@@ -78,7 +78,7 @@ def update_card_from_tcgdex_task(self, card_id: int):
     if card.possui_reverse_foil != possui_reverse_foil:
         card.possui_reverse_foil = possui_reverse_foil
         updated_fields.append("possui_reverse_foil")
-        
+
     if official_total:
         card.total_set = official_total
         card.numero_completo = f"{card.numero}/{official_total}"
