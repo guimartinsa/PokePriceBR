@@ -1,4 +1,10 @@
 import { NavLink } from "react-router-dom";
+import IconeBusca from "../../assets/icons/busca-icon.svg";
+import IconeCamera from "../../assets/icons/camera-pokemon.svg";
+import IconeColecao from "../../assets/icons/colecaoicon.svg";
+import IconHome from "../../assets/icons/home-icon.svg";
+import WishlistIcon from "../../assets/icons/wishlist-icon.svg";
+import CheckballIcon from "../../assets/icons/checkball-icon.svg";
 
 type SideDrawerProps = {
     isOpen: boolean;
@@ -9,13 +15,13 @@ type SideDrawerProps = {
 };
 
 const navItems = [
-    { to: "/", label: "Início", icon: "🏠" },
-    { to: "/cards", label: "Cartas", icon: "🃏" },
-    { to: "/scan", label: "Scanner", icon: "📷" },
-    { to: "/series", label: "Séries", icon: "📚" },
-    { to: "/artists", label: "Artistas", icon: "🎨" },
-    { to: "/collection", label: "Coleções", icon: "📦" },
-    { to: "/perfil", label: "Perfil", icon: "👤" },
+    { to: "/", label: "Início", iconSrc: IconHome },
+    { to: "/cards", label: "Cartas", iconSrc: IconeBusca },
+    { to: "/scan", label: "Scanner", iconSrc: IconeCamera },
+    { to: "/series", label: "Séries", iconSrc: WishlistIcon },
+    { to: "/artists", label: "Artistas", iconSrc: CheckballIcon },
+    { to: "/collection", label: "Coleções", iconSrc: IconeColecao },
+    { to: "/perfil", label: "Perfil", iconSrc: CheckballIcon },
 ];
 
 export default function SideDrawer({ isOpen, isDesktop, isCollapsed, onClose, onToggleCollapse }: SideDrawerProps) {
@@ -61,7 +67,9 @@ export default function SideDrawer({ isOpen, isDesktop, isCollapsed, onClose, on
                                     }
                                     onClick={onClose}
                                 >
-                                    <span className="side-drawer__icon" aria-hidden="true">{item.icon}</span>
+                                    <span className="side-drawer__icon" aria-hidden="true">
+                                        <img src={item.iconSrc} alt="" width={22} height={22} />
+                                    </span>
                                     {!isCollapsed && <span>{item.label}</span>}
                                 </NavLink>
                             </li>
