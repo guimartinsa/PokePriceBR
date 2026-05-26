@@ -21,6 +21,12 @@ function getLowestPrice(card: Pick<Card, "preco_min" | "preco_med" | "preco_max"
     return Math.min(...values).toFixed(2);
 }
 
+function formatPrice(value: string | null | undefined): string {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue) || numericValue <= 0) return "Indisponível";
+    return `R$ ${numericValue.toFixed(2)}`;
+}
+
 const variationLabels = [
     { key: "possui_normal", ownedKey: "owned_normal", shortLabel: "N", label: "Normal", className: "variation-normal", variation: "normal" },
     { key: "possui_foil", ownedKey: "owned_foil", shortLabel: "F", label: "Foil", className: "variation-foil", variation: "foil" },
@@ -77,6 +83,11 @@ export function CardItemDetail({
                 <p className="price-min">
                     Menor valor: {lowestPrice ? `R$ ${lowestPrice}` : "Indisponível"}
                 </p>
+                <div className="price-breakdown" aria-label="Preços da Liga Pokémon">
+                    <small>Mín: {formatPrice(card.preco_min)}</small>
+                    <small>Méd: {formatPrice(card.preco_med)}</small>
+                    <small>Máx: {formatPrice(card.preco_max)}</small>
+                </div>
 
 
 
