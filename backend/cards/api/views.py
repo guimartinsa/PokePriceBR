@@ -1,7 +1,9 @@
 import re
 import logging
 import time
+from decimal import Decimal
 from collections import defaultdict
+import requests
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -48,6 +50,34 @@ from django.db.models import Q
 from celery.result import AsyncResult
 
 logger = logging.getLogger(__name__)
+TCGDEX_CARD_API_PT = "https://api.tcgdex.net/v2/pt/cards"
+
+
+def _get_live_tcgplayer_prices(tcgdex_id: str):
+    if not tcgdex_id:
+        return None
+
+    try:
+        response = requests.get(f"{TCGDEX_CARD_API_PT}/{tcgdex_id}", timeout=10)
+        response.raise_for_status()
+        payload = response.json()
+    except requests.RequestException:
+        logger.warning("live_tcgplayer_prices.fetch_failed tcgdex_id=%s", tcgdex_id, exc_info=True)
+        return None
+
+    normal = (((payload.get("pricing") or {}).get("tcgplayer") or {}).get("normal") or {})
+    low_price = normal.get("lowPrice")
+    mid_price = normal.get("midPrice")
+    high_price = normal.get("highPrice")
+
+    if low_price is None and mid_price is None and high_price is None:
+        return None
+
+    return {
+        "preco_min": Decimal(str(low_price)) if low_price is not None else None,
+        "preco_med": Decimal(str(mid_price)) if mid_price is not None else None,
+        "preco_max": Decimal(str(high_price)) if high_price is not None else None,
+    }
 
 class CardListView(ListAPIView):
     serializer_class = CardSerializer
@@ -161,6 +191,18 @@ class CardListView(ListAPIView):
 class CardDetailView(RetrieveAPIView):
     queryset = Card.objects.select_related("set").filter(ativa=True)
     serializer_class = CardSerializer
+
+    def retrieve(self, request, *args, **kwargs):
+        card = self.get_object()
+        live_prices = _get_live_tcgplayer_prices(card.tcgdex_id)
+
+        if live_prices:
+            card.preco_min = live_prices["preco_min"]
+            card.preco_med = live_prices["preco_med"]
+            card.preco_max = live_prices["preco_max"]
+
+        serializer = self.get_serializer(card)
+        return Response(serializer.data)
 
 class AtualizarPrecoCartaView(APIView):
     def post(self, request, pk):
