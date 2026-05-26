@@ -1,15 +1,5 @@
 from django.contrib import admin
-from django.http import JsonResponse
-from django.urls import path, reverse
 from django.utils.html import format_html, format_html_join
-from celery.result import AsyncResult
-from cards.tasks.update_card_from_tcgdex import update_card_from_tcgdex_task
-from cards.tasks.update_set_cards_from_tcgdex import update_set_cards_from_tcgdex_task
-from cards.tasks.update_card_rarity_from_tcgdex import update_card_rarity_from_tcgdex_task
-from cards.tasks.update_set_cards_rarity_from_tcgdex import (
-    update_set_cards_rarity_from_tcgdex_task,
-)
-from cards.tasks.atualizar_precos_set_task import atualizar_precos_set_task
 from cards.models import Card, CardAdminLog
 from django.contrib import messages
 import re
@@ -17,10 +7,12 @@ from cards.services.admin_log import log_admin_action
 
 from cards.models import Set, Card, Avatar, Profile, Series
 
-from cards.tasks.import_cards import import_cards_from_set_task
-from cards.tasks.atualizar_todas_cartas import atualizar_todas_cartas
-from cards.tasks.import_sets import import_series_from_tcgdex_task, import_sets_from_tcgdex_task
 from cards.services.liga_url import gerar_liga_url
+from cards.services.import_sets import import_series_from_tcgdex, import_sets_from_tcgdex
+from cards.services.import_cards import import_cards_from_tcgdex_set
+from cards.services.liga_scraper import atualizar_preco_carta
+from cards.tasks.update_card_from_tcgdex import update_card_from_tcgdex_task
+from cards.tasks.update_card_rarity_from_tcgdex import update_card_rarity_from_tcgdex_task
 
 @admin.register(Series)
 class SeriesAdmin(admin.ModelAdmin):
@@ -34,11 +26,11 @@ class SeriesAdmin(admin.ModelAdmin):
 
     @admin.action(description="Importar/atualizar séries da TCGdex")
     def importar_series_tcgdex(self, request, queryset):
-        task = import_series_from_tcgdex_task.delay()
+        import_series_from_tcgdex()
 
         self.message_user(
             request,
-            f"Importação/atualização de séries iniciada (task {task.id}).",
+            "Importação/atualização de séries concluída.",
             level=messages.SUCCESS,
         )
 
@@ -91,48 +83,6 @@ class CardAdmin(admin.ModelAdmin):
         "atualizar_links_liga",
     ]
 
-    def get_urls(self):
-        urls = super().get_urls()
-        custom_urls = [
-            path(
-                "task-status/",
-                self.admin_site.admin_view(self.task_status_view),
-                name="cards_card_task_status",
-            )
-        ]
-        return custom_urls + urls
-
-    def task_status_view(self, request):
-        task_id = request.GET.get("task_id")
-        if not task_id:
-            return JsonResponse(
-                {
-                    "error": "Informe task_id na querystring, ex: ?task_id=<uuid>",
-                },
-                status=400,
-            )
-
-        result = AsyncResult(task_id)
-        payload = {
-            "task_id": task_id,
-            "state": result.state,
-        }
-
-        if isinstance(result.info, dict):
-            payload["meta"] = result.info
-            total = result.info.get("total")
-            atualizadas = result.info.get("atualizadas")
-            if total and isinstance(total, int) and isinstance(atualizadas, int):
-                payload["progress"] = min(round((atualizadas / total) * 100, 2), 100.0)
-        elif result.info:
-            payload["meta"] = str(result.info)
-
-        if result.successful():
-            payload["result"] = result.result
-
-        return JsonResponse(payload)
-
-
     @admin.action(description="Excluir cartas selecionadas")
     def excluir_cartas(self, request, queryset):
         atualizadas = 0
@@ -181,18 +131,17 @@ class CardAdmin(admin.ModelAdmin):
 
     @admin.action(description="Atualizar preços (GLOBAL)")
     def atualizar_precos_global(self, request, queryset):
-        task = atualizar_todas_cartas.delay()
-        status_url = reverse("admin:cards_card_task_status")
+        cartas = Card.objects.exclude(liga_num__isnull=True)
+        total = cartas.count()
+        atualizadas = 0
+
+        for carta in cartas:
+            if atualizar_preco_carta(carta):
+                atualizadas += 1
 
         self.message_user(
             request,
-            format_html(
-                'Atualização GLOBAL de preços iniciada (task {}). '
-                '<a href="{}?task_id={}" target="_blank" rel="noopener">Ver andamento</a>.',
-                task.id,
-                status_url,
-                task.id,
-            ),
+            f"Atualização GLOBAL concluída: {atualizadas}/{total} carta(s) atualizada(s).",
             level=messages.SUCCESS,
         )
 
@@ -203,7 +152,7 @@ class CardAdmin(admin.ModelAdmin):
 
         for card in queryset:
             if card.tcgdex_id:
-                update_card_from_tcgdex_task.delay(card.id)
+                update_card_from_tcgdex_task.run(card.id)
                 total += 1
 
         self.message_user(
@@ -218,7 +167,7 @@ class CardAdmin(admin.ModelAdmin):
 
         for card in queryset:
             if card.tcgdex_id:
-                update_card_rarity_from_tcgdex_task.delay(card.id)
+                update_card_rarity_from_tcgdex_task.run(card.id)
                 total += 1
 
         self.message_user(
@@ -334,11 +283,11 @@ class SetAdmin(admin.ModelAdmin):
             )
             return
 
-        task = import_sets_from_tcgdex_task.delay(tcgdex_ids=tcgdex_ids)
+        import_sets_from_tcgdex(tcgdex_ids=tcgdex_ids)
 
         self.message_user(
             request,
-            f"Importação/atualização iniciada para {len(tcgdex_ids)} set(s) selecionado(s) (task {task.id}).",
+            f"Importação/atualização concluída para {len(tcgdex_ids)} set(s) selecionado(s).",
             level=messages.SUCCESS,
         )
 
@@ -356,7 +305,7 @@ class SetAdmin(admin.ModelAdmin):
                 )
                 continue
 
-            import_cards_from_set_task.delay(set_obj.id)
+            import_cards_from_tcgdex_set(set_obj)
             disparados += 1
 
         if disparados:
@@ -375,7 +324,9 @@ class SetAdmin(admin.ModelAdmin):
             cartas = Card.objects.filter(set=set_obj, ativa=True)
             total_cartas += cartas.count()
 
-            atualizar_precos_set_task.delay(set_obj.id)
+            for carta in cartas:
+                if atualizar_preco_carta(carta):
+                    pass
             sets_disparados += 1
 
         self.message_user(
@@ -392,7 +343,10 @@ class SetAdmin(admin.ModelAdmin):
         disparados = 0
 
         for set_obj in queryset:
-            update_set_cards_from_tcgdex_task.delay(set_obj.id)
+            cards = Card.objects.filter(set_id=set_obj.id, ativa=True)
+            for card in cards:
+                if card.tcgdex_id:
+                    update_card_from_tcgdex_task.run(card.id)
             disparados += 1
 
         self.message_user(
@@ -406,7 +360,9 @@ class SetAdmin(admin.ModelAdmin):
         disparados = 0
 
         for set_obj in queryset:
-            update_set_cards_rarity_from_tcgdex_task.delay(set_obj.id)
+            cards = Card.objects.filter(set_id=set_obj.id).exclude(tcgdex_id__isnull=True).exclude(tcgdex_id="")
+            for card in cards:
+                update_card_rarity_from_tcgdex_task.run(card.id)
             disparados += 1
 
         self.message_user(
